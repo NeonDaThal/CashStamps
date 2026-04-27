@@ -9,12 +9,30 @@
           </p>
         </div>
 
-        <q-btn
-          color="primary"
-          label="Create Test Voucher"
-          @click="handleCreateTestVoucher"
-        />
+        <div class="row q-gutter-sm">
+          <q-btn
+            color="primary"
+            label="Create Test Voucher"
+            @click="handleCreateTestVoucher"
+          />
+
+          <q-btn
+            color="negative"
+            outline
+            label="Clear Test Records"
+            :disable="voucherRecords.length === 0"
+            @click="handleClearTestRecords"
+          />
+        </div>
       </div>
+
+      <q-banner
+        v-if="successMessage"
+        class="bg-green-1 text-green-9 q-mb-md"
+        rounded
+      >
+        {{ successMessage }}
+      </q-banner>
 
       <q-banner v-if="errorMessage" class="bg-red-1 text-red-9 q-mb-md" rounded>
         {{ errorMessage }}
@@ -60,12 +78,14 @@ import { onMounted, ref } from 'vue';
 import type { VoucherRecord } from 'src/types/voucher';
 import {
   addVoucherRecord,
+  clearVoucherRecords,
   getVoucherRecords,
 } from 'src/services/voucher-store';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 
 const voucherRecords = ref<VoucherRecord[]>([]);
 const errorMessage = ref('');
+const successMessage = ref('');
 
 async function loadVoucherRecords(): Promise<void> {
   errorMessage.value = '';
@@ -80,15 +100,33 @@ async function loadVoucherRecords(): Promise<void> {
 
 async function handleCreateTestVoucher(): Promise<void> {
   errorMessage.value = '';
+  successMessage.value = '';
 
   try {
     const testVoucher = createDraftVoucherRecord(10_000, 'GBP');
 
     await addVoucherRecord(testVoucher);
     await loadVoucherRecords();
+
+    successMessage.value = `Created test voucher ${testVoucher.serial}.`;
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not create test voucher.';
+  }
+}
+
+async function handleClearTestRecords(): Promise<void> {
+  errorMessage.value = '';
+  successMessage.value = '';
+
+  try {
+    await clearVoucherRecords();
+    await loadVoucherRecords();
+
+    successMessage.value = 'Cleared all local test voucher records.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = 'Could not clear voucher records.';
   }
 }
 
