@@ -616,6 +616,18 @@ Get the current CashStamps project running locally.
 - the main pages/components are visible
 - the repo structure is understood
 
+#### Done
+- fork created
+- repo cloned locally
+- upstream remote added
+- dependencies installed using `--legacy-peer-deps`
+- app runs locally at `http://localhost:9000/`
+- working branch created: `bch-voucher-mvp`
+- build plan committed in `docs/buildplan.md`
+- dependency setup committed
+
+---
+
 ### Phase 1 — Add voucher types and local store
 
 #### Goal
