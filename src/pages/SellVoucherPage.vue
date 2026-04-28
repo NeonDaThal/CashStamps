@@ -29,6 +29,63 @@
         </q-card-section>
       </q-card>
 
+      <q-card v-if="lastIssuedVoucher" flat bordered class="q-mt-md bg-green-1">
+        <q-card-section>
+          <div class="row items-start q-col-gutter-md">
+            <div class="col">
+              <div class="text-h6 text-green-10">
+                Fake voucher issued successfully
+              </div>
+
+              <p class="text-green-10 q-mb-sm">
+                This test voucher has been saved locally. No BCH was sent.
+              </p>
+
+              <div class="text-body2">
+                <strong>Voucher reference:</strong>
+                {{ lastIssuedVoucher.serial }}
+              </div>
+
+              <div class="text-body2">
+                <strong>Customer paid:</strong>
+                {{
+                  formatFiatAmount(
+                    lastIssuedVoucher.fiatAmountMinor,
+                    lastIssuedVoucher.fiatCurrency
+                  )
+                }}
+              </div>
+
+              <div class="text-body2">
+                <strong>Status:</strong>
+                {{ lastIssuedVoucher.status }}
+              </div>
+            </div>
+
+            <div class="col-auto">
+              <q-icon name="check_circle" color="positive" size="42px" />
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            color="primary"
+            label="View History"
+            to="/voucher-history"
+          />
+
+          <q-btn
+            color="primary"
+            label="Issue Another"
+            @click="handleResetLastIssuedVoucher"
+          />
+        </q-card-actions>
+      </q-card>
+
       <q-banner
         v-if="successMessage"
         class="bg-green-1 text-green-9 q-mt-md"
@@ -65,6 +122,7 @@ import IssueProgressDialog, {
 } from 'src/components/IssueProgressDialog.vue';
 import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
+import type { VoucherRecord } from 'src/types/voucher';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import { calculateFakeVoucherPricing } from 'src/services/voucher-pricing';
 import { addVoucherRecord } from 'src/services/voucher-store';
@@ -78,6 +136,8 @@ const isProgressDialogOpen = ref(false);
 
 const pendingFiatAmountMinor = ref(0);
 const pendingFiatCurrency = ref('GBP');
+
+const lastIssuedVoucher = ref<VoucherRecord | null>(null);
 
 const issueProgressSteps = ref<IssueProgressStep[]>([
   {
@@ -134,6 +194,7 @@ function handleReviewVoucher(
 ): void {
   successMessage.value = '';
   errorMessage.value = '';
+  lastIssuedVoucher.value = null;
 
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
     errorMessage.value = 'Enter a valid cash amount first.';
@@ -143,6 +204,12 @@ function handleReviewVoucher(
   pendingFiatAmountMinor.value = fiatAmountMinor;
   pendingFiatCurrency.value = fiatCurrency;
   isConfirmDialogOpen.value = true;
+}
+
+function handleResetLastIssuedVoucher(): void {
+  successMessage.value = '';
+  errorMessage.value = '';
+  lastIssuedVoucher.value = null;
 }
 
 async function runFakeIssueProgress(): Promise<void> {
@@ -166,6 +233,7 @@ async function runFakeIssueProgress(): Promise<void> {
 async function handleCreateDraftVoucher(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
+  lastIssuedVoucher.value = null;
 
   if (
     !Number.isFinite(pendingFiatAmountMinor.value) ||
@@ -183,27 +251,23 @@ async function handleCreateDraftVoucher(): Promise<void> {
     await runFakeIssueProgress();
 
     const pricing = calculateFakeVoucherPricing(
-  pendingFiatAmountMinor.value,
-  pendingFiatCurrency.value,
-);
+      pendingFiatAmountMinor.value,
+      pendingFiatCurrency.value
+    );
 
-const voucher = createDraftVoucherRecord(
-  pendingFiatAmountMinor.value,
-  pendingFiatCurrency.value,
-  pricing,
-);
+    const voucher = createDraftVoucherRecord(
+      pendingFiatAmountMinor.value,
+      pendingFiatCurrency.value,
+      pricing
+    );
 
     await addVoucherRecord(voucher);
 
     setIssueProgressStepStatus('store', 'complete');
     await waitForFakeStep(300);
 
-    const formattedFiatAmount = new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: pendingFiatCurrency.value,
-    }).format(pendingFiatAmountMinor.value / 100);
-
-    successMessage.value = `Created fake voucher ${voucher.serial} for ${formattedFiatAmount}.`;
+    successMessage.value = '';
+    lastIssuedVoucher.value = voucher;
     isProgressDialogOpen.value = false;
   } catch (error) {
     console.error(error);
@@ -212,5 +276,12 @@ const voucher = createDraftVoucherRecord(
   } finally {
     isSubmitting.value = false;
   }
+}
+
+function formatFiatAmount(amountMinor: number, currency: string): string {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency,
+  }).format(amountMinor / 100);
 }
 </script>
