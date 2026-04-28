@@ -61,6 +61,8 @@
             </q-item-section>
           </q-item>
 
+          <q-separator spaced />
+
           <q-item>
             <q-item-section>
               <q-item-label caption>Market rate</q-item-label>
@@ -84,7 +86,31 @@
               <q-item-label caption>Quote source</q-item-label>
               <q-item-label>
                 {{ quoteSourceLabel }}
-                <span v-if="pricing.isFallbackQuote">(fallback)</span>
+                <q-badge
+                  v-if="pricing.isFallbackQuote"
+                  color="orange"
+                  class="q-ml-sm"
+                >
+                  fallback
+                </q-badge>
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Quote timestamp</q-item-label>
+              <q-item-label>
+                {{ formatDateTime(pricing.quoteTimestamp) }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item v-if="pricing.quoteLockedAt">
+            <q-item-section>
+              <q-item-label caption>Quote locked</q-item-label>
+              <q-item-label>
+                {{ formatDateTime(pricing.quoteLockedAt) }}
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -97,6 +123,8 @@
               </q-item-label>
             </q-item-section>
           </q-item>
+
+          <q-separator spaced />
 
           <q-item>
             <q-item-section>

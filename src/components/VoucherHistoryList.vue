@@ -30,6 +30,15 @@
           · Quote:
           {{ formatQuoteSource(voucher.quote.source) }}
           <span v-if="voucher.quote.isFallbackQuote">(fallback)</span>
+        </q-item-label>
+
+        <q-item-label caption>
+          Quote time:
+          {{ formatDate(voucher.quote.marketRateTimestamp) }}
+          <span v-if="voucher.quote.quoteExpiresAt">
+            · Expires:
+            {{ formatDate(voucher.quote.quoteExpiresAt) }}
+          </span>
           · Created:
           {{ formatDate(voucher.createdAt) }}
         </q-item-label>
@@ -88,7 +97,7 @@ function formatQuoteSource(source: VoucherQuoteSource): string {
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'medium',
-    timeStyle: 'short',
+    timeStyle: 'medium',
   }).format(new Date(value));
 }
 </script>
