@@ -20,15 +20,41 @@
 
         <div class="row q-col-gutter-md">
           <div class="col-12 col-sm-6">
-            <div class="text-caption text-grey-7">Fiat amount</div>
+            <div class="text-caption text-grey-7">Customer pays</div>
             <div class="text-body1">
-              {{ formattedFiatAmount }}
+              {{
+                formatMinorFiatAmount(
+                  pricing.customerPaysMinor,
+                  pricing.fiatCurrency
+                )
+              }}
             </div>
           </div>
 
           <div class="col-12 col-sm-6">
-            <div class="text-caption text-grey-7">Fee</div>
-            <div class="text-body1">10% placeholder fee</div>
+            <div class="text-caption text-grey-7">Service fee</div>
+            <div class="text-body1">
+              {{ formatBasisPointsAsPercent(pricing.serviceFeeBasisPoints) }}
+              —
+              {{
+                formatMinorFiatAmount(
+                  pricing.serviceFeeAmountMinor,
+                  pricing.fiatCurrency
+                )
+              }}
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <div class="text-caption text-grey-7">Voucher value</div>
+            <div class="text-body1">
+              {{
+                formatMinorFiatAmount(
+                  pricing.voucherValueMinor,
+                  pricing.fiatCurrency
+                )
+              }}
+            </div>
           </div>
 
           <div class="col-12 col-sm-6">
@@ -36,7 +62,7 @@
             <div class="text-body1">Fake Phase 2 quote</div>
           </div>
 
-          <div class="col-12 col-sm-6">
+          <div class="col-12">
             <div class="text-caption text-grey-7">Funding</div>
             <div class="text-body1">Fake only — no BCH sent</div>
           </div>
@@ -61,6 +87,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 
+import {
+  calculateFakeVoucherPricing,
+  formatBasisPointsAsPercent,
+  formatMinorFiatAmount,
+} from 'src/services/voucher-pricing';
+
 const emit = defineEmits<{
   reviewVoucher: [fiatAmountMinor: number, fiatCurrency: string];
 }>();
@@ -78,12 +110,9 @@ const canCreateVoucher = computed(() => {
   return Number.isFinite(fiatAmount.value) && fiatAmount.value > 0;
 });
 
-const formattedFiatAmount = computed(() => {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: fiatCurrency,
-  }).format(fiatAmountMinor.value / 100);
-});
+const pricing = computed(() =>
+  calculateFakeVoucherPricing(fiatAmountMinor.value, fiatCurrency)
+);
 
 function handleSubmit(): void {
   if (!canCreateVoucher.value) {

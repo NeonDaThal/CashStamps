@@ -19,15 +19,45 @@
         <q-list dense>
           <q-item>
             <q-item-section>
-              <q-item-label caption>Customer cash amount</q-item-label>
-              <q-item-label>{{ formattedFiatAmount }}</q-item-label>
+              <q-item-label caption>Customer pays</q-item-label>
+              <q-item-label>
+                {{
+                  formatMinorFiatAmount(
+                    pricing.customerPaysMinor,
+                    pricing.fiatCurrency
+                  )
+                }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
           <q-item>
             <q-item-section>
-              <q-item-label caption>Placeholder fee</q-item-label>
-              <q-item-label>10%</q-item-label>
+              <q-item-label caption>Service fee</q-item-label>
+              <q-item-label>
+                {{ formatBasisPointsAsPercent(pricing.serviceFeeBasisPoints) }}
+                —
+                {{
+                  formatMinorFiatAmount(
+                    pricing.serviceFeeAmountMinor,
+                    pricing.fiatCurrency
+                  )
+                }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Voucher value</q-item-label>
+              <q-item-label>
+                {{
+                  formatMinorFiatAmount(
+                    pricing.voucherValueMinor,
+                    pricing.fiatCurrency
+                  )
+                }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
@@ -48,7 +78,8 @@
 
         <q-banner class="bg-orange-1 text-orange-10 q-mt-md" rounded>
           This confirmation dialog is temporary. In later phases it will show
-          the locked quote, real fee breakdown, BCH amount, and funding details.
+          the locked quote, real BCH amount, funding transaction, and printer
+          status.
         </q-banner>
       </q-card-section>
 
@@ -77,6 +108,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+import {
+  calculateFakeVoucherPricing,
+  formatBasisPointsAsPercent,
+  formatMinorFiatAmount,
+} from 'src/services/voucher-pricing';
+
 const props = defineProps<{
   modelValue: boolean;
   fiatAmountMinor: number;
@@ -89,10 +126,7 @@ const emit = defineEmits<{
   confirm: [];
 }>();
 
-const formattedFiatAmount = computed(() => {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: props.fiatCurrency,
-  }).format(props.fiatAmountMinor / 100);
-});
+const pricing = computed(() =>
+  calculateFakeVoucherPricing(props.fiatAmountMinor, props.fiatCurrency)
+);
 </script>
