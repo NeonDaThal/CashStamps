@@ -66,6 +66,7 @@ import IssueProgressDialog, {
 import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
+import { calculateFakeVoucherPricing } from 'src/services/voucher-pricing';
 import { addVoucherRecord } from 'src/services/voucher-store';
 
 const isSubmitting = ref(false);
@@ -181,10 +182,16 @@ async function handleCreateDraftVoucher(): Promise<void> {
   try {
     await runFakeIssueProgress();
 
-    const voucher = createDraftVoucherRecord(
-      pendingFiatAmountMinor.value,
-      pendingFiatCurrency.value
-    );
+    const pricing = calculateFakeVoucherPricing(
+  pendingFiatAmountMinor.value,
+  pendingFiatCurrency.value,
+);
+
+const voucher = createDraftVoucherRecord(
+  pendingFiatAmountMinor.value,
+  pendingFiatCurrency.value,
+  pricing,
+);
 
     await addVoucherRecord(voucher);
 

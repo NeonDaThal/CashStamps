@@ -1,4 +1,5 @@
 import type { VoucherRecord } from 'src/types/voucher';
+import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
 function createVoucherId(): string {
   return `voucher-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -16,7 +17,8 @@ function createVoucherSerial(): string {
 
 export function createDraftVoucherRecord(
   fiatAmountMinor: number,
-  fiatCurrency = 'GBP'
+  fiatCurrency = 'GBP',
+  pricing?: FakeVoucherPricingQuote
 ): VoucherRecord {
   const now = new Date().toISOString();
 
@@ -30,22 +32,23 @@ export function createDraftVoucherRecord(
     fiatCurrency,
     fiatAmountMinor,
 
-    // Phase 1/2 placeholder values.
-    // These will be replaced by real pricing and fee calculations later.
+    // Phase 2 placeholder values.
+    // These will become real BCH satoshi values in Phase 3.
     marketBchSats: 0,
     fee: {
       type: 'percentage',
-      basisPoints: 1000,
-      amountMinor: 0,
-      description: 'Initial MVP placeholder fee',
+      basisPoints: pricing?.serviceFeeBasisPoints ?? 1000,
+      amountMinor: pricing?.serviceFeeAmountMinor ?? 0,
+      description: 'Phase 2 placeholder service fee',
     },
     finalBchSats: 0,
 
     quote: {
-      source: 'unknown',
+      source: pricing ? 'manual' : 'unknown',
       fiatCurrency,
       marketRate: 0,
-      marketRateTimestamp: now,
+      marketRateTimestamp: pricing?.quoteTimestamp ?? now,
+      quoteLockedAt: pricing?.quoteTimestamp,
       isFallbackQuote: false,
     },
 
