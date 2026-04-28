@@ -48,7 +48,7 @@
       <q-btn
         type="submit"
         color="primary"
-        label="Create Fake Voucher"
+        label="Review Fake Voucher"
         :loading="isSubmitting"
         :disable="!canCreateVoucher"
       />
@@ -62,7 +62,7 @@
 import { computed, ref } from 'vue';
 
 const emit = defineEmits<{
-  createVoucher: [fiatAmountMinor: number, fiatCurrency: string];
+  reviewVoucher: [fiatAmountMinor: number, fiatCurrency: string];
 }>();
 
 const fiatAmount = ref(100);
@@ -90,6 +90,6 @@ function handleSubmit(): void {
     return;
   }
 
-  emit('createVoucher', fiatAmountMinor.value, fiatCurrency);
+  emit('reviewVoucher', fiatAmountMinor.value, fiatCurrency);
 }
 </script>

@@ -24,7 +24,7 @@
         <q-card-section>
           <VoucherSaleForm
             :is-submitting="isSubmitting"
-            @create-voucher="handleCreateDraftVoucher"
+            @review-voucher="handleReviewVoucher"
           />
         </q-card-section>
       </q-card>
@@ -40,6 +40,14 @@
       <q-banner v-if="errorMessage" class="bg-red-1 text-red-9 q-mt-md" rounded>
         {{ errorMessage }}
       </q-banner>
+
+      <SaleConfirmDialog
+        v-model="isConfirmDialogOpen"
+        :fiat-amount-minor="pendingFiatAmountMinor"
+        :fiat-currency="pendingFiatCurrency"
+        :is-submitting="isSubmitting"
+        @confirm="handleCreateDraftVoucher"
+      />
     </div>
   </q-page>
 </template>
@@ -47,6 +55,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
+import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import { addVoucherRecord } from 'src/services/voucher-store';
@@ -55,10 +64,14 @@ const isSubmitting = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
-async function handleCreateDraftVoucher(
+const isConfirmDialogOpen = ref(false);
+const pendingFiatAmountMinor = ref(0);
+const pendingFiatCurrency = ref('GBP');
+
+function handleReviewVoucher(
   fiatAmountMinor: number,
   fiatCurrency: string
-): Promise<void> {
+): void {
   successMessage.value = '';
   errorMessage.value = '';
 
@@ -67,19 +80,40 @@ async function handleCreateDraftVoucher(
     return;
   }
 
+  pendingFiatAmountMinor.value = fiatAmountMinor;
+  pendingFiatCurrency.value = fiatCurrency;
+  isConfirmDialogOpen.value = true;
+}
+
+async function handleCreateDraftVoucher(): Promise<void> {
+  successMessage.value = '';
+  errorMessage.value = '';
+
+  if (
+    !Number.isFinite(pendingFiatAmountMinor.value) ||
+    pendingFiatAmountMinor.value <= 0
+  ) {
+    errorMessage.value = 'Enter a valid cash amount first.';
+    return;
+  }
+
   isSubmitting.value = true;
 
   try {
-    const voucher = createDraftVoucherRecord(fiatAmountMinor, fiatCurrency);
+    const voucher = createDraftVoucherRecord(
+      pendingFiatAmountMinor.value,
+      pendingFiatCurrency.value
+    );
 
     await addVoucherRecord(voucher);
 
     const formattedFiatAmount = new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: fiatCurrency,
-    }).format(fiatAmountMinor / 100);
+      currency: pendingFiatCurrency.value,
+    }).format(pendingFiatAmountMinor.value / 100);
 
     successMessage.value = `Created fake voucher ${voucher.serial} for ${formattedFiatAmount}.`;
+    isConfirmDialogOpen.value = false;
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not create fake voucher.';
