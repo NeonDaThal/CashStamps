@@ -57,6 +57,6 @@ export function createDraftVoucherRecord(
     derivationIndex: -1,
     address: '',
 
-    status: 'draft',
+    status: pricing ? 'funded' : 'draft',
   };
 }
