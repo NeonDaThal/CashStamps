@@ -1,6 +1,15 @@
 <template>
   <q-page padding>
     <div class="q-mx-auto" style="max-width: 900px">
+      <q-banner class="bg-blue-1 text-blue-10 q-mb-md" rounded>
+        <template #avatar>
+          <q-icon name="info" />
+        </template>
+
+        This is a temporary Phase 1 development screen for testing local voucher
+        records. It is not the final merchant-facing voucher history UI.
+      </q-banner>
+
       <div class="row items-center justify-between q-mb-md">
         <div>
           <h1 class="text-h4 q-mb-xs">Voucher History</h1>
