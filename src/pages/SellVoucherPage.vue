@@ -6,16 +6,16 @@
           <q-icon name="info" />
         </template>
 
-        This is a temporary Phase 2 cashier screen. It uses fake funding only
-        and does not send BCH yet.
+        Phase 3 has started. This screen now locks a real BCH/GBP quote before
+        confirmation, but funding is still fake and no BCH is sent yet.
       </q-banner>
 
       <q-card flat bordered>
         <q-card-section>
           <div class="text-h4 q-mb-xs">Sell BCH Voucher</div>
           <p class="text-grey-7 q-mb-none">
-            Enter the customer&apos;s cash amount to create a test BCH voucher
-            record.
+            Enter the customer&apos;s cash amount to review a real BCH quote and
+            create a test voucher record.
           </p>
         </q-card-section>
 
@@ -54,6 +54,11 @@
                     lastIssuedVoucher.fiatCurrency
                   )
                 }}
+              </div>
+
+              <div class="text-body2">
+                <strong>Estimated BCH loaded:</strong>
+                {{ formatBchSats(lastIssuedVoucher.finalBchSats) }}
               </div>
 
               <div class="text-body2">
@@ -99,9 +104,9 @@
       </q-banner>
 
       <SaleConfirmDialog
+        v-if="pendingPricing"
         v-model="isConfirmDialogOpen"
-        :fiat-amount-minor="pendingFiatAmountMinor"
-        :fiat-currency="pendingFiatCurrency"
+        :pricing="pendingPricing"
         :is-submitting="isSubmitting"
         @confirm="handleCreateDraftVoucher"
       />
@@ -124,8 +129,18 @@ import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
 import type { VoucherRecord } from 'src/types/voucher';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
-import { calculateFakeVoucherPricing } from 'src/services/voucher-pricing';
+import {
+  PricingService,
+  PricingUnavailableError,
+} from 'src/services/pricing-service';
+import {
+  calculateVoucherPricingFromLockedQuote,
+  formatBchSats,
+} from 'src/services/voucher-pricing';
 import { addVoucherRecord } from 'src/services/voucher-store';
+import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
+
+const pricingService = new PricingService();
 
 const isSubmitting = ref(false);
 const successMessage = ref('');
@@ -136,14 +151,15 @@ const isProgressDialogOpen = ref(false);
 
 const pendingFiatAmountMinor = ref(0);
 const pendingFiatCurrency = ref('GBP');
+const pendingPricing = ref<FakeVoucherPricingQuote | null>(null);
 
 const lastIssuedVoucher = ref<VoucherRecord | null>(null);
 
 const issueProgressSteps = ref<IssueProgressStep[]>([
   {
     key: 'quote',
-    label: 'Lock placeholder quote',
-    description: 'Preparing fake Phase 2 quote data.',
+    label: 'Use locked quote',
+    description: 'Use the BCH/GBP quote locked before confirmation.',
     status: 'pending',
   },
   {
@@ -155,13 +171,13 @@ const issueProgressSteps = ref<IssueProgressStep[]>([
   {
     key: 'funding',
     label: 'Simulate treasury funding',
-    description: 'No BCH is sent in Phase 2.',
+    description: 'No BCH is sent yet.',
     status: 'pending',
   },
   {
     key: 'store',
     label: 'Save voucher record',
-    description: 'Store the fake voucher in local browser storage.',
+    description: 'Store the test voucher in local browser storage.',
     status: 'pending',
   },
 ]);
@@ -188,13 +204,14 @@ function waitForFakeStep(milliseconds: number): Promise<void> {
   });
 }
 
-function handleReviewVoucher(
+async function handleReviewVoucher(
   fiatAmountMinor: number,
   fiatCurrency: string
-): void {
+): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
   lastIssuedVoucher.value = null;
+  pendingPricing.value = null;
 
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
     errorMessage.value = 'Enter a valid cash amount first.';
@@ -203,7 +220,30 @@ function handleReviewVoucher(
 
   pendingFiatAmountMinor.value = fiatAmountMinor;
   pendingFiatCurrency.value = fiatCurrency;
-  isConfirmDialogOpen.value = true;
+
+  isSubmitting.value = true;
+
+  try {
+    const lockedQuote = await pricingService.getLockedQuote(fiatCurrency);
+
+    pendingPricing.value = calculateVoucherPricingFromLockedQuote(
+      fiatAmountMinor,
+      lockedQuote
+    );
+
+    isConfirmDialogOpen.value = true;
+  } catch (error) {
+    console.error(error);
+
+    if (error instanceof PricingUnavailableError) {
+      errorMessage.value = error.message;
+    } else {
+      errorMessage.value =
+        'Could not fetch a valid price quote. Please try again.';
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 function handleResetLastIssuedVoucher(): void {
@@ -235,11 +275,9 @@ async function handleCreateDraftVoucher(): Promise<void> {
   errorMessage.value = '';
   lastIssuedVoucher.value = null;
 
-  if (
-    !Number.isFinite(pendingFiatAmountMinor.value) ||
-    pendingFiatAmountMinor.value <= 0
-  ) {
-    errorMessage.value = 'Enter a valid cash amount first.';
+  if (!pendingPricing.value) {
+    errorMessage.value =
+      'No locked quote is available. Please review the voucher again.';
     return;
   }
 
@@ -250,15 +288,10 @@ async function handleCreateDraftVoucher(): Promise<void> {
   try {
     await runFakeIssueProgress();
 
-    const pricing = calculateFakeVoucherPricing(
-      pendingFiatAmountMinor.value,
-      pendingFiatCurrency.value
-    );
-
     const voucher = createDraftVoucherRecord(
       pendingFiatAmountMinor.value,
       pendingFiatCurrency.value,
-      pricing
+      pendingPricing.value
     );
 
     await addVoucherRecord(voucher);
@@ -268,6 +301,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
     successMessage.value = '';
     lastIssuedVoucher.value = voucher;
+    pendingPricing.value = null;
     isProgressDialogOpen.value = false;
   } catch (error) {
     console.error(error);

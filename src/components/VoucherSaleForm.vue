@@ -15,7 +15,7 @@
     <q-card flat bordered class="bg-grey-1 q-mb-md">
       <q-card-section>
         <div class="text-subtitle1 text-weight-medium q-mb-sm">
-          Phase 2 placeholder pricing
+          Pricing preview
         </div>
 
         <div class="row q-col-gutter-md">
@@ -24,8 +24,8 @@
             <div class="text-body1">
               {{
                 formatMinorFiatAmount(
-                  pricing.customerPaysMinor,
-                  pricing.fiatCurrency
+                  previewPricing.customerPaysMinor,
+                  previewPricing.fiatCurrency
                 )
               }}
             </div>
@@ -34,24 +34,28 @@
           <div class="col-12 col-sm-6">
             <div class="text-caption text-grey-7">Service fee</div>
             <div class="text-body1">
-              {{ formatBasisPointsAsPercent(pricing.serviceFeeBasisPoints) }}
+              {{
+                formatBasisPointsAsPercent(previewPricing.serviceFeeBasisPoints)
+              }}
               —
               {{
                 formatMinorFiatAmount(
-                  pricing.serviceFeeAmountMinor,
-                  pricing.fiatCurrency
+                  previewPricing.serviceFeeAmountMinor,
+                  previewPricing.fiatCurrency
                 )
               }}
             </div>
           </div>
 
           <div class="col-12 col-sm-6">
-            <div class="text-caption text-grey-7">Voucher value</div>
+            <div class="text-caption text-grey-7">
+              Voucher value before quote
+            </div>
             <div class="text-body1">
               {{
                 formatMinorFiatAmount(
-                  pricing.voucherValueMinor,
-                  pricing.fiatCurrency
+                  previewPricing.voucherValueMinor,
+                  previewPricing.fiatCurrency
                 )
               }}
             </div>
@@ -59,12 +63,12 @@
 
           <div class="col-12 col-sm-6">
             <div class="text-caption text-grey-7">Quote source</div>
-            <div class="text-body1">Fake Phase 2 quote</div>
+            <div class="text-body1">Fetched after review</div>
           </div>
 
           <div class="col-12">
             <div class="text-caption text-grey-7">Funding</div>
-            <div class="text-body1">Fake only — no BCH sent</div>
+            <div class="text-body1">Fake only — no BCH sent yet</div>
           </div>
         </div>
       </q-card-section>
@@ -74,7 +78,7 @@
       <q-btn
         type="submit"
         color="primary"
-        label="Review Fake Voucher"
+        label="Review Voucher"
         :loading="isSubmitting"
         :disable="!canCreateVoucher"
       />
@@ -110,7 +114,7 @@ const canCreateVoucher = computed(() => {
   return Number.isFinite(fiatAmount.value) && fiatAmount.value > 0;
 });
 
-const pricing = computed(() =>
+const previewPricing = computed(() =>
   calculateFakeVoucherPricing(fiatAmountMinor.value, fiatCurrency)
 );
 

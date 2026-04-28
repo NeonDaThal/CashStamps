@@ -1,4 +1,4 @@
-import type { VoucherRecord } from 'src/types/voucher';
+import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
 function createVoucherId(): string {
@@ -8,17 +8,30 @@ function createVoucherId(): string {
 function createVoucherSerial(): string {
   const now = new Date();
 
-  const datePart = now.toISOString().slice(0, 10).replaceAll('-', '');
+  const datePart = now
+    .toISOString()
+    .slice(0, 10)
+    .replaceAll('-', '');
 
   const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
 
   return `BCHV-${datePart}-${randomPart}`;
 }
 
+function mapPricingQuoteSourceToVoucherQuoteSource(
+  source: FakeVoucherPricingQuote['quoteSource'],
+): VoucherQuoteSource {
+  if (source === 'fake_phase_2_quote') {
+    return 'manual';
+  }
+
+  return source;
+}
+
 export function createDraftVoucherRecord(
   fiatAmountMinor: number,
   fiatCurrency = 'GBP',
-  pricing?: FakeVoucherPricingQuote
+  pricing?: FakeVoucherPricingQuote,
 ): VoucherRecord {
   const now = new Date().toISOString();
 
@@ -32,28 +45,30 @@ export function createDraftVoucherRecord(
     fiatCurrency,
     fiatAmountMinor,
 
-    // Phase 2 placeholder values.
-    // These will become real BCH satoshi values in Phase 3.
-    marketBchSats: 0,
+    // These become real BCH satoshi values once a real locked quote is passed in.
+    marketBchSats: pricing?.marketBchSats ?? 0,
     fee: {
       type: 'percentage',
       basisPoints: pricing?.serviceFeeBasisPoints ?? 1000,
       amountMinor: pricing?.serviceFeeAmountMinor ?? 0,
-      description: 'Phase 2 placeholder service fee',
+      description: 'MVP service fee',
     },
-    finalBchSats: 0,
+    finalBchSats: pricing?.finalBchSats ?? 0,
 
     quote: {
-      source: pricing ? 'manual' : 'unknown',
+      source: pricing
+        ? mapPricingQuoteSourceToVoucherQuoteSource(pricing.quoteSource)
+        : 'unknown',
       fiatCurrency,
-      marketRate: 0,
+      marketRate: pricing?.marketRate ?? 0,
       marketRateTimestamp: pricing?.quoteTimestamp ?? now,
-      quoteLockedAt: pricing?.quoteTimestamp,
-      isFallbackQuote: false,
+      quoteLockedAt: pricing?.quoteLockedAt,
+      quoteExpiresAt: pricing?.quoteExpiresAt,
+      isFallbackQuote: pricing?.isFallbackQuote ?? false,
     },
 
     // Phase 1/2 placeholder values.
-    // Real derivation index and address are added in Phase 3.
+    // Real derivation index and address are added later in Phase 3.
     derivationIndex: -1,
     address: '',
 

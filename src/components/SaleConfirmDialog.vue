@@ -4,12 +4,12 @@
     persistent
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <q-card style="width: 520px; max-width: 95vw">
+    <q-card style="width: 560px; max-width: 95vw">
       <q-card-section>
-        <div class="text-h5">Confirm Fake Voucher Issue</div>
+        <div class="text-h5">Confirm Voucher Issue</div>
         <p class="text-grey-7 q-mb-none">
-          Review the placeholder Phase 2 pricing before creating this test
-          voucher.
+          Review the locked quote and pricing breakdown before creating this
+          test voucher.
         </p>
       </q-card-section>
 
@@ -63,23 +63,52 @@
 
           <q-item>
             <q-item-section>
+              <q-item-label caption>Market rate</q-item-label>
+              <q-item-label>
+                {{ formatMarketRate(pricing.marketRate, pricing.fiatCurrency) }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>Estimated BCH loaded</q-item-label>
+              <q-item-label>
+                {{ formatBchSats(pricing.finalBchSats) }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
               <q-item-label caption>Quote source</q-item-label>
-              <q-item-label>Fake Phase 2 quote</q-item-label>
+              <q-item-label>
+                {{ quoteSourceLabel }}
+                <span v-if="pricing.isFallbackQuote">(fallback)</span>
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item v-if="pricing.quoteExpiresAt">
+            <q-item-section>
+              <q-item-label caption>Quote expires</q-item-label>
+              <q-item-label>
+                {{ formatDateTime(pricing.quoteExpiresAt) }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
           <q-item>
             <q-item-section>
               <q-item-label caption>Funding mode</q-item-label>
-              <q-item-label>Fake only — no BCH will be sent</q-item-label>
+              <q-item-label>Fake only — no BCH will be sent yet</q-item-label>
             </q-item-section>
           </q-item>
         </q-list>
 
         <q-banner class="bg-orange-1 text-orange-10 q-mt-md" rounded>
-          This confirmation dialog is temporary. In later phases it will show
-          the locked quote, real BCH amount, funding transaction, and printer
-          status.
+          This still uses fake funding. The quote and BCH amount are real
+          pricing calculations, but treasury funding is added later in Phase 3.
         </q-banner>
       </q-card-section>
 
@@ -108,16 +137,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import {
-  calculateFakeVoucherPricing,
   formatBasisPointsAsPercent,
+  formatBchSats,
+  formatMarketRate,
   formatMinorFiatAmount,
 } from 'src/services/voucher-pricing';
 
 const props = defineProps<{
   modelValue: boolean;
-  fiatAmountMinor: number;
-  fiatCurrency: string;
+  pricing: FakeVoucherPricingQuote;
   isSubmitting: boolean;
 }>();
 
@@ -126,7 +156,21 @@ const emit = defineEmits<{
   confirm: [];
 }>();
 
-const pricing = computed(() =>
-  calculateFakeVoucherPricing(props.fiatAmountMinor, props.fiatCurrency)
-);
+const quoteSourceLabel = computed(() => {
+  const labels: Record<FakeVoucherPricingQuote['quoteSource'], string> = {
+    fake_phase_2_quote: 'Fake Phase 2 quote',
+    coingecko: 'CoinGecko',
+    cached: 'Cached quote',
+    general_protocols_oracle: 'General Protocols Oracle',
+  };
+
+  return labels[props.pricing.quoteSource];
+});
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'medium',
+  }).format(new Date(value));
+}
 </script>
