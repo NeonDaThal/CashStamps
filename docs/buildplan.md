@@ -617,6 +617,7 @@ Get the current CashStamps project running locally.
 - the repo structure is understood
 
 #### Done
+
 - fork created
 - repo cloned locally
 - upstream remote added
@@ -660,6 +661,8 @@ Create the voucher data model and local persistence layer.
 - quote metadata can be stored with each voucher record
 - last known good quote can be stored locally for later fallback use
 
+#### Status: Completed
+
 ---
 
 ### Phase 2 — Build Sell Voucher page with fake funding
@@ -692,6 +695,25 @@ Create the new cashier flow without real blockchain funding yet.
 - the confirm screen shows the rate being used
 - the confirm screen is structured to support quote timestamp / expiry display
 - the pricing flow is structured to support fallback logic later without redesigning the UI
+
+#### Status: complete
+
+Phase 2 is complete.
+
+The app now has a working fake cashier flow:
+
+- cashier can enter a GBP amount
+- app shows a placeholder pricing breakdown
+- app shows a 10% placeholder service fee
+- confirmation dialog appears before issuing
+- fake issue progress dialog simulates the future issue flow
+- voucher record is saved locally
+- voucher is marked as `funded` for Phase 2 simulation purposes
+- success panel appears after issue
+- voucher appears in history
+- fee details appear in history
+
+Note: Phase 2 does not yet use a real BCH market rate. The current “quote” is represented by fake Phase 2 quote metadata. Real pricing, quote locking, fallback quote handling, and real BCH amount calculation are handled in Phase 3.
 
 ---
 
