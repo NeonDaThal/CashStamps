@@ -48,6 +48,11 @@
         :is-submitting="isSubmitting"
         @confirm="handleCreateDraftVoucher"
       />
+
+      <IssueProgressDialog
+        v-model="isProgressDialogOpen"
+        :steps="issueProgressSteps"
+      />
     </div>
   </q-page>
 </template>
@@ -55,6 +60,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
+import IssueProgressDialog, {
+  type IssueProgressStep,
+} from 'src/components/IssueProgressDialog.vue';
 import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
@@ -65,8 +73,59 @@ const successMessage = ref('');
 const errorMessage = ref('');
 
 const isConfirmDialogOpen = ref(false);
+const isProgressDialogOpen = ref(false);
+
 const pendingFiatAmountMinor = ref(0);
 const pendingFiatCurrency = ref('GBP');
+
+const issueProgressSteps = ref<IssueProgressStep[]>([
+  {
+    key: 'quote',
+    label: 'Lock placeholder quote',
+    description: 'Preparing fake Phase 2 quote data.',
+    status: 'pending',
+  },
+  {
+    key: 'wallet',
+    label: 'Derive placeholder voucher wallet',
+    description: 'Real child wallet derivation is added later.',
+    status: 'pending',
+  },
+  {
+    key: 'funding',
+    label: 'Simulate treasury funding',
+    description: 'No BCH is sent in Phase 2.',
+    status: 'pending',
+  },
+  {
+    key: 'store',
+    label: 'Save voucher record',
+    description: 'Store the fake voucher in local browser storage.',
+    status: 'pending',
+  },
+]);
+
+function resetIssueProgressSteps(): void {
+  issueProgressSteps.value = issueProgressSteps.value.map((step) => ({
+    ...step,
+    status: 'pending',
+  }));
+}
+
+function setIssueProgressStepStatus(
+  key: string,
+  status: IssueProgressStep['status']
+): void {
+  issueProgressSteps.value = issueProgressSteps.value.map((step) =>
+    step.key === key ? { ...step, status } : step
+  );
+}
+
+function waitForFakeStep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+}
 
 function handleReviewVoucher(
   fiatAmountMinor: number,
@@ -85,6 +144,24 @@ function handleReviewVoucher(
   isConfirmDialogOpen.value = true;
 }
 
+async function runFakeIssueProgress(): Promise<void> {
+  resetIssueProgressSteps();
+
+  setIssueProgressStepStatus('quote', 'active');
+  await waitForFakeStep(350);
+  setIssueProgressStepStatus('quote', 'complete');
+
+  setIssueProgressStepStatus('wallet', 'active');
+  await waitForFakeStep(350);
+  setIssueProgressStepStatus('wallet', 'complete');
+
+  setIssueProgressStepStatus('funding', 'active');
+  await waitForFakeStep(350);
+  setIssueProgressStepStatus('funding', 'complete');
+
+  setIssueProgressStepStatus('store', 'active');
+}
+
 async function handleCreateDraftVoucher(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
@@ -98,8 +175,12 @@ async function handleCreateDraftVoucher(): Promise<void> {
   }
 
   isSubmitting.value = true;
+  isConfirmDialogOpen.value = false;
+  isProgressDialogOpen.value = true;
 
   try {
+    await runFakeIssueProgress();
+
     const voucher = createDraftVoucherRecord(
       pendingFiatAmountMinor.value,
       pendingFiatCurrency.value
@@ -107,16 +188,20 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
     await addVoucherRecord(voucher);
 
+    setIssueProgressStepStatus('store', 'complete');
+    await waitForFakeStep(300);
+
     const formattedFiatAmount = new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency: pendingFiatCurrency.value,
     }).format(pendingFiatAmountMinor.value / 100);
 
     successMessage.value = `Created fake voucher ${voucher.serial} for ${formattedFiatAmount}.`;
-    isConfirmDialogOpen.value = false;
+    isProgressDialogOpen.value = false;
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not create fake voucher.';
+    setIssueProgressStepStatus('store', 'error');
   } finally {
     isSubmitting.value = false;
   }
