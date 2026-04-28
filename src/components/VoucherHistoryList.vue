@@ -14,15 +14,25 @@
         </q-item-label>
 
         <q-item-label caption>
+          Customer pays:
           {{ formatFiatAmount(voucher.fiatAmountMinor, voucher.fiatCurrency) }}
-          · Status: {{ voucher.status }} · Created:
+          · Fee:
+          {{ formatFee(voucher) }}
+          · Status:
+          {{ voucher.status }}
+        </q-item-label>
+
+        <q-item-label caption>
+          Quote:
+          {{ formatQuoteSource(voucher.quote.source) }}
+          · Created:
           {{ formatDate(voucher.createdAt) }}
         </q-item-label>
       </q-item-section>
 
       <q-item-section side>
         <q-badge color="grey-8">
-          {{ voucher.quote.source }}
+          {{ formatQuoteSource(voucher.quote.source) }}
         </q-badge>
       </q-item-section>
     </q-item>
@@ -30,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import type { VoucherRecord } from 'src/types/voucher';
+import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 
 defineProps<{
   voucherRecords: VoucherRecord[];
@@ -41,6 +51,32 @@ function formatFiatAmount(amountMinor: number, currency: string): string {
     style: 'currency',
     currency,
   }).format(amountMinor / 100);
+}
+
+function formatFee(voucher: VoucherRecord): string {
+  if (voucher.fee.type === 'none') {
+    return 'None';
+  }
+
+  const feePercent = `${voucher.fee.basisPoints / 100}%`;
+  const feeAmount = formatFiatAmount(
+    voucher.fee.amountMinor,
+    voucher.fiatCurrency
+  );
+
+  return `${feePercent} / ${feeAmount}`;
+}
+
+function formatQuoteSource(source: VoucherQuoteSource): string {
+  const labels: Record<VoucherQuoteSource, string> = {
+    general_protocols_oracle: 'GP Oracle',
+    coingecko: 'CoinGecko',
+    cached: 'Cached',
+    manual: 'Manual',
+    unknown: 'Unknown',
+  };
+
+  return labels[source];
 }
 
 function formatDate(value: string): string {
