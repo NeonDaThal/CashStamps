@@ -99,6 +99,14 @@
         {{ successMessage }}
       </q-banner>
 
+      <q-banner
+        v-if="warningMessage"
+        class="bg-orange-1 text-orange-10 q-mt-md"
+        rounded
+      >
+        {{ warningMessage }}
+      </q-banner>
+
       <q-banner v-if="errorMessage" class="bg-red-1 text-red-9 q-mt-md" rounded>
         {{ errorMessage }}
       </q-banner>
@@ -144,6 +152,7 @@ const pricingService = new PricingService();
 
 const isSubmitting = ref(false);
 const successMessage = ref('');
+const warningMessage = ref('');
 const errorMessage = ref('');
 
 const isConfirmDialogOpen = ref(false);
@@ -182,6 +191,12 @@ const issueProgressSteps = ref<IssueProgressStep[]>([
   },
 ]);
 
+function clearMessages(): void {
+  successMessage.value = '';
+  warningMessage.value = '';
+  errorMessage.value = '';
+}
+
 function resetIssueProgressSteps(): void {
   issueProgressSteps.value = issueProgressSteps.value.map((step) => ({
     ...step,
@@ -208,8 +223,7 @@ async function handleReviewVoucher(
   fiatAmountMinor: number,
   fiatCurrency: string
 ): Promise<void> {
-  successMessage.value = '';
-  errorMessage.value = '';
+  clearMessages();
   lastIssuedVoucher.value = null;
   pendingPricing.value = null;
 
@@ -231,6 +245,13 @@ async function handleReviewVoucher(
       lockedQuote
     );
 
+    if (lockedQuote.isFallbackQuote) {
+      warningMessage.value =
+        'Live pricing was unavailable, so a recent cached quote is being used. Review the quote carefully before issuing.';
+    } else {
+      successMessage.value = 'Live price quote locked successfully.';
+    }
+
     isConfirmDialogOpen.value = true;
   } catch (error) {
     console.error(error);
@@ -239,7 +260,7 @@ async function handleReviewVoucher(
       errorMessage.value = error.message;
     } else {
       errorMessage.value =
-        'Could not fetch a valid price quote. Please try again.';
+        'Could not fetch a valid price quote. Please check the connection and try again.';
     }
   } finally {
     isSubmitting.value = false;
@@ -247,8 +268,7 @@ async function handleReviewVoucher(
 }
 
 function handleResetLastIssuedVoucher(): void {
-  successMessage.value = '';
-  errorMessage.value = '';
+  clearMessages();
   lastIssuedVoucher.value = null;
 }
 
@@ -271,8 +291,7 @@ async function runFakeIssueProgress(): Promise<void> {
 }
 
 async function handleCreateDraftVoucher(): Promise<void> {
-  successMessage.value = '';
-  errorMessage.value = '';
+  clearMessages();
   lastIssuedVoucher.value = null;
 
   if (!pendingPricing.value) {
@@ -299,7 +318,6 @@ async function handleCreateDraftVoucher(): Promise<void> {
     setIssueProgressStepStatus('store', 'complete');
     await waitForFakeStep(300);
 
-    successMessage.value = '';
     lastIssuedVoucher.value = voucher;
     pendingPricing.value = null;
     isProgressDialogOpen.value = false;
