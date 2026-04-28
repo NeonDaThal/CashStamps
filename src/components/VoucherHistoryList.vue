@@ -18,13 +18,18 @@
           {{ formatFiatAmount(voucher.fiatAmountMinor, voucher.fiatCurrency) }}
           · Fee:
           {{ formatFee(voucher) }}
+          · BCH loaded:
+          {{ formatBchSats(voucher.finalBchSats) }}
           · Status:
           {{ voucher.status }}
         </q-item-label>
 
         <q-item-label caption>
-          Quote:
+          Rate:
+          {{ formatMarketRate(voucher.quote.marketRate, voucher.fiatCurrency) }}
+          · Quote:
           {{ formatQuoteSource(voucher.quote.source) }}
+          <span v-if="voucher.quote.isFallbackQuote">(fallback)</span>
           · Created:
           {{ formatDate(voucher.createdAt) }}
         </q-item-label>
@@ -41,6 +46,7 @@
 
 <script setup lang="ts">
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
+import { formatBchSats, formatMarketRate } from 'src/services/voucher-pricing';
 
 defineProps<{
   voucherRecords: VoucherRecord[];
