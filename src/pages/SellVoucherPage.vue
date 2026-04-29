@@ -34,9 +34,29 @@
               <div v-if="treasuryWallet.isSetup">
                 <q-badge color="positive" class="q-mb-sm"> Set up </q-badge>
 
-                <div class="text-body2 text-break">
+                <div class="text-body2 text-break q-mb-xs">
                   <strong>Address:</strong>
                   {{ treasuryWallet.address }}
+                </div>
+
+                <div v-if="treasuryBalance" class="text-body2 q-mb-xs">
+                  <strong>Balance:</strong>
+                  {{ formatBchSats(treasuryBalance.balanceSats) }}
+                  / {{ treasuryBalance.balanceSats.toLocaleString() }} sats
+                </div>
+
+                <div v-if="treasuryBalance" class="text-body2 q-mb-xs">
+                  <strong>UTXOs:</strong>
+                  {{ treasuryBalance.utxoCount }}
+                </div>
+
+                <div v-if="treasuryBalance" class="text-caption text-grey-7">
+                  Last checked:
+                  {{ formatDateTime(treasuryBalance.checkedAt) }}
+                </div>
+
+                <div v-else class="text-body2 text-grey-7">
+                  Balance has not been checked yet.
                 </div>
               </div>
 
@@ -50,12 +70,21 @@
               </div>
             </div>
 
-            <div class="col-auto">
+            <div class="col-auto column q-gutter-sm">
               <q-btn
                 flat
                 color="primary"
                 label="Treasury Settings"
                 to="/treasury-settings"
+              />
+
+              <q-btn
+                v-if="treasuryWallet.isSetup"
+                outline
+                color="secondary"
+                label="Refresh Balance"
+                :loading="isCheckingTreasuryBalance"
+                @click="handleRefreshTreasuryBalance"
               />
             </div>
           </div>
@@ -187,7 +216,10 @@ import IssueProgressDialog, {
 } from 'src/components/IssueProgressDialog.vue';
 import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
-import type { TreasuryWalletPublicInfo } from 'src/types/treasury';
+import type {
+  TreasuryWalletBalance,
+  TreasuryWalletPublicInfo,
+} from 'src/types/treasury';
 import type { VoucherRecord } from 'src/types/voucher';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import {
@@ -198,7 +230,10 @@ import {
   calculateVoucherPricingFromLockedQuote,
   formatBchSats,
 } from 'src/services/voucher-pricing';
-import { getTreasuryWalletPublicInfo } from 'src/services/treasury-wallet';
+import {
+  getTreasuryWalletBalance,
+  getTreasuryWalletPublicInfo,
+} from 'src/services/treasury-wallet';
 import { addVoucherRecord } from 'src/services/voucher-store';
 import { deriveNextVoucherAddress } from 'src/services/voucher-wallet';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
@@ -206,6 +241,7 @@ import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 const pricingService = new PricingService();
 
 const isSubmitting = ref(false);
+const isCheckingTreasuryBalance = ref(false);
 const successMessage = ref('');
 const warningMessage = ref('');
 const errorMessage = ref('');
@@ -225,6 +261,8 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   updatedAt: '',
   isSetup: false,
 });
+
+const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
 
 const issueProgressSteps = ref<IssueProgressStep[]>([
   {
@@ -256,9 +294,29 @@ const issueProgressSteps = ref<IssueProgressStep[]>([
 async function loadTreasuryWallet(): Promise<void> {
   try {
     treasuryWallet.value = await getTreasuryWalletPublicInfo();
+
+    if (!treasuryWallet.value.isSetup) {
+      treasuryBalance.value = null;
+    }
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not load treasury wallet status.';
+  }
+}
+
+async function handleRefreshTreasuryBalance(): Promise<void> {
+  clearMessages();
+  isCheckingTreasuryBalance.value = true;
+
+  try {
+    treasuryBalance.value = await getTreasuryWalletBalance();
+    successMessage.value = 'Treasury balance refreshed.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value =
+      'Could not refresh treasury balance. Check your connection and try again.';
+  } finally {
+    isCheckingTreasuryBalance.value = false;
   }
 }
 
@@ -421,6 +479,13 @@ function formatFiatAmount(amountMinor: number, currency: string): string {
     style: 'currency',
     currency,
   }).format(amountMinor / 100);
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'medium',
+  }).format(new Date(value));
 }
 
 onMounted(() => {
