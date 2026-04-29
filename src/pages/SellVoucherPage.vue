@@ -21,6 +21,47 @@
         real funds are used.
       </q-banner>
 
+      <q-card flat bordered class="q-mb-md">
+        <q-card-section>
+          <div class="row items-start q-col-gutter-md">
+            <div class="col">
+              <div class="text-h6">Treasury wallet status</div>
+
+              <p class="text-grey-7 q-mb-sm">
+                The treasury wallet will later fund issued BCH vouchers.
+              </p>
+
+              <div v-if="treasuryWallet.isSetup">
+                <q-badge color="positive" class="q-mb-sm"> Set up </q-badge>
+
+                <div class="text-body2 text-break">
+                  <strong>Address:</strong>
+                  {{ treasuryWallet.address }}
+                </div>
+              </div>
+
+              <div v-else>
+                <q-badge color="grey-7" class="q-mb-sm"> Not set up </q-badge>
+
+                <div class="text-body2 text-grey-7">
+                  Create a local test treasury wallet before real funding is
+                  added.
+                </div>
+              </div>
+            </div>
+
+            <div class="col-auto">
+              <q-btn
+                flat
+                color="primary"
+                label="Treasury Settings"
+                to="/treasury-settings"
+              />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+
       <q-card flat bordered>
         <q-card-section>
           <div class="text-h4 q-mb-xs">Sell BCH Voucher</div>
@@ -139,13 +180,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 import IssueProgressDialog, {
   type IssueProgressStep,
 } from 'src/components/IssueProgressDialog.vue';
 import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
+import type { TreasuryWalletPublicInfo } from 'src/types/treasury';
 import type { VoucherRecord } from 'src/types/voucher';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import {
@@ -156,6 +198,7 @@ import {
   calculateVoucherPricingFromLockedQuote,
   formatBchSats,
 } from 'src/services/voucher-pricing';
+import { getTreasuryWalletPublicInfo } from 'src/services/treasury-wallet';
 import { addVoucherRecord } from 'src/services/voucher-store';
 import { deriveNextVoucherAddress } from 'src/services/voucher-wallet';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
@@ -176,6 +219,13 @@ const pendingPricing = ref<FakeVoucherPricingQuote | null>(null);
 
 const lastIssuedVoucher = ref<VoucherRecord | null>(null);
 
+const treasuryWallet = ref<TreasuryWalletPublicInfo>({
+  address: '',
+  createdAt: '',
+  updatedAt: '',
+  isSetup: false,
+});
+
 const issueProgressSteps = ref<IssueProgressStep[]>([
   {
     key: 'quote',
@@ -185,8 +235,8 @@ const issueProgressSteps = ref<IssueProgressStep[]>([
   },
   {
     key: 'wallet',
-    label: 'Derive placeholder voucher wallet',
-    description: 'Real child wallet derivation is added later.',
+    label: 'Derive voucher wallet',
+    description: 'Derive a fresh voucher address for this sale.',
     status: 'pending',
   },
   {
@@ -202,6 +252,15 @@ const issueProgressSteps = ref<IssueProgressStep[]>([
     status: 'pending',
   },
 ]);
+
+async function loadTreasuryWallet(): Promise<void> {
+  try {
+    treasuryWallet.value = await getTreasuryWalletPublicInfo();
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = 'Could not load treasury wallet status.';
+  }
+}
 
 function clearMessages(): void {
   successMessage.value = '';
@@ -238,6 +297,13 @@ async function handleReviewVoucher(
   clearMessages();
   lastIssuedVoucher.value = null;
   pendingPricing.value = null;
+
+  await loadTreasuryWallet();
+
+  if (!treasuryWallet.value.isSetup) {
+    warningMessage.value =
+      'No treasury wallet is set up yet. You can continue fake testing, but real funding will require a treasury wallet.';
+  }
 
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
     errorMessage.value = 'Enter a valid cash amount first.';
@@ -339,6 +405,8 @@ async function handleCreateDraftVoucher(): Promise<void> {
     lastIssuedVoucher.value = voucher;
     pendingPricing.value = null;
     isProgressDialogOpen.value = false;
+
+    await loadTreasuryWallet();
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not create fake voucher.';
@@ -354,4 +422,8 @@ function formatFiatAmount(amountMinor: number, currency: string): string {
     currency,
   }).format(amountMinor / 100);
 }
+
+onMounted(() => {
+  void loadTreasuryWallet();
+});
 </script>
