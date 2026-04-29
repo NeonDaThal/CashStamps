@@ -143,6 +143,16 @@
               </div>
 
               <div class="text-body2">
+                <strong>Voucher address:</strong>
+                {{ lastIssuedVoucher.address }}
+              </div>
+
+              <div class="text-body2">
+                <strong>Derivation index:</strong>
+                {{ lastIssuedVoucher.derivationIndex }}
+              </div>
+
+              <div class="text-body2">
                 <strong>Status:</strong>
                 {{ lastIssuedVoucher.status }}
               </div>
@@ -240,7 +250,10 @@ import {
   getTreasuryWalletPublicInfo,
 } from 'src/services/treasury-wallet';
 import { addVoucherRecord } from 'src/services/voucher-store';
-import { deriveNextVoucherAddress } from 'src/services/voucher-wallet';
+import {
+  deriveNextVoucherAddress,
+  type DerivedVoucherAddress,
+} from 'src/services/voucher-wallet';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
 const pricingService = new PricingService();
@@ -258,6 +271,7 @@ const pendingFiatAmountMinor = ref(0);
 const pendingFiatCurrency = ref('GBP');
 const pendingPricing = ref<FakeVoucherPricingQuote | null>(null);
 const pendingTreasuryFundingPreview = ref<TreasuryFundingPreview | null>(null);
+const pendingVoucherAddress = ref<DerivedVoucherAddress | null>(null);
 
 const lastIssuedVoucher = ref<VoucherRecord | null>(null);
 
@@ -301,8 +315,8 @@ const issueProgressSteps = ref<IssueProgressStep[]>([
   },
   {
     key: 'wallet',
-    label: 'Derive voucher wallet',
-    description: 'Derive a fresh voucher address for this sale.',
+    label: 'Use derived voucher wallet',
+    description: 'Use the voucher address prepared before confirmation.',
     status: 'pending',
   },
   {
@@ -384,6 +398,7 @@ async function handleReviewVoucher(
   lastIssuedVoucher.value = null;
   pendingPricing.value = null;
   pendingTreasuryFundingPreview.value = null;
+  pendingVoucherAddress.value = null;
 
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
     errorMessage.value = 'Enter a valid cash amount first.';
@@ -416,10 +431,12 @@ async function handleReviewVoucher(
       lockedQuote
     );
 
+    pendingVoucherAddress.value = await deriveNextVoucherAddress();
+
     if (treasuryWallet.value.isSetup && treasuryWallet.value.address) {
       pendingTreasuryFundingPreview.value = createTreasuryFundingPreview({
         treasuryAddress: treasuryWallet.value.address,
-        voucherAddress: 'To be derived after confirmation',
+        voucherAddress: pendingVoucherAddress.value.address,
         amountSats: pendingPricing.value.finalBchSats,
         treasuryBalanceSats: treasuryBalance.value?.balanceSats ?? 0,
         treasuryUtxoCount: treasuryBalance.value?.utxoCount ?? 0,
@@ -441,7 +458,7 @@ async function handleReviewVoucher(
       errorMessage.value = error.message;
     } else {
       errorMessage.value =
-        'Could not fetch a valid price quote. Please check the connection and try again.';
+        'Could not prepare voucher review. Please check the connection and try again.';
     }
   } finally {
     isSubmitting.value = false;
@@ -481,6 +498,12 @@ async function handleCreateDraftVoucher(): Promise<void> {
     return;
   }
 
+  if (!pendingVoucherAddress.value) {
+    errorMessage.value =
+      'No voucher address is available. Please review the voucher again.';
+    return;
+  }
+
   isSubmitting.value = true;
   isConfirmDialogOpen.value = false;
   isProgressDialogOpen.value = true;
@@ -488,15 +511,13 @@ async function handleCreateDraftVoucher(): Promise<void> {
   try {
     await runFakeIssueProgress();
 
-    const derivedVoucherAddress = await deriveNextVoucherAddress();
-
     const voucher = createDraftVoucherRecord(
       pendingFiatAmountMinor.value,
       pendingFiatCurrency.value,
       pendingPricing.value,
       {
-        derivationIndex: derivedVoucherAddress.derivationIndex,
-        address: derivedVoucherAddress.address,
+        derivationIndex: pendingVoucherAddress.value.derivationIndex,
+        address: pendingVoucherAddress.value.address,
       }
     );
 
@@ -508,6 +529,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
     lastIssuedVoucher.value = voucher;
     pendingPricing.value = null;
     pendingTreasuryFundingPreview.value = null;
+    pendingVoucherAddress.value = null;
     isProgressDialogOpen.value = false;
 
     await loadTreasuryWallet();
