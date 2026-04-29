@@ -39,6 +39,18 @@
           <span v-else> Live price quote locked successfully. </span>
         </q-banner>
 
+        <q-banner
+          v-if="treasuryWarning"
+          class="bg-orange-1 text-orange-10 q-mb-md"
+          rounded
+        >
+          <template #avatar>
+            <q-icon name="warning" />
+          </template>
+
+          {{ treasuryWarning }}
+        </q-banner>
+
         <q-list dense>
           <q-item>
             <q-item-section>
@@ -100,6 +112,15 @@
               <q-item-label caption>Estimated BCH loaded</q-item-label>
               <q-item-label>
                 {{ formatBchSats(pricing.finalBchSats) }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item v-if="treasuryBalanceSats !== undefined">
+            <q-item-section>
+              <q-item-label caption>Treasury balance</q-item-label>
+              <q-item-label>
+                {{ formatBchSats(treasuryBalanceSats) }}
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -200,6 +221,8 @@ const props = defineProps<{
   modelValue: boolean;
   pricing: FakeVoucherPricingQuote;
   isSubmitting: boolean;
+  treasuryWarning?: string;
+  treasuryBalanceSats?: number;
 }>();
 
 const emit = defineEmits<{

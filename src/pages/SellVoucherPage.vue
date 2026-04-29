@@ -197,6 +197,8 @@
         v-model="isConfirmDialogOpen"
         :pricing="pendingPricing"
         :is-submitting="isSubmitting"
+        :treasury-warning="treasuryWarning"
+        :treasury-balance-sats="treasuryBalance?.balanceSats"
         @confirm="handleCreateDraftVoucher"
       />
 
@@ -209,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import IssueProgressDialog, {
   type IssueProgressStep,
@@ -263,6 +265,28 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
 });
 
 const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
+
+const treasuryWarning = computed(() => {
+  if (!pendingPricing.value) {
+    return '';
+  }
+
+  if (!treasuryWallet.value.isSetup) {
+    return 'Treasury wallet is not set up. Fake issuing can continue, but real funding will be blocked until a treasury wallet exists.';
+  }
+
+  if (!treasuryBalance.value) {
+    return 'Treasury balance has not been checked. Fake issuing can continue, but real funding will require a fresh balance check.';
+  }
+
+  if (treasuryBalance.value.balanceSats < pendingPricing.value.finalBchSats) {
+    return `Treasury balance is too low for this voucher. Required: ${formatBchSats(
+      pendingPricing.value.finalBchSats
+    )}. Available: ${formatBchSats(treasuryBalance.value.balanceSats)}.`;
+  }
+
+  return '';
+});
 
 const issueProgressSteps = ref<IssueProgressStep[]>([
   {
@@ -356,13 +380,6 @@ async function handleReviewVoucher(
   lastIssuedVoucher.value = null;
   pendingPricing.value = null;
 
-  await loadTreasuryWallet();
-
-  if (!treasuryWallet.value.isSetup) {
-    warningMessage.value =
-      'No treasury wallet is set up yet. You can continue fake testing, but real funding will require a treasury wallet.';
-  }
-
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
     errorMessage.value = 'Enter a valid cash amount first.';
     return;
@@ -374,6 +391,19 @@ async function handleReviewVoucher(
   isSubmitting.value = true;
 
   try {
+    await loadTreasuryWallet();
+
+    if (treasuryWallet.value.isSetup) {
+      try {
+        treasuryBalance.value = await getTreasuryWalletBalance();
+      } catch (error) {
+        console.error(error);
+        treasuryBalance.value = null;
+        warningMessage.value =
+          'Treasury balance could not be checked. Fake issuing can continue, but real funding will require a fresh balance check.';
+      }
+    }
+
     const lockedQuote = await pricingService.getLockedQuote(fiatCurrency);
 
     pendingPricing.value = calculateVoucherPricingFromLockedQuote(
@@ -384,7 +414,7 @@ async function handleReviewVoucher(
     if (lockedQuote.isFallbackQuote) {
       warningMessage.value =
         'Live pricing was unavailable, so a recent cached quote is being used. Review the quote carefully before issuing.';
-    } else {
+    } else if (!warningMessage.value) {
       successMessage.value = 'Live price quote locked successfully.';
     }
 
