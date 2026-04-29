@@ -199,6 +199,7 @@
         :is-submitting="isSubmitting"
         :treasury-warning="treasuryWarning"
         :treasury-balance-sats="treasuryBalance?.balanceSats"
+        :treasury-funding-preview="pendingTreasuryFundingPreview"
         @confirm="handleCreateDraftVoucher"
       />
 
@@ -222,6 +223,8 @@ import type {
   TreasuryWalletBalance,
   TreasuryWalletPublicInfo,
 } from 'src/types/treasury';
+import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
+import { createTreasuryFundingPreview } from 'src/services/treasury-funding';
 import type { VoucherRecord } from 'src/types/voucher';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import {
@@ -254,6 +257,7 @@ const isProgressDialogOpen = ref(false);
 const pendingFiatAmountMinor = ref(0);
 const pendingFiatCurrency = ref('GBP');
 const pendingPricing = ref<FakeVoucherPricingQuote | null>(null);
+const pendingTreasuryFundingPreview = ref<TreasuryFundingPreview | null>(null);
 
 const lastIssuedVoucher = ref<VoucherRecord | null>(null);
 
@@ -379,6 +383,7 @@ async function handleReviewVoucher(
   clearMessages();
   lastIssuedVoucher.value = null;
   pendingPricing.value = null;
+  pendingTreasuryFundingPreview.value = null;
 
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
     errorMessage.value = 'Enter a valid cash amount first.';
@@ -410,6 +415,16 @@ async function handleReviewVoucher(
       fiatAmountMinor,
       lockedQuote
     );
+
+    if (treasuryWallet.value.isSetup && treasuryWallet.value.address) {
+      pendingTreasuryFundingPreview.value = createTreasuryFundingPreview({
+        treasuryAddress: treasuryWallet.value.address,
+        voucherAddress: 'To be derived after confirmation',
+        amountSats: pendingPricing.value.finalBchSats,
+        treasuryBalanceSats: treasuryBalance.value?.balanceSats ?? 0,
+        treasuryUtxoCount: treasuryBalance.value?.utxoCount ?? 0,
+      });
+    }
 
     if (lockedQuote.isFallbackQuote) {
       warningMessage.value =
@@ -492,6 +507,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
     lastIssuedVoucher.value = voucher;
     pendingPricing.value = null;
+    pendingTreasuryFundingPreview.value = null;
     isProgressDialogOpen.value = false;
 
     await loadTreasuryWallet();

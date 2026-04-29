@@ -4,7 +4,7 @@
     persistent
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <q-card style="width: 560px; max-width: 95vw">
+    <q-card style="width: 620px; max-width: 95vw">
       <q-card-section>
         <div class="text-h5">Confirm Voucher Issue</div>
         <p class="text-grey-7 q-mb-none">
@@ -125,6 +125,108 @@
             </q-item-section>
           </q-item>
 
+          <q-separator spaced />
+
+          <q-item-label header> Dry-run treasury funding preview </q-item-label>
+
+          <template v-if="treasuryFundingPreview">
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Treasury address</q-item-label>
+                <q-item-label class="text-break">
+                  {{ treasuryFundingPreview.treasuryAddress }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Voucher address</q-item-label>
+                <q-item-label class="text-break">
+                  {{ treasuryFundingPreview.voucherAddress }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Amount to send</q-item-label>
+                <q-item-label>
+                  {{ formatBchSats(treasuryFundingPreview.amountSats) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Estimated network fee</q-item-label>
+                <q-item-label>
+                  {{ formatBchSats(treasuryFundingPreview.estimatedFeeSats) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Estimated total required</q-item-label>
+                <q-item-label>
+                  {{
+                    formatBchSats(
+                      treasuryFundingPreview.estimatedTotalRequiredSats
+                    )
+                  }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Estimated change</q-item-label>
+                <q-item-label>
+                  {{
+                    formatBchSats(treasuryFundingPreview.estimatedChangeSats)
+                  }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-banner
+              :class="
+                treasuryFundingPreview.isAffordable
+                  ? 'bg-green-1 text-green-10'
+                  : 'bg-red-1 text-red-10'
+              "
+              rounded
+              class="q-mt-sm q-mb-md"
+            >
+              <template #avatar>
+                <q-icon
+                  :name="
+                    treasuryFundingPreview.isAffordable
+                      ? 'check_circle'
+                      : 'warning'
+                  "
+                />
+              </template>
+
+              <span v-if="treasuryFundingPreview.isAffordable">
+                Treasury appears affordable for this voucher in dry-run preview.
+              </span>
+
+              <span v-else>
+                Treasury does not appear affordable for this voucher in dry-run
+                preview.
+              </span>
+            </q-banner>
+          </template>
+
+          <q-banner v-else class="bg-grey-2 text-grey-9 q-mb-md" rounded>
+            Treasury funding preview is not available yet. Set up a treasury
+            wallet and refresh/check balance before real funding is enabled.
+          </q-banner>
+
+          <q-separator spaced />
+
           <q-item>
             <q-item-section>
               <q-item-label caption>Quote source</q-item-label>
@@ -179,8 +281,9 @@
         </q-list>
 
         <q-banner class="bg-orange-1 text-orange-10 q-mt-md" rounded>
-          This still uses fake funding. The quote and BCH amount are real
-          pricing calculations, but treasury funding is added later in Phase 3.
+          This is still a dry-run only. No transaction is built, signed, or
+          broadcast yet. Real treasury funding will be added after this preview
+          layer is correct.
         </q-banner>
       </q-card-section>
 
@@ -209,6 +312,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import {
   formatBasisPointsAsPercent,
@@ -223,6 +327,7 @@ const props = defineProps<{
   isSubmitting: boolean;
   treasuryWarning?: string;
   treasuryBalanceSats?: number;
+  treasuryFundingPreview?: TreasuryFundingPreview | null;
 }>();
 
 const emit = defineEmits<{
