@@ -25,6 +25,13 @@
         </q-item-label>
 
         <q-item-label caption>
+          Address:
+          {{ voucher.address || 'Not derived yet' }}
+          · Index:
+          {{ voucher.derivationIndex }}
+        </q-item-label>
+
+        <q-item-label caption>
           Rate:
           {{ formatMarketRate(voucher.quote.marketRate, voucher.fiatCurrency) }}
           · Quote:

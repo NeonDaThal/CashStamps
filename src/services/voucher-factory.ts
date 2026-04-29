@@ -1,6 +1,11 @@
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
+export interface VoucherAddressData {
+  derivationIndex: number;
+  address: string;
+}
+
 function createVoucherId(): string {
   return `voucher-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -8,10 +13,7 @@ function createVoucherId(): string {
 function createVoucherSerial(): string {
   const now = new Date();
 
-  const datePart = now
-    .toISOString()
-    .slice(0, 10)
-    .replaceAll('-', '');
+  const datePart = now.toISOString().slice(0, 10).replaceAll('-', '');
 
   const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
 
@@ -19,7 +21,7 @@ function createVoucherSerial(): string {
 }
 
 function mapPricingQuoteSourceToVoucherQuoteSource(
-  source: FakeVoucherPricingQuote['quoteSource'],
+  source: FakeVoucherPricingQuote['quoteSource']
 ): VoucherQuoteSource {
   if (source === 'fake_phase_2_quote') {
     return 'manual';
@@ -32,6 +34,7 @@ export function createDraftVoucherRecord(
   fiatAmountMinor: number,
   fiatCurrency = 'GBP',
   pricing?: FakeVoucherPricingQuote,
+  addressData?: VoucherAddressData
 ): VoucherRecord {
   const now = new Date().toISOString();
 
@@ -67,10 +70,8 @@ export function createDraftVoucherRecord(
       isFallbackQuote: pricing?.isFallbackQuote ?? false,
     },
 
-    // Phase 1/2 placeholder values.
-    // Real derivation index and address are added later in Phase 3.
-    derivationIndex: -1,
-    address: '',
+    derivationIndex: addressData?.derivationIndex ?? -1,
+    address: addressData?.address ?? '',
 
     status: pricing ? 'funded' : 'draft',
   };

@@ -146,6 +146,7 @@ import {
   formatBchSats,
 } from 'src/services/voucher-pricing';
 import { addVoucherRecord } from 'src/services/voucher-store';
+import { deriveNextVoucherAddress } from 'src/services/voucher-wallet';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
 const pricingService = new PricingService();
@@ -307,11 +308,17 @@ async function handleCreateDraftVoucher(): Promise<void> {
   try {
     await runFakeIssueProgress();
 
-    const voucher = createDraftVoucherRecord(
-      pendingFiatAmountMinor.value,
-      pendingFiatCurrency.value,
-      pendingPricing.value
-    );
+    const derivedVoucherAddress = await deriveNextVoucherAddress();
+
+const voucher = createDraftVoucherRecord(
+  pendingFiatAmountMinor.value,
+  pendingFiatCurrency.value,
+  pendingPricing.value,
+  {
+    derivationIndex: derivedVoucherAddress.derivationIndex,
+    address: derivedVoucherAddress.address,
+  },
+);
 
     await addVoucherRecord(voucher);
 
