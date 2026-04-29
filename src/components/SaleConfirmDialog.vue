@@ -16,6 +16,29 @@
       <q-separator />
 
       <q-card-section>
+        <q-banner
+          :class="
+            pricing.isFallbackQuote
+              ? 'bg-orange-1 text-orange-10'
+              : 'bg-green-1 text-green-10'
+          "
+          rounded
+          class="q-mb-md"
+        >
+          <template #avatar>
+            <q-icon
+              :name="pricing.isFallbackQuote ? 'warning' : 'check_circle'"
+            />
+          </template>
+
+          <span v-if="pricing.isFallbackQuote">
+            Live pricing was unavailable, so a recent cached quote is being
+            used. Review the quote carefully before issuing.
+          </span>
+
+          <span v-else> Live price quote locked successfully. </span>
+        </q-banner>
+
         <q-list dense>
           <q-item>
             <q-item-section>
