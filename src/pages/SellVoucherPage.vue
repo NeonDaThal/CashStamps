@@ -10,6 +10,17 @@
         confirmation, but funding is still fake and no BCH is sent yet.
       </q-banner>
 
+      <q-banner class="bg-orange-1 text-orange-10 q-mb-md" rounded>
+        <template #avatar>
+          <q-icon name="warning" />
+        </template>
+
+        Development note: voucher addresses are now derived from a local test
+        mnemonic stored in browser storage. This is acceptable for MVP testing
+        only. Secure storage and merchant wallet setup will be hardened before
+        real funds are used.
+      </q-banner>
+
       <q-card flat bordered>
         <q-card-section>
           <div class="text-h4 q-mb-xs">Sell BCH Voucher</div>
@@ -310,15 +321,15 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
     const derivedVoucherAddress = await deriveNextVoucherAddress();
 
-const voucher = createDraftVoucherRecord(
-  pendingFiatAmountMinor.value,
-  pendingFiatCurrency.value,
-  pendingPricing.value,
-  {
-    derivationIndex: derivedVoucherAddress.derivationIndex,
-    address: derivedVoucherAddress.address,
-  },
-);
+    const voucher = createDraftVoucherRecord(
+      pendingFiatAmountMinor.value,
+      pendingFiatCurrency.value,
+      pendingPricing.value,
+      {
+        derivationIndex: derivedVoucherAddress.derivationIndex,
+        address: derivedVoucherAddress.address,
+      }
+    );
 
     await addVoucherRecord(voucher);
 
