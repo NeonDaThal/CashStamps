@@ -1,8 +1,10 @@
 import { generateBip39Mnemonic } from '@bitauth/libauth';
 import { del, get, set } from 'idb-keyval';
 
+import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
 import type {
+  TreasuryWalletBalance,
   TreasuryWalletPublicInfo,
   TreasuryWalletRecord,
 } from 'src/types/treasury';
@@ -31,6 +33,20 @@ async function deriveTreasuryAddressFromMnemonic(
   }
 
   return wallet.getAddress();
+}
+
+async function deriveTreasuryWalletWithElectrum(
+  mnemonic: string,
+  electrum: ElectrumService
+) {
+  const walletHd = await WalletHD.fromMnemonic(mnemonic, electrum);
+  const [wallet] = walletHd.deriveWallets(1, 0);
+
+  if (!wallet) {
+    throw new Error('Could not derive treasury wallet.');
+  }
+
+  return wallet;
 }
 
 export async function getTreasuryWalletRecord(): Promise<
@@ -84,6 +100,31 @@ export async function createTreasuryWallet(): Promise<TreasuryWalletPublicInfo> 
     createdAt: now,
     updatedAt: now,
     isSetup: true,
+  };
+}
+
+export async function getTreasuryWalletBalance(): Promise<TreasuryWalletBalance> {
+  const treasuryWallet = await getTreasuryWalletRecord();
+
+  if (!treasuryWallet) {
+    throw new Error('Treasury wallet is not set up.');
+  }
+
+  const electrum = new ElectrumService(ELECTRUM_SERVERS);
+  await electrum.start();
+
+  const wallet = await deriveTreasuryWalletWithElectrum(
+    treasuryWallet.mnemonic,
+    electrum
+  );
+
+  const unspentOutputs = await wallet.getUnspentOutputs();
+
+  return {
+    address: wallet.getAddress(),
+    balanceSats: wallet.balance.value,
+    utxoCount: unspentOutputs.length,
+    checkedAt: new Date().toISOString(),
   };
 }
 

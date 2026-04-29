@@ -65,6 +65,34 @@
               </q-item-section>
             </q-item>
 
+            <q-item v-if="treasuryBalance">
+              <q-item-section>
+                <q-item-label caption>Balance</q-item-label>
+                <q-item-label>
+                  {{ formatBchSats(treasuryBalance.balanceSats) }}
+                  / {{ treasuryBalance.balanceSats.toLocaleString() }} sats
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="treasuryBalance">
+              <q-item-section>
+                <q-item-label caption>UTXOs</q-item-label>
+                <q-item-label>
+                  {{ treasuryBalance.utxoCount }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="treasuryBalance">
+              <q-item-section>
+                <q-item-label caption>Balance checked</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(treasuryBalance.checkedAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
             <q-item v-if="treasuryWallet.createdAt">
               <q-item-section>
                 <q-item-label caption>Created</q-item-label>
@@ -95,6 +123,15 @@
             label="Clear Test Treasury Wallet"
             :loading="isSubmitting"
             @click="handleClearTreasuryWallet"
+          />
+
+          <q-btn
+            v-if="treasuryWallet.isSetup"
+            color="secondary"
+            outline
+            label="Refresh Balance"
+            :loading="isCheckingBalance"
+            @click="handleRefreshBalance"
           />
 
           <q-btn
@@ -129,12 +166,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 
-import type { TreasuryWalletPublicInfo } from 'src/types/treasury';
+import type {
+  TreasuryWalletBalance,
+  TreasuryWalletPublicInfo,
+} from 'src/types/treasury';
 import {
   clearTreasuryWallet,
   createTreasuryWallet,
+  getTreasuryWalletBalance,
   getTreasuryWalletPublicInfo,
 } from 'src/services/treasury-wallet';
+import { formatBchSats } from 'src/services/voucher-pricing';
 
 const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   address: '',
@@ -143,7 +185,10 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   isSetup: false,
 });
 
+const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
+
 const isSubmitting = ref(false);
+const isCheckingBalance = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
@@ -161,6 +206,7 @@ async function loadTreasuryWallet(): Promise<void> {
 async function handleCreateTreasuryWallet(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
+  treasuryBalance.value = null;
   isSubmitting.value = true;
 
   try {
@@ -177,6 +223,7 @@ async function handleCreateTreasuryWallet(): Promise<void> {
 async function handleClearTreasuryWallet(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
+  treasuryBalance.value = null;
   isSubmitting.value = true;
 
   try {
@@ -188,6 +235,23 @@ async function handleClearTreasuryWallet(): Promise<void> {
     errorMessage.value = 'Could not clear treasury wallet.';
   } finally {
     isSubmitting.value = false;
+  }
+}
+
+async function handleRefreshBalance(): Promise<void> {
+  successMessage.value = '';
+  errorMessage.value = '';
+  isCheckingBalance.value = true;
+
+  try {
+    treasuryBalance.value = await getTreasuryWalletBalance();
+    successMessage.value = 'Treasury balance refreshed.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value =
+      'Could not refresh treasury balance. Check your connection and try again.';
+  } finally {
+    isCheckingBalance.value = false;
   }
 }
 

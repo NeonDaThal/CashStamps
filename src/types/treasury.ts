@@ -11,3 +11,10 @@ export interface TreasuryWalletPublicInfo {
   updatedAt: string;
   isSetup: boolean;
 }
+
+export interface TreasuryWalletBalance {
+  address: string;
+  balanceSats: number;
+  utxoCount: number;
+  checkedAt: string;
+}
