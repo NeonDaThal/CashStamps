@@ -32,6 +32,33 @@
         </q-item-label>
 
         <q-item-label caption>
+          Funding preview:
+          <span v-if="voucher.treasuryFundingPreview">
+            fee
+            {{
+              formatBchSats(voucher.treasuryFundingPreview.estimatedFeeSats)
+            }}
+            · total
+            {{
+              formatBchSats(
+                voucher.treasuryFundingPreview.estimatedTotalRequiredSats
+              )
+            }}
+            · change
+            {{
+              formatBchSats(voucher.treasuryFundingPreview.estimatedChangeSats)
+            }}
+            ·
+            {{
+              voucher.treasuryFundingPreview.isAffordable
+                ? 'affordable'
+                : 'not affordable'
+            }}
+          </span>
+          <span v-else> Not available </span>
+        </q-item-label>
+
+        <q-item-label caption>
           Rate:
           {{ formatMarketRate(voucher.quote.marketRate, voucher.fiatCurrency) }}
           · Quote:

@@ -1,3 +1,5 @@
+import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
+
 export type VoucherStatus =
   | 'draft'
   | 'quote_locked'
@@ -52,6 +54,8 @@ export interface VoucherRecord {
 
   derivationIndex: number;
   address: string;
+
+  treasuryFundingPreview?: TreasuryFundingPreview;
 
   fundingTxid?: string;
   fundingDetectedAt?: string;

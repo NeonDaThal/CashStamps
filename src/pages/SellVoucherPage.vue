@@ -390,6 +390,21 @@ function waitForFakeStep(milliseconds: number): Promise<void> {
   });
 }
 
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMilliseconds: number,
+  timeoutMessage: string
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => {
+        reject(new Error(timeoutMessage));
+      }, timeoutMilliseconds);
+    }),
+  ]);
+}
+
 async function handleReviewVoucher(
   fiatAmountMinor: number,
   fiatCurrency: string
@@ -415,7 +430,11 @@ async function handleReviewVoucher(
 
     if (treasuryWallet.value.isSetup) {
       try {
-        treasuryBalance.value = await getTreasuryWalletBalance();
+        treasuryBalance.value = await withTimeout(
+          getTreasuryWalletBalance(),
+          8_000,
+          'Treasury balance check timed out.'
+        );
       } catch (error) {
         console.error(error);
         treasuryBalance.value = null;
@@ -516,8 +535,11 @@ async function handleCreateDraftVoucher(): Promise<void> {
       pendingFiatCurrency.value,
       pendingPricing.value,
       {
-        derivationIndex: pendingVoucherAddress.value.derivationIndex,
-        address: pendingVoucherAddress.value.address,
+        addressData: {
+          derivationIndex: pendingVoucherAddress.value.derivationIndex,
+          address: pendingVoucherAddress.value.address,
+        },
+        treasuryFundingPreview: pendingTreasuryFundingPreview.value,
       }
     );
 

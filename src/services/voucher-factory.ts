@@ -1,9 +1,15 @@
+import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
 export interface VoucherAddressData {
   derivationIndex: number;
   address: string;
+}
+
+export interface CreateVoucherRecordOptions {
+  addressData?: VoucherAddressData;
+  treasuryFundingPreview?: TreasuryFundingPreview | null;
 }
 
 function createVoucherId(): string {
@@ -30,11 +36,35 @@ function mapPricingQuoteSourceToVoucherQuoteSource(
   return source;
 }
 
+function cloneTreasuryFundingPreview(
+  preview?: TreasuryFundingPreview | null
+): TreasuryFundingPreview | undefined {
+  if (!preview) {
+    return undefined;
+  }
+
+  return {
+    treasuryAddress: preview.treasuryAddress,
+    voucherAddress: preview.voucherAddress,
+
+    amountSats: preview.amountSats,
+    estimatedFeeSats: preview.estimatedFeeSats,
+    estimatedTotalRequiredSats: preview.estimatedTotalRequiredSats,
+    estimatedChangeSats: preview.estimatedChangeSats,
+
+    treasuryBalanceSats: preview.treasuryBalanceSats,
+    treasuryUtxoCount: preview.treasuryUtxoCount,
+
+    isAffordable: preview.isAffordable,
+    createdAt: preview.createdAt,
+  };
+}
+
 export function createDraftVoucherRecord(
   fiatAmountMinor: number,
   fiatCurrency = 'GBP',
   pricing?: FakeVoucherPricingQuote,
-  addressData?: VoucherAddressData
+  options?: CreateVoucherRecordOptions
 ): VoucherRecord {
   const now = new Date().toISOString();
 
@@ -70,8 +100,12 @@ export function createDraftVoucherRecord(
       isFallbackQuote: pricing?.isFallbackQuote ?? false,
     },
 
-    derivationIndex: addressData?.derivationIndex ?? -1,
-    address: addressData?.address ?? '',
+    derivationIndex: options?.addressData?.derivationIndex ?? -1,
+    address: options?.addressData?.address ?? '',
+
+    treasuryFundingPreview: cloneTreasuryFundingPreview(
+      options?.treasuryFundingPreview
+    ),
 
     status: pricing ? 'funded' : 'draft',
   };
