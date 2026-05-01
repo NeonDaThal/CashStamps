@@ -755,6 +755,31 @@ Connect real BCH funding logic.
 - no funding transaction is broadcast unless a valid quote is available
 - the exact quote used is stored with the voucher record
 
+#### Current Phase 3 progress note
+
+Phase 3 has now reached the treasury funding dry-run stage.
+
+Completed so far:
+
+- real BCH/GBP pricing is fetched through CoinGecko
+- quotes are locked before voucher confirmation
+- quote timestamp and expiry are shown in the confirmation dialog and history
+- service fee and estimated BCH loaded are calculated from the locked quote
+- fresh voucher addresses are derived before confirmation
+- voucher address and derivation index are stored with each voucher record
+- merchant treasury wallet setup exists
+- treasury address is generated and stored locally for MVP testing
+- treasury balance can be checked through Electrum
+- read-only treasury UTXO details are displayed
+- dry-run funding preview is shown before fake issue
+- dry-run preview uses actual treasury UTXO details where available
+- dry-run preview is saved with the voucher record
+- voucher history displays the saved funding preview details
+
+Important: this stage is still read-only / fake-funding only.
+
+No real transaction is currently built, signed, or broadcast. No BCH is moved yet.
+
 ### Phase 4 — Browser receipt preview
 
 #### Goal
