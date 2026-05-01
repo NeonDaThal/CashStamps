@@ -34,7 +34,8 @@
         <q-item-label caption>
           Funding preview:
           <span v-if="voucher.treasuryFundingPreview">
-            fee
+            selected {{ getSelectedUtxoCount(voucher) }} UTXOs · inputs
+            {{ formatBchSats(getSelectedInputSats(voucher)) }} · fee
             {{
               formatBchSats(voucher.treasuryFundingPreview.estimatedFeeSats)
             }}
@@ -114,6 +115,18 @@ function formatFee(voucher: VoucherRecord): string {
   );
 
   return `${feePercent} / ${feeAmount}`;
+}
+
+function getSelectedUtxoCount(voucher: VoucherRecord): number {
+  return voucher.treasuryFundingPreview?.selectedUtxos?.length ?? 0;
+}
+
+function getSelectedInputSats(voucher: VoucherRecord): number {
+  return (
+    voucher.treasuryFundingPreview?.selectedInputSats ??
+    voucher.treasuryFundingPreview?.treasuryBalanceSats ??
+    0
+  );
 }
 
 function formatQuoteSource(source: VoucherQuoteSource): string {

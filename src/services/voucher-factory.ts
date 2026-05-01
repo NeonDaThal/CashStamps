@@ -1,4 +1,7 @@
-import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
+import type {
+  TreasuryFundingPreview,
+  TreasuryFundingPreviewSelectedUtxo,
+} from 'src/types/treasury-funding';
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
@@ -36,6 +39,20 @@ function mapPricingQuoteSourceToVoucherQuoteSource(
   return source;
 }
 
+function cloneSelectedUtxos(
+  selectedUtxos?: TreasuryFundingPreviewSelectedUtxo[]
+): TreasuryFundingPreviewSelectedUtxo[] {
+  if (!Array.isArray(selectedUtxos)) {
+    return [];
+  }
+
+  return selectedUtxos.map((utxo) => ({
+    outpointTransactionHash: utxo.outpointTransactionHash,
+    outpointIndex: utxo.outpointIndex,
+    valueSats: utxo.valueSats,
+  }));
+}
+
 function cloneTreasuryFundingPreview(
   preview?: TreasuryFundingPreview | null
 ): TreasuryFundingPreview | undefined {
@@ -54,6 +71,10 @@ function cloneTreasuryFundingPreview(
 
     treasuryBalanceSats: preview.treasuryBalanceSats,
     treasuryUtxoCount: preview.treasuryUtxoCount,
+
+    selectedUtxos: cloneSelectedUtxos(preview.selectedUtxos),
+    selectedInputSats:
+      preview.selectedInputSats ?? preview.treasuryBalanceSats ?? 0,
 
     isAffordable: preview.isAffordable,
     createdAt: preview.createdAt,

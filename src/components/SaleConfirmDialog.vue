@@ -159,6 +159,25 @@
 
             <q-item>
               <q-item-section>
+                <q-item-label caption>Selected input total</q-item-label>
+                <q-item-label>
+                  {{ formatBchSats(treasuryFundingPreview.selectedInputSats) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Selected UTXOs</q-item-label>
+                <q-item-label>
+                  {{ treasuryFundingPreview.selectedUtxos.length }}
+                  of {{ treasuryFundingPreview.treasuryUtxoCount }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
                 <q-item-label caption>Estimated network fee</q-item-label>
                 <q-item-label>
                   {{ formatBchSats(treasuryFundingPreview.estimatedFeeSats) }}
@@ -218,6 +237,45 @@
                 preview.
               </span>
             </q-banner>
+
+            <q-card
+              v-if="treasuryFundingPreview.selectedUtxos.length > 0"
+              flat
+              bordered
+              class="q-mb-md"
+            >
+              <q-card-section>
+                <div class="text-subtitle2 q-mb-sm">Selected UTXO details</div>
+
+                <q-list dense separator>
+                  <q-item
+                    v-for="(
+                      utxo, index
+                    ) in treasuryFundingPreview.selectedUtxos"
+                    :key="`${utxo.outpointTransactionHash}:${utxo.outpointIndex}`"
+                  >
+                    <q-item-section>
+                      <q-item-label> UTXO {{ index + 1 }} </q-item-label>
+
+                      <q-item-label caption>
+                        Value:
+                        {{ formatBchSats(utxo.valueSats) }}
+                      </q-item-label>
+
+                      <q-item-label caption class="text-break">
+                        Tx:
+                        {{ utxo.outpointTransactionHash }}
+                      </q-item-label>
+
+                      <q-item-label caption>
+                        Output index:
+                        {{ utxo.outpointIndex }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card-section>
+            </q-card>
           </template>
 
           <q-banner v-else class="bg-grey-2 text-grey-9 q-mb-md" rounded>

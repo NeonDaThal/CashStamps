@@ -459,6 +459,7 @@ async function handleReviewVoucher(
         amountSats: pendingPricing.value.finalBchSats,
         treasuryBalanceSats: treasuryBalance.value?.balanceSats ?? 0,
         treasuryUtxoCount: treasuryBalance.value?.utxoCount ?? 0,
+        treasuryUtxos: treasuryBalance.value?.utxos ?? [],
       });
     }
 
