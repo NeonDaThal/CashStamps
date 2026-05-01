@@ -111,6 +111,55 @@
               </q-item-section>
             </q-item>
           </q-list>
+
+          <q-card v-if="treasuryBalance" flat bordered class="q-mt-md">
+            <q-card-section>
+              <div class="text-h6 q-mb-sm">Read-only UTXO details</div>
+
+              <p class="text-grey-7 q-mb-md">
+                These are the unspent outputs currently detected for the
+                treasury wallet. This is read-only and does not build or
+                broadcast a transaction.
+              </p>
+
+              <q-banner
+                v-if="treasuryBalance.utxos.length === 0"
+                class="bg-grey-2 text-grey-9"
+                rounded
+              >
+                No treasury UTXOs detected.
+              </q-banner>
+
+              <q-list v-else bordered separator>
+                <q-item
+                  v-for="(utxo, index) in treasuryBalance.utxos"
+                  :key="`${utxo.outpointTransactionHash}:${utxo.outpointIndex}`"
+                >
+                  <q-item-section>
+                    <q-item-label class="text-weight-medium">
+                      UTXO {{ index + 1 }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      Value:
+                      {{ formatBchSats(utxo.valueSats) }}
+                      / {{ utxo.valueSats.toLocaleString() }} sats
+                    </q-item-label>
+
+                    <q-item-label caption class="text-break">
+                      Tx:
+                      {{ utxo.outpointTransactionHash }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      Output index:
+                      {{ utxo.outpointIndex }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
+          </q-card>
         </q-card-section>
 
         <q-separator />

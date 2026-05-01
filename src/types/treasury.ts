@@ -12,9 +12,16 @@ export interface TreasuryWalletPublicInfo {
   isSetup: boolean;
 }
 
+export interface TreasuryUtxo {
+  outpointTransactionHash: string;
+  outpointIndex: number;
+  valueSats: number;
+}
+
 export interface TreasuryWalletBalance {
   address: string;
   balanceSats: number;
   utxoCount: number;
+  utxos: TreasuryUtxo[];
   checkedAt: string;
 }
