@@ -781,6 +781,29 @@ Important: this stage is still read-only / fake-funding only.
 
 No real transaction is currently built, signed, or broadcast. No BCH is moved yet.
 
+#### Fee address configuration note
+
+The treasury funding model now assumes merchant-controlled treasury funding.
+
+The intended real-funding transaction shape is:
+
+- voucher output — BCH loaded for the customer
+- platform fee output — automatic fee paid to the platform wallet
+- optional buffer reserve output — reserve/buffer wallet if used
+- change output — remaining BCH returned to the merchant treasury wallet
+
+Current implementation status:
+
+- platform fee calculation model exists
+- merchant retained spread calculation exists
+- buffer reserve calculation exists
+- fee-output plan is shown during voucher confirmation
+- fee-output plan is saved with the voucher record
+- Treasury Settings shows fee address configuration status
+- real funding is blocked/not ready while required fee addresses are blank
+
+Important: no real transaction is currently built, signed, or broadcast.
+
 ### Phase 4 — Browser receipt preview
 
 #### Goal
