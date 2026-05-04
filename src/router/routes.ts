@@ -20,6 +20,10 @@ const routes: RouteRecordRaw[] = [
         path: 'voucher-history',
         component: () => import('pages/VoucherHistoryPage.vue'),
       },
+      {
+        path: 'voucher-key-check',
+        component: () => import('pages/VoucherKeyCheckPage.vue'),
+      },
       { path: 'faq', component: () => import('pages/FAQPage.vue') },
       { path: 'debug', component: () => import('pages/DebugPage.vue') },
     ],
