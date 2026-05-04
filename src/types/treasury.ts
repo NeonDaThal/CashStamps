@@ -26,6 +26,12 @@ export interface TreasuryRestoreCheckResult {
   checkedAt: string;
 }
 
+export interface TreasuryRestoreImportResult {
+  address: string;
+  importedAt: string;
+  replacedExistingWallet: boolean;
+}
+
 export interface TreasuryUtxo {
   outpointTransactionHash: string;
   outpointIndex: number;

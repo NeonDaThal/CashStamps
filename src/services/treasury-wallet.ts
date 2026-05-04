@@ -5,6 +5,7 @@ import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
 import type {
   TreasuryRestoreCheckResult,
+  TreasuryRestoreImportResult,
   TreasuryUtxo,
   TreasuryWalletBackupInfo,
   TreasuryWalletBalance,
@@ -130,6 +131,35 @@ export async function checkTreasuryRestoreMnemonic(
       Boolean(currentTreasuryWallet?.address) &&
       currentTreasuryWallet?.address === derivedAddress,
     checkedAt: new Date().toISOString(),
+  };
+}
+
+export async function importTreasuryWalletFromMnemonic(
+  mnemonic: string
+): Promise<TreasuryRestoreImportResult> {
+  const normalizedMnemonic = normalizeMnemonic(mnemonic);
+
+  if (!normalizedMnemonic) {
+    throw new Error('Enter a treasury seed phrase to import.');
+  }
+
+  const existingWallet = await getTreasuryWalletRecord();
+  const now = new Date().toISOString();
+  const address = await deriveTreasuryAddressFromMnemonic(normalizedMnemonic);
+
+  const treasuryWallet: TreasuryWalletRecord = {
+    mnemonic: normalizedMnemonic,
+    address,
+    createdAt: existingWallet?.createdAt ?? now,
+    updatedAt: now,
+  };
+
+  await set(TREASURY_WALLET_KEY, treasuryWallet);
+
+  return {
+    address,
+    importedAt: now,
+    replacedExistingWallet: Boolean(existingWallet),
   };
 }
 

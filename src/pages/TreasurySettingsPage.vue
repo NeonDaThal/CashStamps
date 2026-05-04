@@ -285,10 +285,13 @@
 
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
-          <div class="text-h5 q-mb-xs">Development Treasury Restore Check</div>
+          <div class="text-h5 q-mb-xs">
+            Development Treasury Restore / Import
+          </div>
           <p class="text-grey-7 q-mb-none">
             Paste a treasury seed phrase to check which treasury address it
-            derives. This does not replace the current wallet.
+            derives. After checking, you can import it into local storage for
+            development testing.
           </p>
         </q-card-section>
 
@@ -300,15 +303,15 @@
               <q-icon name="warning" />
             </template>
 
-            This is a check-only restore tool. It will not overwrite the current
-            treasury wallet. Do not paste a real production seed phrase into
-            this MVP test app.
+            Development-only restore/import tool. Importing will replace the
+            current local treasury wallet. Do not paste a real production seed
+            phrase into this MVP test app.
           </q-banner>
 
           <q-input
             v-model="restoreMnemonicInput"
             type="textarea"
-            label="Treasury seed phrase to check"
+            label="Treasury seed phrase to check/import"
             outlined
             autogrow
             class="q-mb-md"
@@ -341,6 +344,18 @@
             </span>
           </q-banner>
 
+          <q-banner
+            v-if="restoreImportResult"
+            class="bg-green-1 text-green-10 q-mb-md"
+            rounded
+          >
+            <template #avatar>
+              <q-icon name="check_circle" />
+            </template>
+
+            Imported treasury wallet into local development storage.
+          </q-banner>
+
           <q-list v-if="restoreCheck" bordered separator>
             <q-item>
               <q-item-section>
@@ -371,16 +386,47 @@
               </q-item-section>
             </q-item>
           </q-list>
+
+          <q-list v-if="restoreImportResult" bordered separator class="q-mt-md">
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Imported address</q-item-label>
+                <q-item-label class="text-break">
+                  {{ restoreImportResult.address }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Replaced existing wallet</q-item-label>
+                <q-item-label>
+                  {{
+                    restoreImportResult.replacedExistingWallet ? 'Yes' : 'No'
+                  }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Imported</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(restoreImportResult.importedAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
         </q-card-section>
 
         <q-separator />
 
         <q-card-actions align="right">
           <q-btn
-            v-if="restoreCheck"
+            v-if="restoreCheck || restoreImportResult"
             flat
             color="grey-8"
-            label="Clear Restore Check"
+            label="Clear Restore Tool"
             @click="handleClearRestoreCheck"
           />
 
@@ -390,6 +436,14 @@
             label="Check Restore Seed"
             :loading="isCheckingRestore"
             @click="handleCheckRestoreMnemonic"
+          />
+
+          <q-btn
+            color="negative"
+            label="Import Checked Seed"
+            :disable="!restoreCheck"
+            :loading="isImportingRestore"
+            @click="handleImportCheckedRestoreMnemonic"
           />
         </q-card-actions>
       </q-card>
@@ -518,6 +572,7 @@ import { onMounted, ref } from 'vue';
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
   TreasuryRestoreCheckResult,
+  TreasuryRestoreImportResult,
   TreasuryWalletBackupInfo,
   TreasuryWalletBalance,
   TreasuryWalletPublicInfo,
@@ -529,6 +584,7 @@ import {
   getTreasuryWalletBackupInfo,
   getTreasuryWalletBalance,
   getTreasuryWalletPublicInfo,
+  importTreasuryWalletFromMnemonic,
 } from 'src/services/treasury-wallet';
 import { formatBchSats } from 'src/services/voucher-pricing';
 import { getFeeAddressConfigStatus } from 'src/services/fee-address-config';
@@ -543,6 +599,7 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
 const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
 const treasuryBackup = ref<TreasuryWalletBackupInfo | null>(null);
 const restoreCheck = ref<TreasuryRestoreCheckResult | null>(null);
+const restoreImportResult = ref<TreasuryRestoreImportResult | null>(null);
 const restoreMnemonicInput = ref('');
 
 const feeAddressConfig = ref<FeeAddressConfigStatus>(
@@ -553,6 +610,7 @@ const isSubmitting = ref(false);
 const isCheckingBalance = ref(false);
 const isExportingBackup = ref(false);
 const isCheckingRestore = ref(false);
+const isImportingRestore = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
@@ -579,6 +637,7 @@ async function handleCreateTreasuryWallet(): Promise<void> {
   treasuryBalance.value = null;
   treasuryBackup.value = null;
   restoreCheck.value = null;
+  restoreImportResult.value = null;
   isSubmitting.value = true;
 
   try {
@@ -598,6 +657,7 @@ async function handleClearTreasuryWallet(): Promise<void> {
   treasuryBalance.value = null;
   treasuryBackup.value = null;
   restoreCheck.value = null;
+  restoreImportResult.value = null;
   isSubmitting.value = true;
 
   try {
@@ -654,6 +714,7 @@ async function handleCheckRestoreMnemonic(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
   restoreCheck.value = null;
+  restoreImportResult.value = null;
   isCheckingRestore.value = true;
 
   try {
@@ -673,10 +734,44 @@ async function handleCheckRestoreMnemonic(): Promise<void> {
   }
 }
 
+async function handleImportCheckedRestoreMnemonic(): Promise<void> {
+  successMessage.value = '';
+  errorMessage.value = '';
+
+  if (!restoreCheck.value) {
+    errorMessage.value = 'Check a treasury seed phrase before importing.';
+    return;
+  }
+
+  isImportingRestore.value = true;
+
+  try {
+    restoreImportResult.value = await importTreasuryWalletFromMnemonic(
+      restoreCheck.value.mnemonic
+    );
+
+    treasuryBalance.value = null;
+    treasuryBackup.value = null;
+
+    await loadTreasuryWallet();
+
+    successMessage.value = 'Imported checked treasury seed into local storage.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : 'Could not import treasury seed.';
+  } finally {
+    isImportingRestore.value = false;
+  }
+}
+
 function handleClearRestoreCheck(): void {
   restoreCheck.value = null;
+  restoreImportResult.value = null;
   restoreMnemonicInput.value = '';
-  successMessage.value = 'Treasury restore check cleared.';
+  successMessage.value = 'Treasury restore tool cleared.';
 }
 
 function formatDateTime(value: string): string {
