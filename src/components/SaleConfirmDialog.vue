@@ -8,8 +8,7 @@
       <q-card-section>
         <div class="text-h5">Confirm Voucher Issue</div>
         <p class="text-grey-7 q-mb-none">
-          Review the locked quote and pricing breakdown before creating this
-          test voucher.
+          Review the locked quote and pricing breakdown before creating this test voucher.
         </p>
       </q-card-section>
 
@@ -17,11 +16,7 @@
 
       <q-card-section>
         <q-banner
-          :class="
-            pricing.isFallbackQuote
-              ? 'bg-orange-1 text-orange-10'
-              : 'bg-green-1 text-green-10'
-          "
+          :class="pricing.isFallbackQuote ? 'bg-orange-1 text-orange-10' : 'bg-green-1 text-green-10'"
           rounded
           class="q-mb-md"
         >
@@ -32,11 +27,13 @@
           </template>
 
           <span v-if="pricing.isFallbackQuote">
-            Live pricing was unavailable, so a recent cached quote is being
-            used. Review the quote carefully before issuing.
+            Live pricing was unavailable, so a recent cached quote is being used.
+            Review the quote carefully before issuing.
           </span>
 
-          <span v-else> Live price quote locked successfully. </span>
+          <span v-else>
+            Live price quote locked successfully.
+          </span>
         </q-banner>
 
         <q-banner
@@ -56,12 +53,7 @@
             <q-item-section>
               <q-item-label caption>Customer pays</q-item-label>
               <q-item-label>
-                {{
-                  formatMinorFiatAmount(
-                    pricing.customerPaysMinor,
-                    pricing.fiatCurrency
-                  )
-                }}
+                {{ formatMinorFiatAmount(pricing.customerPaysMinor, pricing.fiatCurrency) }}
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -72,12 +64,7 @@
               <q-item-label>
                 {{ formatBasisPointsAsPercent(pricing.serviceFeeBasisPoints) }}
                 —
-                {{
-                  formatMinorFiatAmount(
-                    pricing.serviceFeeAmountMinor,
-                    pricing.fiatCurrency
-                  )
-                }}
+                {{ formatMinorFiatAmount(pricing.serviceFeeAmountMinor, pricing.fiatCurrency) }}
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -86,12 +73,7 @@
             <q-item-section>
               <q-item-label caption>Voucher value</q-item-label>
               <q-item-label>
-                {{
-                  formatMinorFiatAmount(
-                    pricing.voucherValueMinor,
-                    pricing.fiatCurrency
-                  )
-                }}
+                {{ formatMinorFiatAmount(pricing.voucherValueMinor, pricing.fiatCurrency) }}
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -127,25 +109,19 @@
 
           <q-separator spaced />
 
-          <q-item-label header> Dry-run treasury funding preview </q-item-label>
+          <q-item-label header>
+            Dry-run treasury funding preview
+          </q-item-label>
 
           <q-banner
             v-if="transactionPlan"
-            :class="
-              transactionPlan.status === 'valid'
-                ? 'bg-green-1 text-green-10'
-                : 'bg-red-1 text-red-10'
-            "
+            :class="transactionPlan.status === 'valid' ? 'bg-green-1 text-green-10' : 'bg-red-1 text-red-10'"
             rounded
             class="q-mb-md"
           >
             <template #avatar>
               <q-icon
-                :name="
-                  transactionPlan.status === 'valid'
-                    ? 'check_circle'
-                    : 'warning'
-                "
+                :name="transactionPlan.status === 'valid' ? 'check_circle' : 'warning'"
               />
             </template>
 
@@ -161,21 +137,13 @@
 
           <q-banner
             v-if="transactionDraft"
-            :class="
-              transactionDraft.status === 'created'
-                ? 'bg-green-1 text-green-10'
-                : 'bg-grey-2 text-grey-9'
-            "
+            :class="transactionDraft.status === 'created' ? 'bg-green-1 text-green-10' : 'bg-grey-2 text-grey-9'"
             rounded
             class="q-mb-md"
           >
             <template #avatar>
               <q-icon
-                :name="
-                  transactionDraft.status === 'created'
-                    ? 'check_circle'
-                    : 'info'
-                "
+                :name="transactionDraft.status === 'created' ? 'check_circle' : 'info'"
               />
             </template>
 
@@ -249,11 +217,19 @@
               <q-item-section>
                 <q-item-label caption>Estimated total required</q-item-label>
                 <q-item-label>
-                  {{
-                    formatBchSats(
-                      treasuryFundingPreview.estimatedTotalRequiredSats
-                    )
-                  }}
+                  {{ formatBchSats(treasuryFundingPreview.estimatedTotalRequiredSats) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="transactionPlan">
+              <q-item-section>
+                <q-item-label caption>Planned fee outputs</q-item-label>
+                <q-item-label>
+                  Platform fee:
+                  {{ formatBchSats(transactionPlan.platformFeeOutputSats) }}
+                  · Buffer reserve:
+                  {{ formatBchSats(transactionPlan.bufferReserveOutputSats) }}
                 </q-item-label>
               </q-item-section>
             </q-item>
@@ -262,29 +238,19 @@
               <q-item-section>
                 <q-item-label caption>Estimated change</q-item-label>
                 <q-item-label>
-                  {{
-                    formatBchSats(treasuryFundingPreview.estimatedChangeSats)
-                  }}
+                  {{ formatBchSats(treasuryFundingPreview.estimatedChangeSats) }}
                 </q-item-label>
               </q-item-section>
             </q-item>
 
             <q-banner
-              :class="
-                treasuryFundingPreview.isAffordable
-                  ? 'bg-green-1 text-green-10'
-                  : 'bg-red-1 text-red-10'
-              "
+              :class="treasuryFundingPreview.isAffordable ? 'bg-green-1 text-green-10' : 'bg-red-1 text-red-10'"
               rounded
               class="q-mt-sm q-mb-md"
             >
               <template #avatar>
                 <q-icon
-                  :name="
-                    treasuryFundingPreview.isAffordable
-                      ? 'check_circle'
-                      : 'warning'
-                  "
+                  :name="treasuryFundingPreview.isAffordable ? 'check_circle' : 'warning'"
                 />
               </template>
 
@@ -293,8 +259,7 @@
               </span>
 
               <span v-else>
-                Treasury does not appear affordable for this voucher in dry-run
-                preview.
+                Treasury does not appear affordable for this voucher in dry-run preview.
               </span>
             </q-banner>
 
@@ -305,17 +270,19 @@
               class="q-mb-md"
             >
               <q-card-section>
-                <div class="text-subtitle2 q-mb-sm">Selected UTXO details</div>
+                <div class="text-subtitle2 q-mb-sm">
+                  Selected UTXO details
+                </div>
 
                 <q-list dense separator>
                   <q-item
-                    v-for="(
-                      utxo, index
-                    ) in treasuryFundingPreview.selectedUtxos"
+                    v-for="(utxo, index) in treasuryFundingPreview.selectedUtxos"
                     :key="`${utxo.outpointTransactionHash}:${utxo.outpointIndex}`"
                   >
                     <q-item-section>
-                      <q-item-label> UTXO {{ index + 1 }} </q-item-label>
+                      <q-item-label>
+                        UTXO {{ index + 1 }}
+                      </q-item-label>
 
                       <q-item-label caption>
                         Value:
@@ -338,7 +305,11 @@
             </q-card>
           </template>
 
-          <q-banner v-else class="bg-grey-2 text-grey-9 q-mb-md" rounded>
+          <q-banner
+            v-else
+            class="bg-grey-2 text-grey-9 q-mb-md"
+            rounded
+          >
             Treasury funding preview is not available yet. Set up a treasury
             wallet and refresh/check balance before real funding is enabled.
           </q-banner>
@@ -429,13 +400,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
-import { createTreasuryTransactionDraftFromPlan } from 'src/services/treasury-transaction-draft';
 
+import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
-import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
+import { createTreasuryTransactionDraftFromPlan } from 'src/services/treasury-transaction-draft';
+import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
 import {
   formatBasisPointsAsPercent,
   formatBchSats,
@@ -473,7 +444,10 @@ const transactionPlan = computed<TreasuryTransactionPlan | null>(() => {
     return null;
   }
 
-  return createTreasuryTransactionPlanFromPreview(props.treasuryFundingPreview);
+  return createTreasuryTransactionPlanFromPreview(props.treasuryFundingPreview, {
+    platformFeeSats: 0,
+    bufferReserveSats: 0,
+  });
 });
 
 const transactionDraft = computed<TreasuryTransactionDraft | null>(() => {

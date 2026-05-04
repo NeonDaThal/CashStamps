@@ -10,10 +10,24 @@ export type TreasuryTransactionPlanInvalidReason =
   | 'insufficient_input_value'
   | 'invalid_change';
 
+export type TreasuryTransactionPlanOutputPurpose =
+  | 'voucher'
+  | 'platform_fee'
+  | 'buffer_reserve'
+  | 'change';
+
 export interface TreasuryTransactionPlanOutput {
   address: string;
   valueSats: number;
-  purpose: 'voucher' | 'change';
+  purpose: TreasuryTransactionPlanOutputPurpose;
+}
+
+export interface TreasuryTransactionPlanFeeOutputs {
+  platformFeeAddress?: string;
+  platformFeeSats: number;
+
+  bufferReserveAddress?: string;
+  bufferReserveSats: number;
 }
 
 export interface TreasuryTransactionPlan {
@@ -28,6 +42,10 @@ export interface TreasuryTransactionPlan {
   outputs: TreasuryTransactionPlanOutput[];
 
   voucherOutputSats: number;
+
+  platformFeeOutputSats: number;
+  bufferReserveOutputSats: number;
+
   estimatedFeeSats: number;
   estimatedChangeSats: number;
 
