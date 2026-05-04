@@ -4,6 +4,7 @@ import { del, get, set } from 'idb-keyval';
 import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
 import type {
+  TreasuryRestoreCheckResult,
   TreasuryUtxo,
   TreasuryWalletBackupInfo,
   TreasuryWalletBalance,
@@ -20,11 +21,17 @@ const TREASURY_WALLET_KEY = 'bch-voucher-treasury-wallet';
  */
 const DERIVATION_ONLY_ELECTRUM = new ElectrumService([]);
 
+function normalizeMnemonic(mnemonic: string): string {
+  return mnemonic.trim().replace(/\s+/g, ' ');
+}
+
 async function deriveTreasuryAddressFromMnemonic(
   mnemonic: string
 ): Promise<string> {
+  const normalizedMnemonic = normalizeMnemonic(mnemonic);
+
   const walletHd = await WalletHD.fromMnemonic(
-    mnemonic,
+    normalizedMnemonic,
     DERIVATION_ONLY_ELECTRUM
   );
 
@@ -41,7 +48,8 @@ async function deriveTreasuryWalletWithElectrum(
   mnemonic: string,
   electrum: ElectrumService
 ) {
-  const walletHd = await WalletHD.fromMnemonic(mnemonic, electrum);
+  const normalizedMnemonic = normalizeMnemonic(mnemonic);
+  const walletHd = await WalletHD.fromMnemonic(normalizedMnemonic, electrum);
   const [wallet] = walletHd.deriveWallets(1, 0);
 
   if (!wallet) {
@@ -97,6 +105,31 @@ export async function getTreasuryWalletBackupInfo(): Promise<TreasuryWalletBacku
     mnemonic: treasuryWallet.mnemonic,
     address: treasuryWallet.address,
     exportedAt: new Date().toISOString(),
+  };
+}
+
+export async function checkTreasuryRestoreMnemonic(
+  mnemonic: string
+): Promise<TreasuryRestoreCheckResult> {
+  const normalizedMnemonic = normalizeMnemonic(mnemonic);
+
+  if (!normalizedMnemonic) {
+    throw new Error('Enter a treasury seed phrase to check.');
+  }
+
+  const currentTreasuryWallet = await getTreasuryWalletRecord();
+  const derivedAddress = await deriveTreasuryAddressFromMnemonic(
+    normalizedMnemonic
+  );
+
+  return {
+    mnemonic: normalizedMnemonic,
+    derivedAddress,
+    currentAddress: currentTreasuryWallet?.address ?? '',
+    matchesCurrentWallet:
+      Boolean(currentTreasuryWallet?.address) &&
+      currentTreasuryWallet?.address === derivedAddress,
+    checkedAt: new Date().toISOString(),
   };
 }
 

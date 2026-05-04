@@ -283,6 +283,117 @@
         </q-card-actions>
       </q-card>
 
+      <q-card flat bordered class="q-mb-md">
+        <q-card-section>
+          <div class="text-h5 q-mb-xs">Development Treasury Restore Check</div>
+          <p class="text-grey-7 q-mb-none">
+            Paste a treasury seed phrase to check which treasury address it
+            derives. This does not replace the current wallet.
+          </p>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section>
+          <q-banner class="bg-orange-1 text-orange-10 q-mb-md" rounded>
+            <template #avatar>
+              <q-icon name="warning" />
+            </template>
+
+            This is a check-only restore tool. It will not overwrite the current
+            treasury wallet. Do not paste a real production seed phrase into
+            this MVP test app.
+          </q-banner>
+
+          <q-input
+            v-model="restoreMnemonicInput"
+            type="textarea"
+            label="Treasury seed phrase to check"
+            outlined
+            autogrow
+            class="q-mb-md"
+          />
+
+          <q-banner
+            v-if="restoreCheck"
+            :class="
+              restoreCheck.matchesCurrentWallet
+                ? 'bg-green-1 text-green-10'
+                : 'bg-orange-1 text-orange-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  restoreCheck.matchesCurrentWallet ? 'check_circle' : 'warning'
+                "
+              />
+            </template>
+
+            <span v-if="restoreCheck.matchesCurrentWallet">
+              This seed derives the current treasury address.
+            </span>
+
+            <span v-else>
+              This seed derives a different treasury address.
+            </span>
+          </q-banner>
+
+          <q-list v-if="restoreCheck" bordered separator>
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Derived address</q-item-label>
+                <q-item-label class="text-break">
+                  {{ restoreCheck.derivedAddress }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Current treasury address</q-item-label>
+                <q-item-label class="text-break">
+                  {{
+                    restoreCheck.currentAddress || 'No current treasury wallet'
+                  }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Checked</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(restoreCheck.checkedAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right">
+          <q-btn
+            v-if="restoreCheck"
+            flat
+            color="grey-8"
+            label="Clear Restore Check"
+            @click="handleClearRestoreCheck"
+          />
+
+          <q-btn
+            color="primary"
+            outline
+            label="Check Restore Seed"
+            :loading="isCheckingRestore"
+            @click="handleCheckRestoreMnemonic"
+          />
+        </q-card-actions>
+      </q-card>
+
       <q-card flat bordered>
         <q-card-section>
           <div class="text-h5 q-mb-xs">Automatic Fee Address Configuration</div>
@@ -406,11 +517,13 @@ import { onMounted, ref } from 'vue';
 
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
+  TreasuryRestoreCheckResult,
   TreasuryWalletBackupInfo,
   TreasuryWalletBalance,
   TreasuryWalletPublicInfo,
 } from 'src/types/treasury';
 import {
+  checkTreasuryRestoreMnemonic,
   clearTreasuryWallet,
   createTreasuryWallet,
   getTreasuryWalletBackupInfo,
@@ -429,6 +542,8 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
 
 const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
 const treasuryBackup = ref<TreasuryWalletBackupInfo | null>(null);
+const restoreCheck = ref<TreasuryRestoreCheckResult | null>(null);
+const restoreMnemonicInput = ref('');
 
 const feeAddressConfig = ref<FeeAddressConfigStatus>(
   getFeeAddressConfigStatus()
@@ -437,6 +552,7 @@ const feeAddressConfig = ref<FeeAddressConfigStatus>(
 const isSubmitting = ref(false);
 const isCheckingBalance = ref(false);
 const isExportingBackup = ref(false);
+const isCheckingRestore = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
@@ -462,6 +578,7 @@ async function handleCreateTreasuryWallet(): Promise<void> {
   errorMessage.value = '';
   treasuryBalance.value = null;
   treasuryBackup.value = null;
+  restoreCheck.value = null;
   isSubmitting.value = true;
 
   try {
@@ -480,6 +597,7 @@ async function handleClearTreasuryWallet(): Promise<void> {
   errorMessage.value = '';
   treasuryBalance.value = null;
   treasuryBackup.value = null;
+  restoreCheck.value = null;
   isSubmitting.value = true;
 
   try {
@@ -530,6 +648,35 @@ async function handleRevealTreasuryBackup(): Promise<void> {
 function handleHideTreasuryBackup(): void {
   treasuryBackup.value = null;
   successMessage.value = 'Development treasury seed backup hidden.';
+}
+
+async function handleCheckRestoreMnemonic(): Promise<void> {
+  successMessage.value = '';
+  errorMessage.value = '';
+  restoreCheck.value = null;
+  isCheckingRestore.value = true;
+
+  try {
+    restoreCheck.value = await checkTreasuryRestoreMnemonic(
+      restoreMnemonicInput.value
+    );
+
+    successMessage.value = 'Treasury restore seed check completed.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : 'Could not check treasury restore seed.';
+  } finally {
+    isCheckingRestore.value = false;
+  }
+}
+
+function handleClearRestoreCheck(): void {
+  restoreCheck.value = null;
+  restoreMnemonicInput.value = '';
+  successMessage.value = 'Treasury restore check cleared.';
 }
 
 function formatDateTime(value: string): string {

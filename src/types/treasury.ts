@@ -18,6 +18,14 @@ export interface TreasuryWalletBackupInfo {
   exportedAt: string;
 }
 
+export interface TreasuryRestoreCheckResult {
+  mnemonic: string;
+  derivedAddress: string;
+  currentAddress: string;
+  matchesCurrentWallet: boolean;
+  checkedAt: string;
+}
+
 export interface TreasuryUtxo {
   outpointTransactionHash: string;
   outpointIndex: number;
