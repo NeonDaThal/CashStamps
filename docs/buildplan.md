@@ -882,6 +882,21 @@ Current implementation status:
 
 Important: the restore flow must be tested before real merchant funds are used.
 
+#### Treasury restore check progress
+
+The development restore-check flow is now implemented.
+
+Current implementation status:
+
+- merchant/developer can reveal the local treasury seed phrase for MVP backup testing
+- pasted seed phrases can be checked without replacing the current treasury wallet
+- restore check derives the treasury address from the pasted seed
+- restore check shows whether the pasted seed matches the current treasury wallet
+- incorrect or different seed phrases are detected as non-matching or invalid
+- current treasury wallet is not overwritten during restore check
+
+Important: this is still check-only. A full restore/import flow that can safely replace the local treasury wallet is not yet implemented.
+
 ### Phase 4 — Browser receipt preview
 
 #### Goal
