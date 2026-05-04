@@ -12,6 +12,12 @@ export interface TreasuryWalletPublicInfo {
   isSetup: boolean;
 }
 
+export interface TreasuryWalletBackupInfo {
+  mnemonic: string;
+  address: string;
+  exportedAt: string;
+}
+
 export interface TreasuryUtxo {
   outpointTransactionHash: string;
   outpointIndex: number;

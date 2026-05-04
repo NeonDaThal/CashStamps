@@ -197,6 +197,92 @@
         </q-card-actions>
       </q-card>
 
+      <q-card v-if="treasuryWallet.isSetup" flat bordered class="q-mb-md">
+        <q-card-section>
+          <div class="text-h5 q-mb-xs">Development Treasury Backup</div>
+          <p class="text-grey-7 q-mb-none">
+            This proves the treasury seed can be exported for backup. Production
+            backup UX must be stricter before real merchant use.
+          </p>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section>
+          <q-banner class="bg-red-1 text-red-10 q-mb-md" rounded>
+            <template #avatar>
+              <q-icon name="dangerous" />
+            </template>
+
+            Anyone with this seed phrase can control the treasury BCH. Only
+            reveal this in a safe private environment. Do not use this MVP
+            wallet with real funds.
+          </q-banner>
+
+          <q-list bordered separator>
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Backup status</q-item-label>
+                <q-item-label>
+                  {{
+                    treasuryBackup
+                      ? 'Seed loaded for development backup'
+                      : 'Seed not revealed'
+                  }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="treasuryBackup">
+              <q-item-section>
+                <q-item-label caption>Treasury address</q-item-label>
+                <q-item-label class="text-break">
+                  {{ treasuryBackup.address }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="treasuryBackup">
+              <q-item-section>
+                <q-item-label caption>Seed phrase</q-item-label>
+                <q-item-label class="text-break text-weight-medium">
+                  {{ treasuryBackup.mnemonic }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="treasuryBackup">
+              <q-item-section>
+                <q-item-label caption>Exported</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(treasuryBackup.exportedAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right">
+          <q-btn
+            v-if="treasuryBackup"
+            flat
+            color="grey-8"
+            label="Hide Seed"
+            @click="handleHideTreasuryBackup"
+          />
+
+          <q-btn
+            color="negative"
+            outline
+            label="Reveal Development Seed Backup"
+            :loading="isExportingBackup"
+            @click="handleRevealTreasuryBackup"
+          />
+        </q-card-actions>
+      </q-card>
+
       <q-card flat bordered>
         <q-card-section>
           <div class="text-h5 q-mb-xs">Automatic Fee Address Configuration</div>
@@ -320,12 +406,14 @@ import { onMounted, ref } from 'vue';
 
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
+  TreasuryWalletBackupInfo,
   TreasuryWalletBalance,
   TreasuryWalletPublicInfo,
 } from 'src/types/treasury';
 import {
   clearTreasuryWallet,
   createTreasuryWallet,
+  getTreasuryWalletBackupInfo,
   getTreasuryWalletBalance,
   getTreasuryWalletPublicInfo,
 } from 'src/services/treasury-wallet';
@@ -340,6 +428,7 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
 });
 
 const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
+const treasuryBackup = ref<TreasuryWalletBackupInfo | null>(null);
 
 const feeAddressConfig = ref<FeeAddressConfigStatus>(
   getFeeAddressConfigStatus()
@@ -347,6 +436,7 @@ const feeAddressConfig = ref<FeeAddressConfigStatus>(
 
 const isSubmitting = ref(false);
 const isCheckingBalance = ref(false);
+const isExportingBackup = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
@@ -356,6 +446,11 @@ async function loadTreasuryWallet(): Promise<void> {
   try {
     treasuryWallet.value = await getTreasuryWalletPublicInfo();
     feeAddressConfig.value = getFeeAddressConfigStatus();
+
+    if (!treasuryWallet.value.isSetup) {
+      treasuryBalance.value = null;
+      treasuryBackup.value = null;
+    }
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not load treasury wallet information.';
@@ -366,6 +461,7 @@ async function handleCreateTreasuryWallet(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
   treasuryBalance.value = null;
+  treasuryBackup.value = null;
   isSubmitting.value = true;
 
   try {
@@ -383,6 +479,7 @@ async function handleClearTreasuryWallet(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
   treasuryBalance.value = null;
+  treasuryBackup.value = null;
   isSubmitting.value = true;
 
   try {
@@ -412,6 +509,27 @@ async function handleRefreshBalance(): Promise<void> {
   } finally {
     isCheckingBalance.value = false;
   }
+}
+
+async function handleRevealTreasuryBackup(): Promise<void> {
+  successMessage.value = '';
+  errorMessage.value = '';
+  isExportingBackup.value = true;
+
+  try {
+    treasuryBackup.value = await getTreasuryWalletBackupInfo();
+    successMessage.value = 'Development treasury seed backup loaded.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = 'Could not load treasury backup information.';
+  } finally {
+    isExportingBackup.value = false;
+  }
+}
+
+function handleHideTreasuryBackup(): void {
+  treasuryBackup.value = null;
+  successMessage.value = 'Development treasury seed backup hidden.';
 }
 
 function formatDateTime(value: string): string {

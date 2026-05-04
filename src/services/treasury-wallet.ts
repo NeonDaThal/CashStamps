@@ -5,6 +5,7 @@ import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
 import type {
   TreasuryUtxo,
+  TreasuryWalletBackupInfo,
   TreasuryWalletBalance,
   TreasuryWalletPublicInfo,
   TreasuryWalletRecord,
@@ -20,11 +21,11 @@ const TREASURY_WALLET_KEY = 'bch-voucher-treasury-wallet';
 const DERIVATION_ONLY_ELECTRUM = new ElectrumService([]);
 
 async function deriveTreasuryAddressFromMnemonic(
-  mnemonic: string,
+  mnemonic: string
 ): Promise<string> {
   const walletHd = await WalletHD.fromMnemonic(
     mnemonic,
-    DERIVATION_ONLY_ELECTRUM,
+    DERIVATION_ONLY_ELECTRUM
   );
 
   const [wallet] = walletHd.deriveWallets(1, 0);
@@ -38,7 +39,7 @@ async function deriveTreasuryAddressFromMnemonic(
 
 async function deriveTreasuryWalletWithElectrum(
   mnemonic: string,
-  electrum: ElectrumService,
+  electrum: ElectrumService
 ) {
   const walletHd = await WalletHD.fromMnemonic(mnemonic, electrum);
   const [wallet] = walletHd.deriveWallets(1, 0);
@@ -54,14 +55,14 @@ function mapTreasuryUtxos(unspentOutputs: any[]): TreasuryUtxo[] {
   return unspentOutputs.map((utxo) => ({
     outpointTransactionHash:
       utxo.outpointTransactionHash ?? utxo.tx_hash ?? utxo.txHash ?? '',
-    outpointIndex:
-      utxo.outpointIndex ?? utxo.tx_pos ?? utxo.vout ?? 0,
-    valueSats:
-      Number(utxo.valueSatoshis ?? utxo.value ?? utxo.satoshis ?? 0),
+    outpointIndex: utxo.outpointIndex ?? utxo.tx_pos ?? utxo.vout ?? 0,
+    valueSats: Number(utxo.valueSatoshis ?? utxo.value ?? utxo.satoshis ?? 0),
   }));
 }
 
-export async function getTreasuryWalletRecord(): Promise<TreasuryWalletRecord | undefined> {
+export async function getTreasuryWalletRecord(): Promise<
+  TreasuryWalletRecord | undefined
+> {
   return get<TreasuryWalletRecord>(TREASURY_WALLET_KEY);
 }
 
@@ -82,6 +83,20 @@ export async function getTreasuryWalletPublicInfo(): Promise<TreasuryWalletPubli
     createdAt: treasuryWallet.createdAt,
     updatedAt: treasuryWallet.updatedAt,
     isSetup: true,
+  };
+}
+
+export async function getTreasuryWalletBackupInfo(): Promise<TreasuryWalletBackupInfo> {
+  const treasuryWallet = await getTreasuryWalletRecord();
+
+  if (!treasuryWallet) {
+    throw new Error('Treasury wallet is not set up.');
+  }
+
+  return {
+    mnemonic: treasuryWallet.mnemonic,
+    address: treasuryWallet.address,
+    exportedAt: new Date().toISOString(),
   };
 }
 
@@ -125,7 +140,7 @@ export async function getTreasuryWalletBalance(): Promise<TreasuryWalletBalance>
 
   const wallet = await deriveTreasuryWalletWithElectrum(
     treasuryWallet.mnemonic,
-    electrum,
+    electrum
   );
 
   const unspentOutputs = await wallet.getUnspentOutputs();
