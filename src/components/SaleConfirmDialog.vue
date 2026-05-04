@@ -129,6 +129,36 @@
 
           <q-item-label header> Dry-run treasury funding preview </q-item-label>
 
+          <q-banner
+            v-if="transactionPlan"
+            :class="
+              transactionPlan.status === 'valid'
+                ? 'bg-green-1 text-green-10'
+                : 'bg-red-1 text-red-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  transactionPlan.status === 'valid'
+                    ? 'check_circle'
+                    : 'warning'
+                "
+              />
+            </template>
+
+            <span v-if="transactionPlan.status === 'valid'">
+              Internal transaction plan is valid for dry-run purposes.
+            </span>
+
+            <span v-else>
+              Internal transaction plan is not valid yet:
+              {{ transactionPlan.invalidMessage }}
+            </span>
+          </q-banner>
+
           <template v-if="treasuryFundingPreview">
             <q-item>
               <q-item-section>
@@ -369,7 +399,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
 
+import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import {
@@ -402,6 +434,14 @@ const quoteSourceLabel = computed(() => {
   };
 
   return labels[props.pricing.quoteSource];
+});
+
+const transactionPlan = computed<TreasuryTransactionPlan | null>(() => {
+  if (!props.treasuryFundingPreview) {
+    return null;
+  }
+
+  return createTreasuryTransactionPlanFromPreview(props.treasuryFundingPreview);
 });
 
 function formatDateTime(value: string): string {

@@ -754,6 +754,7 @@ Connect real BCH funding logic.
 - stale cached quotes are rejected outside the allowed freshness window
 - no funding transaction is broadcast unless a valid quote is available
 - the exact quote used is stored with the voucher record
+- treasury funding transaction plan is created and validated before signing/broadcasting
 
 #### Current Phase 3 progress note
 
