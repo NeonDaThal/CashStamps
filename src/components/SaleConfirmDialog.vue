@@ -159,6 +159,36 @@
             </span>
           </q-banner>
 
+          <q-banner
+            v-if="transactionDraft"
+            :class="
+              transactionDraft.status === 'created'
+                ? 'bg-green-1 text-green-10'
+                : 'bg-grey-2 text-grey-9'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  transactionDraft.status === 'created'
+                    ? 'check_circle'
+                    : 'info'
+                "
+              />
+            </template>
+
+            <span v-if="transactionDraft.status === 'created'">
+              Transaction draft created. Broadcast is still disabled.
+            </span>
+
+            <span v-else>
+              Transaction draft not created yet:
+              {{ transactionDraft.errorMessage }}
+            </span>
+          </q-banner>
+
           <template v-if="treasuryFundingPreview">
             <q-item>
               <q-item-section>
@@ -400,7 +430,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
+import { createTreasuryTransactionDraftFromPlan } from 'src/services/treasury-transaction-draft';
 
+import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
@@ -442,6 +474,14 @@ const transactionPlan = computed<TreasuryTransactionPlan | null>(() => {
   }
 
   return createTreasuryTransactionPlanFromPreview(props.treasuryFundingPreview);
+});
+
+const transactionDraft = computed<TreasuryTransactionDraft | null>(() => {
+  if (!transactionPlan.value) {
+    return null;
+  }
+
+  return createTreasuryTransactionDraftFromPlan(transactionPlan.value);
 });
 
 function formatDateTime(value: string): string {
