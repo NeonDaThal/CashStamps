@@ -755,6 +755,7 @@ Connect real BCH funding logic.
 - no funding transaction is broadcast unless a valid quote is available
 - the exact quote used is stored with the voucher record
 - treasury funding transaction plan is created and validated before signing/broadcasting
+- voucher WIF/private-key export structure is prepared for future sweepable QR printing
 
 #### Current Phase 3 progress note
 
