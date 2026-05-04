@@ -152,6 +152,11 @@
                 {{ lastIssuedVoucher.derivationIndex }}
               </div>
 
+              <div v-if="lastIssuedVoucher.keyMetadata" class="text-body2">
+                <strong>WIF ready:</strong>
+                {{ lastIssuedVoucher.keyMetadata.hasWif ? 'Yes' : 'No' }}
+              </div>
+
               <div v-if="lastIssuedVoucher.feeOutputPlan" class="text-body2">
                 <strong>Platform fee plan:</strong>
                 {{
@@ -242,7 +247,7 @@ import type {
 } from 'src/types/treasury';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import { createTreasuryFundingPreview } from 'src/services/treasury-funding';
-import type { VoucherRecord } from 'src/types/voucher';
+import type { VoucherKeyMetadata, VoucherRecord } from 'src/types/voucher';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import {
   PricingService,
@@ -259,6 +264,7 @@ import {
 import { addVoucherRecord } from 'src/services/voucher-store';
 import {
   deriveNextVoucherAddress,
+  exportVoucherKeyAtIndex,
   type DerivedVoucherAddress,
 } from 'src/services/voucher-wallet';
 import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
@@ -282,6 +288,7 @@ const pendingPricing = ref<FakeVoucherPricingQuote | null>(null);
 const pendingFeeOutputPlan = ref<VoucherFeeOutputPlan | null>(null);
 const pendingTreasuryFundingPreview = ref<TreasuryFundingPreview | null>(null);
 const pendingVoucherAddress = ref<DerivedVoucherAddress | null>(null);
+const pendingKeyMetadata = ref<VoucherKeyMetadata | null>(null);
 
 const lastIssuedVoucher = ref<VoucherRecord | null>(null);
 
@@ -425,6 +432,7 @@ async function handleReviewVoucher(
   pendingFeeOutputPlan.value = null;
   pendingTreasuryFundingPreview.value = null;
   pendingVoucherAddress.value = null;
+  pendingKeyMetadata.value = null;
 
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
     errorMessage.value = 'Enter a valid cash amount first.';
@@ -466,6 +474,25 @@ async function handleReviewVoucher(
     );
 
     pendingVoucherAddress.value = await deriveNextVoucherAddress();
+
+    try {
+      const voucherKey = await exportVoucherKeyAtIndex(
+        pendingVoucherAddress.value.derivationIndex
+      );
+
+      pendingKeyMetadata.value = {
+        hasWif: Boolean(voucherKey.wif),
+        checkedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error(error);
+      pendingKeyMetadata.value = {
+        hasWif: false,
+        checkedAt: new Date().toISOString(),
+      };
+      warningMessage.value =
+        'Voucher WIF capability check failed. Fake issuing can continue, but printing/sweeping will require WIF export.';
+    }
 
     if (treasuryWallet.value.isSetup && treasuryWallet.value.address) {
       pendingTreasuryFundingPreview.value = createTreasuryFundingPreview({
@@ -555,6 +582,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
           derivationIndex: pendingVoucherAddress.value.derivationIndex,
           address: pendingVoucherAddress.value.address,
         },
+        keyMetadata: pendingKeyMetadata.value,
         feeOutputPlan: pendingFeeOutputPlan.value,
         treasuryFundingPreview: pendingTreasuryFundingPreview.value,
       }
@@ -570,6 +598,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
     pendingFeeOutputPlan.value = null;
     pendingTreasuryFundingPreview.value = null;
     pendingVoucherAddress.value = null;
+    pendingKeyMetadata.value = null;
     isProgressDialogOpen.value = false;
 
     await loadTreasuryWallet();

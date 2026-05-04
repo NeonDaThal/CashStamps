@@ -3,7 +3,11 @@ import type {
   TreasuryFundingPreviewSelectedUtxo,
 } from 'src/types/treasury-funding';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
-import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
+import type {
+  VoucherKeyMetadata,
+  VoucherRecord,
+  VoucherQuoteSource,
+} from 'src/types/voucher';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
 export interface VoucherAddressData {
@@ -13,6 +17,7 @@ export interface VoucherAddressData {
 
 export interface CreateVoucherRecordOptions {
   addressData?: VoucherAddressData;
+  keyMetadata?: VoucherKeyMetadata | null;
   feeOutputPlan?: VoucherFeeOutputPlan | null;
   treasuryFundingPreview?: TreasuryFundingPreview | null;
 }
@@ -107,6 +112,19 @@ function cloneFeeOutputPlan(
   };
 }
 
+function cloneKeyMetadata(
+  keyMetadata?: VoucherKeyMetadata | null
+): VoucherKeyMetadata | undefined {
+  if (!keyMetadata) {
+    return undefined;
+  }
+
+  return {
+    hasWif: keyMetadata.hasWif,
+    checkedAt: keyMetadata.checkedAt,
+  };
+}
+
 export function createDraftVoucherRecord(
   fiatAmountMinor: number,
   fiatCurrency = 'GBP',
@@ -149,6 +167,8 @@ export function createDraftVoucherRecord(
 
     derivationIndex: options?.addressData?.derivationIndex ?? -1,
     address: options?.addressData?.address ?? '',
+
+    keyMetadata: cloneKeyMetadata(options?.keyMetadata),
 
     feeOutputPlan: cloneFeeOutputPlan(options?.feeOutputPlan),
     treasuryFundingPreview: cloneTreasuryFundingPreview(

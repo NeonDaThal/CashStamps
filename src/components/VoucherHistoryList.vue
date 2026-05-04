@@ -32,6 +32,15 @@
         </q-item-label>
 
         <q-item-label caption>
+          WIF ready:
+          <span v-if="voucher.keyMetadata">
+            {{ voucher.keyMetadata.hasWif ? 'Yes' : 'No' }}
+            · checked {{ formatDate(voucher.keyMetadata.checkedAt) }}
+          </span>
+          <span v-else> Not checked </span>
+        </q-item-label>
+
+        <q-item-label caption>
           Fee output plan:
           <span v-if="voucher.feeOutputPlan">
             platform

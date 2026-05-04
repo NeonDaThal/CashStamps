@@ -37,6 +37,11 @@ export interface VoucherFee {
   description?: string;
 }
 
+export interface VoucherKeyMetadata {
+  hasWif: boolean;
+  checkedAt: string;
+}
+
 export interface VoucherRecord {
   id: string;
   serial: string;
@@ -55,6 +60,8 @@ export interface VoucherRecord {
 
   derivationIndex: number;
   address: string;
+
+  keyMetadata?: VoucherKeyMetadata;
 
   feeOutputPlan?: VoucherFeeOutputPlan;
   treasuryFundingPreview?: TreasuryFundingPreview;
