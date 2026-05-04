@@ -32,6 +32,20 @@
         </q-item-label>
 
         <q-item-label caption>
+          Fee output plan:
+          <span v-if="voucher.feeOutputPlan">
+            platform
+            {{ formatBchSats(voucher.feeOutputPlan.platformFeeSats) }} ·
+            merchant retained
+            {{ formatBchSats(voucher.feeOutputPlan.merchantRetainedSats) }} ·
+            buffer
+            {{ formatBchSats(voucher.feeOutputPlan.bufferReserveSats) }} · total
+            {{ formatBchSats(voucher.feeOutputPlan.totalServiceFeeSats) }}
+          </span>
+          <span v-else> Not available </span>
+        </q-item-label>
+
+        <q-item-label caption>
           Funding preview:
           <span v-if="voucher.treasuryFundingPreview">
             selected {{ getSelectedUtxoCount(voucher) }} UTXOs · inputs

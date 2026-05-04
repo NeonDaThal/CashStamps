@@ -152,6 +152,13 @@
                 {{ lastIssuedVoucher.derivationIndex }}
               </div>
 
+              <div v-if="lastIssuedVoucher.feeOutputPlan" class="text-body2">
+                <strong>Platform fee plan:</strong>
+                {{
+                  formatBchSats(lastIssuedVoucher.feeOutputPlan.platformFeeSats)
+                }}
+              </div>
+
               <div class="text-body2">
                 <strong>Status:</strong>
                 {{ lastIssuedVoucher.status }}
@@ -254,7 +261,9 @@ import {
   deriveNextVoucherAddress,
   type DerivedVoucherAddress,
 } from 'src/services/voucher-wallet';
+import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
+import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 
 const pricingService = new PricingService();
 
@@ -270,6 +279,7 @@ const isProgressDialogOpen = ref(false);
 const pendingFiatAmountMinor = ref(0);
 const pendingFiatCurrency = ref('GBP');
 const pendingPricing = ref<FakeVoucherPricingQuote | null>(null);
+const pendingFeeOutputPlan = ref<VoucherFeeOutputPlan | null>(null);
 const pendingTreasuryFundingPreview = ref<TreasuryFundingPreview | null>(null);
 const pendingVoucherAddress = ref<DerivedVoucherAddress | null>(null);
 
@@ -412,6 +422,7 @@ async function handleReviewVoucher(
   clearMessages();
   lastIssuedVoucher.value = null;
   pendingPricing.value = null;
+  pendingFeeOutputPlan.value = null;
   pendingTreasuryFundingPreview.value = null;
   pendingVoucherAddress.value = null;
 
@@ -448,6 +459,10 @@ async function handleReviewVoucher(
     pendingPricing.value = calculateVoucherPricingFromLockedQuote(
       fiatAmountMinor,
       lockedQuote
+    );
+
+    pendingFeeOutputPlan.value = createVoucherFeeOutputPlan(
+      pendingPricing.value
     );
 
     pendingVoucherAddress.value = await deriveNextVoucherAddress();
@@ -540,6 +555,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
           derivationIndex: pendingVoucherAddress.value.derivationIndex,
           address: pendingVoucherAddress.value.address,
         },
+        feeOutputPlan: pendingFeeOutputPlan.value,
         treasuryFundingPreview: pendingTreasuryFundingPreview.value,
       }
     );
@@ -551,6 +567,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
     lastIssuedVoucher.value = voucher;
     pendingPricing.value = null;
+    pendingFeeOutputPlan.value = null;
     pendingTreasuryFundingPreview.value = null;
     pendingVoucherAddress.value = null;
     isProgressDialogOpen.value = false;

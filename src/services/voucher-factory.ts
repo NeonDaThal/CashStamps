@@ -2,6 +2,7 @@ import type {
   TreasuryFundingPreview,
   TreasuryFundingPreviewSelectedUtxo,
 } from 'src/types/treasury-funding';
+import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 
@@ -12,6 +13,7 @@ export interface VoucherAddressData {
 
 export interface CreateVoucherRecordOptions {
   addressData?: VoucherAddressData;
+  feeOutputPlan?: VoucherFeeOutputPlan | null;
   treasuryFundingPreview?: TreasuryFundingPreview | null;
 }
 
@@ -81,6 +83,30 @@ function cloneTreasuryFundingPreview(
   };
 }
 
+function cloneFeeOutputPlan(
+  feeOutputPlan?: VoucherFeeOutputPlan | null
+): VoucherFeeOutputPlan | undefined {
+  if (!feeOutputPlan) {
+    return undefined;
+  }
+
+  return {
+    platformFeeAddress: feeOutputPlan.platformFeeAddress,
+    platformFeeSats: feeOutputPlan.platformFeeSats,
+    platformFeeBasisPoints: feeOutputPlan.platformFeeBasisPoints,
+
+    merchantRetainedSats: feeOutputPlan.merchantRetainedSats,
+    merchantRetainedBasisPoints: feeOutputPlan.merchantRetainedBasisPoints,
+
+    bufferReserveAddress: feeOutputPlan.bufferReserveAddress,
+    bufferReserveSats: feeOutputPlan.bufferReserveSats,
+    bufferReserveBasisPoints: feeOutputPlan.bufferReserveBasisPoints,
+
+    totalServiceFeeSats: feeOutputPlan.totalServiceFeeSats,
+    totalServiceFeeBasisPoints: feeOutputPlan.totalServiceFeeBasisPoints,
+  };
+}
+
 export function createDraftVoucherRecord(
   fiatAmountMinor: number,
   fiatCurrency = 'GBP',
@@ -124,6 +150,7 @@ export function createDraftVoucherRecord(
     derivationIndex: options?.addressData?.derivationIndex ?? -1,
     address: options?.addressData?.address ?? '',
 
+    feeOutputPlan: cloneFeeOutputPlan(options?.feeOutputPlan),
     treasuryFundingPreview: cloneTreasuryFundingPreview(
       options?.treasuryFundingPreview
     ),

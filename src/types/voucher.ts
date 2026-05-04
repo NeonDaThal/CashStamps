@@ -1,4 +1,5 @@
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
+import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 
 export type VoucherStatus =
   | 'draft'
@@ -55,6 +56,7 @@ export interface VoucherRecord {
   derivationIndex: number;
   address: string;
 
+  feeOutputPlan?: VoucherFeeOutputPlan;
   treasuryFundingPreview?: TreasuryFundingPreview;
 
   fundingTxid?: string;
