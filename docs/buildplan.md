@@ -826,6 +826,38 @@ Current implementation status:
 
 Important: WIF/private key exposure must be limited to the final secure print/export flow only.
 
+#### Treasury wallet backup and restore requirement
+
+Before real merchant funding is enabled, the treasury wallet must support safe backup and restore.
+
+The merchant treasury wallet is the wallet that funds BCH vouchers. If it holds real BCH, the merchant must be able to recover it if:
+
+- the browser storage is cleared
+- the device is lost
+- the app is reinstalled
+- the merchant moves to a new device
+
+Required before production use:
+
+- show treasury seed phrase with strong warnings
+- require merchant to confirm they have backed it up
+- restore/import treasury wallet from seed phrase
+- verify restored wallet derives the same treasury address
+- show receive/top-up address for adding BCH to treasury
+- allow merchant to send BCH out of treasury to another BCH wallet
+- prevent accidental wallet reset while funds may still exist
+
+Current implementation status:
+
+- treasury wallet can be created locally
+- treasury address is shown
+- treasury balance can be checked
+- treasury UTXOs can be viewed
+- treasury wallet is still MVP/local-storage only
+- backup/restore/send-out flows are not yet implemented
+
+Important: real funding should not be enabled for merchants until backup/restore is implemented and tested.
+
 ### Phase 4 — Browser receipt preview
 
 #### Goal
