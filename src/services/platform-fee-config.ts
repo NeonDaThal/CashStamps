@@ -8,13 +8,24 @@ export const TOTAL_SERVICE_FEE_BASIS_POINTS =
   BUFFER_RESERVE_BASIS_POINTS;
 
 /**
- * TODO before real funding:
- * Replace these with real BCH addresses.
+ * Real funding must stay disabled until this is configured.
  *
- * PLATFORM_FEE_ADDRESS is your automatic fee wallet.
- * BUFFER_RESERVE_ADDRESS is optional. It can be your own reserve wallet,
- * a separate reserve wallet, or left blank if we later decide not to use
- * an on-chain buffer output.
+ * This should be your BCH fee collection wallet address.
  */
 export const PLATFORM_FEE_ADDRESS = '';
+
+/**
+ * Optional future reserve wallet.
+ *
+ * For now, this is required only if BUFFER_RESERVE_BASIS_POINTS is greater than 0
+ * and we decide the buffer should be paid as an on-chain output.
+ */
 export const BUFFER_RESERVE_ADDRESS = '';
+
+export function isPlatformFeeAddressConfigured(): boolean {
+  return PLATFORM_FEE_ADDRESS.trim().length > 0;
+}
+
+export function isBufferReserveAddressConfigured(): boolean {
+  return BUFFER_RESERVE_ADDRESS.trim().length > 0;
+}

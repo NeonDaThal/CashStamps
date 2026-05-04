@@ -51,6 +51,40 @@
           {{ treasuryWarning }}
         </q-banner>
 
+        <q-banner
+          v-if="fundingReadiness"
+          :class="
+            fundingReadiness.status === 'ready'
+              ? 'bg-green-1 text-green-10'
+              : 'bg-red-1 text-red-10'
+          "
+          rounded
+          class="q-mb-md"
+        >
+          <template #avatar>
+            <q-icon
+              :name="
+                fundingReadiness.status === 'ready' ? 'check_circle' : 'block'
+              "
+            />
+          </template>
+
+          <div v-if="fundingReadiness.status === 'ready'">
+            Real funding readiness check passed. Broadcast is still disabled in
+            this build.
+          </div>
+
+          <div v-else>
+            <div class="text-weight-medium q-mb-xs">
+              Real funding is not ready yet.
+            </div>
+
+            <div v-for="message in fundingReadiness.messages" :key="message">
+              - {{ message }}
+            </div>
+          </div>
+        </q-banner>
+
         <q-list dense>
           <q-item>
             <q-item-section>
@@ -500,10 +534,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+import type { FundingReadinessCheck } from 'src/types/funding-readiness';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
+import { createFundingReadinessCheck } from 'src/services/funding-readiness';
 import { createTreasuryTransactionDraftFromPlan } from 'src/services/treasury-transaction-draft';
 import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
 import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
@@ -566,6 +602,16 @@ const transactionDraft = computed<TreasuryTransactionDraft | null>(() => {
   }
 
   return createTreasuryTransactionDraftFromPlan(transactionPlan.value);
+});
+
+const fundingReadiness = computed<FundingReadinessCheck | null>(() => {
+  return createFundingReadinessCheck({
+    treasuryIsSetup: Boolean(props.treasuryFundingPreview?.treasuryAddress),
+    treasuryBalanceSats: props.treasuryBalanceSats,
+    requiredSats: props.treasuryFundingPreview?.estimatedTotalRequiredSats,
+    transactionPlan: transactionPlan.value,
+    transactionDraft: transactionDraft.value,
+  });
 });
 
 function formatDateTime(value: string): string {
