@@ -805,6 +805,27 @@ Current implementation status:
 
 Important: no real transaction is currently built, signed, or broadcast.
 
+#### Voucher WIF readiness note
+
+Phase 3 now includes the sweepable voucher key side of the funding model.
+
+A funded voucher requires two pieces:
+
+- voucher address — where the merchant treasury sends BCH
+- voucher WIF/private key — what the customer wallet will later sweep from the printed QR
+
+Current implementation status:
+
+- voucher addresses are derived before confirmation
+- WIF export capability has been tested through a developer-only check page
+- the app confirms WIF export is available for derived voucher wallets
+- voucher records store a safe WIF-ready marker
+- voucher history shows whether WIF export was checked
+- full WIF/private key is not stored in voucher history
+- full WIF/private key is not shown in normal merchant UI
+
+Important: WIF/private key exposure must be limited to the final secure print/export flow only.
+
 ### Phase 4 — Browser receipt preview
 
 #### Goal
