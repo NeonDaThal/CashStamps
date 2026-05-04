@@ -858,6 +858,30 @@ Current implementation status:
 
 Important: real funding should not be enabled for merchants until backup/restore is implemented and tested.
 
+#### Treasury restore/import requirement
+
+A merchant must be able to restore their treasury wallet from seed phrase before real production use.
+
+The restore/import flow should:
+
+- accept a valid treasury seed phrase
+- derive the treasury address from the imported seed
+- show the derived address before saving
+- require confirmation before replacing any existing local treasury wallet
+- warn clearly if a wallet already exists
+- verify that the restored wallet can check balance through Electrum
+- never overwrite an existing treasury wallet accidentally
+- keep real funding disabled until backup and restore have both been tested
+
+Current implementation status:
+
+- development seed backup/reveal exists
+- seed can be hidden after reveal
+- restore/import flow is not yet implemented
+- replacing an existing treasury wallet is not yet supported safely
+
+Important: the restore flow must be tested before real merchant funds are used.
+
 ### Phase 4 — Browser receipt preview
 
 #### Goal
