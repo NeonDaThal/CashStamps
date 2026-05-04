@@ -107,6 +107,24 @@ export function createTreasuryTransactionPlanFromPreview(
     );
   }
 
+  if (feeOutputs.platformFeeSats > 0 && !feeOutputs.platformFeeAddress) {
+    return createInvalidPlan(
+      preview,
+      'missing_platform_fee_address',
+      'Platform fee amount is planned, but no platform fee address is configured.',
+      feeOutputs
+    );
+  }
+
+  if (feeOutputs.bufferReserveSats > 0 && !feeOutputs.bufferReserveAddress) {
+    return createInvalidPlan(
+      preview,
+      'missing_buffer_reserve_address',
+      'Buffer reserve amount is planned, but no buffer reserve address is configured.',
+      feeOutputs
+    );
+  }
+
   const totalOutputSatsBeforeChange =
     preview.amountSats +
     feeOutputs.platformFeeSats +

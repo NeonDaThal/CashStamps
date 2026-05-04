@@ -7,6 +7,8 @@ export type TreasuryTransactionPlanInvalidReason =
   | 'missing_voucher_address'
   | 'invalid_amount'
   | 'no_selected_utxos'
+  | 'missing_platform_fee_address'
+  | 'missing_buffer_reserve_address'
   | 'insufficient_input_value'
   | 'invalid_change';
 
