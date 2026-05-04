@@ -10,7 +10,7 @@
         testing. Do not use this with real funds yet.
       </q-banner>
 
-      <q-card flat bordered>
+      <q-card flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-h4 q-mb-xs">Treasury Wallet</div>
           <p class="text-grey-7 q-mb-none">
@@ -197,6 +197,109 @@
         </q-card-actions>
       </q-card>
 
+      <q-card flat bordered>
+        <q-card-section>
+          <div class="text-h5 q-mb-xs">Automatic Fee Address Configuration</div>
+          <p class="text-grey-7 q-mb-none">
+            Real funding must stay disabled until the required fee collection
+            addresses are configured.
+          </p>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section>
+          <q-banner
+            :class="
+              feeAddressConfig.platformFeeAddressConfigured
+                ? 'bg-green-1 text-green-10'
+                : 'bg-red-1 text-red-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  feeAddressConfig.platformFeeAddressConfigured
+                    ? 'check_circle'
+                    : 'block'
+                "
+              />
+            </template>
+
+            <span v-if="feeAddressConfig.platformFeeAddressConfigured">
+              Platform fee address is configured.
+            </span>
+
+            <span v-else>
+              Platform fee address is not configured. Real funding must stay
+              disabled.
+            </span>
+          </q-banner>
+
+          <q-banner
+            :class="
+              feeAddressConfig.bufferReserveAddressConfigured
+                ? 'bg-green-1 text-green-10'
+                : 'bg-red-1 text-red-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  feeAddressConfig.bufferReserveAddressConfigured
+                    ? 'check_circle'
+                    : 'block'
+                "
+              />
+            </template>
+
+            <span v-if="feeAddressConfig.bufferReserveAddressConfigured">
+              Buffer reserve address is configured.
+            </span>
+
+            <span v-else>
+              Buffer reserve address is not configured. Real funding must stay
+              disabled while buffer output is enabled.
+            </span>
+          </q-banner>
+
+          <q-list bordered separator>
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Platform fee address</q-item-label>
+                <q-item-label class="text-break">
+                  {{ feeAddressConfig.platformFeeAddress || 'Not configured' }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Buffer reserve address</q-item-label>
+                <q-item-label class="text-break">
+                  {{
+                    feeAddressConfig.bufferReserveAddress || 'Not configured'
+                  }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Config checked</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(feeAddressConfig.checkedAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+      </q-card>
+
       <q-banner
         v-if="successMessage"
         class="bg-green-1 text-green-9 q-mt-md"
@@ -215,6 +318,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 
+import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
   TreasuryWalletBalance,
   TreasuryWalletPublicInfo,
@@ -226,6 +330,7 @@ import {
   getTreasuryWalletPublicInfo,
 } from 'src/services/treasury-wallet';
 import { formatBchSats } from 'src/services/voucher-pricing';
+import { getFeeAddressConfigStatus } from 'src/services/fee-address-config';
 
 const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   address: '',
@@ -235,6 +340,10 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
 });
 
 const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
+
+const feeAddressConfig = ref<FeeAddressConfigStatus>(
+  getFeeAddressConfigStatus()
+);
 
 const isSubmitting = ref(false);
 const isCheckingBalance = ref(false);
@@ -246,6 +355,7 @@ async function loadTreasuryWallet(): Promise<void> {
 
   try {
     treasuryWallet.value = await getTreasuryWalletPublicInfo();
+    feeAddressConfig.value = getFeeAddressConfigStatus();
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not load treasury wallet information.';
