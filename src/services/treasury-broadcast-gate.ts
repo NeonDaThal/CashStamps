@@ -1,9 +1,21 @@
 import type { PreBroadcastChecklist } from 'src/types/pre-broadcast-checklist';
 import type { TreasuryBroadcastGate } from 'src/types/treasury-broadcast-gate';
+import { getFundingSafetyStatus } from 'src/services/funding-safety';
 
 export function createTreasuryBroadcastGate(
   checklist?: PreBroadcastChecklist | null
 ): TreasuryBroadcastGate {
+  const fundingSafety = getFundingSafetyStatus();
+
+  if (!fundingSafety.realBroadcastEnabled) {
+    return {
+      status: 'blocked',
+      canBroadcast: false,
+      message: fundingSafety.message,
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
   if (!checklist) {
     return {
       status: 'blocked',
