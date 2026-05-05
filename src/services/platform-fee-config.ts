@@ -8,9 +8,13 @@ export const TOTAL_SERVICE_FEE_BASIS_POINTS =
   BUFFER_RESERVE_BASIS_POINTS;
 
 /**
- * Real funding must stay disabled until this is configured.
+ * Real funding must stay disabled until this is configured with a valid BCH
+ * address.
  *
  * This should be your BCH fee collection wallet address.
+ *
+ * Example format:
+ * bitcoincash:...
  */
 export const PLATFORM_FEE_ADDRESS = '';
 

@@ -2,9 +2,8 @@ import {
   BUFFER_RESERVE_BASIS_POINTS,
   BUFFER_RESERVE_OUTPUT_ENABLED,
   PLATFORM_FEE_BASIS_POINTS,
-  isBufferReserveAddressConfigured,
-  isPlatformFeeAddressConfigured,
 } from 'src/services/platform-fee-config';
+import { getFeeAddressConfigStatus } from 'src/services/fee-address-config';
 import { getFundingSafetyStatus } from 'src/services/funding-safety';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
@@ -22,7 +21,7 @@ function addBlocker(
   blockers: FundingReadinessCheck['blockers'],
   messages: string[],
   blocker: FundingReadinessCheck['blockers'][number],
-  message: string
+  message: string,
 ): void {
   if (!blockers.includes(blocker)) {
     blockers.push(blocker);
@@ -34,40 +33,71 @@ function addBlocker(
 }
 
 export function createFundingReadinessCheck(
-  input: CreateFundingReadinessCheckInput
+  input: CreateFundingReadinessCheckInput,
 ): FundingReadinessCheck {
   const blockers: FundingReadinessCheck['blockers'] = [];
   const messages: string[] = [];
   const fundingSafetyStatus = getFundingSafetyStatus();
+  const feeAddressConfigStatus = getFeeAddressConfigStatus();
 
   if (!fundingSafetyStatus.realBroadcastEnabled) {
     addBlocker(
       blockers,
       messages,
       'real_broadcast_disabled',
-      fundingSafetyStatus.message
+      fundingSafetyStatus.message,
     );
   }
 
-  if (PLATFORM_FEE_BASIS_POINTS > 0 && !isPlatformFeeAddressConfigured()) {
+  if (
+    PLATFORM_FEE_BASIS_POINTS > 0 &&
+    !feeAddressConfigStatus.platformFeeAddressConfigured
+  ) {
     addBlocker(
       blockers,
       messages,
       'platform_fee_address_missing',
-      'Platform fee address is not configured. Real funding must stay disabled.'
+      'Platform fee address is not configured. Real funding must stay disabled.',
+    );
+  }
+
+  if (
+    PLATFORM_FEE_BASIS_POINTS > 0 &&
+    feeAddressConfigStatus.platformFeeAddressConfigured &&
+    !feeAddressConfigStatus.platformFeeAddressValid
+  ) {
+    addBlocker(
+      blockers,
+      messages,
+      'platform_fee_address_invalid',
+      `Platform fee address is invalid: ${feeAddressConfigStatus.platformFeeAddressError}`,
     );
   }
 
   if (
     BUFFER_RESERVE_OUTPUT_ENABLED &&
     BUFFER_RESERVE_BASIS_POINTS > 0 &&
-    !isBufferReserveAddressConfigured()
+    !feeAddressConfigStatus.bufferReserveAddressConfigured
   ) {
     addBlocker(
       blockers,
       messages,
       'buffer_reserve_address_missing',
-      'Buffer reserve address is not configured. Real funding must stay disabled while buffer reserve output is enabled.'
+      'Buffer reserve address is not configured. Real funding must stay disabled while buffer reserve output is enabled.',
+    );
+  }
+
+  if (
+    BUFFER_RESERVE_OUTPUT_ENABLED &&
+    BUFFER_RESERVE_BASIS_POINTS > 0 &&
+    feeAddressConfigStatus.bufferReserveAddressConfigured &&
+    !feeAddressConfigStatus.bufferReserveAddressValid
+  ) {
+    addBlocker(
+      blockers,
+      messages,
+      'buffer_reserve_address_invalid',
+      `Buffer reserve address is invalid: ${feeAddressConfigStatus.bufferReserveAddressError}`,
     );
   }
 
@@ -76,7 +106,7 @@ export function createFundingReadinessCheck(
       blockers,
       messages,
       'treasury_not_setup',
-      'Treasury wallet is not set up.'
+      'Treasury wallet is not set up.',
     );
   }
 
@@ -85,7 +115,7 @@ export function createFundingReadinessCheck(
       blockers,
       messages,
       'treasury_balance_missing',
-      'Treasury balance has not been checked.'
+      'Treasury balance has not been checked.',
     );
   }
 
@@ -98,7 +128,7 @@ export function createFundingReadinessCheck(
       blockers,
       messages,
       'treasury_balance_too_low',
-      'Treasury balance is too low for this voucher.'
+      'Treasury balance is too low for this voucher.',
     );
   }
 
@@ -107,7 +137,7 @@ export function createFundingReadinessCheck(
       blockers,
       messages,
       'transaction_plan_invalid',
-      input.transactionPlan.invalidMessage ?? 'Transaction plan is invalid.'
+      input.transactionPlan.invalidMessage ?? 'Transaction plan is invalid.',
     );
   }
 
@@ -117,7 +147,7 @@ export function createFundingReadinessCheck(
       messages,
       'transaction_draft_not_created',
       input.transactionDraft.errorMessage ??
-        'Transaction draft has not been created.'
+        'Transaction draft has not been created.',
     );
   }
 

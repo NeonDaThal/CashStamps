@@ -453,7 +453,7 @@
           <div class="text-h5 q-mb-xs">Automatic Fee Address Configuration</div>
           <p class="text-grey-7 q-mb-none">
             Real funding must stay disabled until the required fee collection
-            addresses are configured.
+            addresses are configured and valid.
           </p>
         </q-card-section>
 
@@ -462,7 +462,7 @@
         <q-card-section>
           <q-banner
             :class="
-              feeAddressConfig.platformFeeAddressConfigured
+              feeAddressConfig.platformFeeAddressValid
                 ? 'bg-green-1 text-green-10'
                 : 'bg-red-1 text-red-10'
             "
@@ -472,15 +472,20 @@
             <template #avatar>
               <q-icon
                 :name="
-                  feeAddressConfig.platformFeeAddressConfigured
+                  feeAddressConfig.platformFeeAddressValid
                     ? 'check_circle'
                     : 'block'
                 "
               />
             </template>
 
-            <span v-if="feeAddressConfig.platformFeeAddressConfigured">
-              Platform fee address is configured.
+            <span v-if="feeAddressConfig.platformFeeAddressValid">
+              Platform fee address is configured and valid.
+            </span>
+
+            <span v-else-if="feeAddressConfig.platformFeeAddressConfigured">
+              Platform fee address is configured but invalid:
+              {{ feeAddressConfig.platformFeeAddressError }}
             </span>
 
             <span v-else>
@@ -491,9 +496,9 @@
 
           <q-banner
             :class="
-              feeAddressConfig.bufferReserveAddressConfigured
+              feeAddressConfig.bufferReserveAddressValid
                 ? 'bg-green-1 text-green-10'
-                : 'bg-red-1 text-red-10'
+                : 'bg-grey-2 text-grey-9'
             "
             rounded
             class="q-mb-md"
@@ -501,20 +506,25 @@
             <template #avatar>
               <q-icon
                 :name="
-                  feeAddressConfig.bufferReserveAddressConfigured
+                  feeAddressConfig.bufferReserveAddressValid
                     ? 'check_circle'
-                    : 'block'
+                    : 'info'
                 "
               />
             </template>
 
-            <span v-if="feeAddressConfig.bufferReserveAddressConfigured">
-              Buffer reserve address is configured.
+            <span
+              v-if="
+                feeAddressConfig.bufferReserveAddressConfigured &&
+                feeAddressConfig.bufferReserveAddress
+              "
+            >
+              Buffer reserve address is configured and valid.
             </span>
 
             <span v-else>
-              Buffer reserve address is not configured. Real funding must stay
-              disabled while buffer output is enabled.
+              Buffer reserve output is optional for MVP and is not currently
+              required.
             </span>
           </q-banner>
 
@@ -530,10 +540,38 @@
 
             <q-item>
               <q-item-section>
+                <q-item-label caption>Platform fee address status</q-item-label>
+                <q-item-label>
+                  {{
+                    feeAddressConfig.platformFeeAddressValid
+                      ? 'Valid'
+                      : 'Not ready'
+                  }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
                 <q-item-label caption>Buffer reserve address</q-item-label>
                 <q-item-label class="text-break">
                   {{
                     feeAddressConfig.bufferReserveAddress || 'Not configured'
+                  }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption
+                  >Buffer reserve address status</q-item-label
+                >
+                <q-item-label>
+                  {{
+                    feeAddressConfig.bufferReserveAddressValid
+                      ? 'Valid / not required'
+                      : 'Not ready'
                   }}
                 </q-item-label>
               </q-item-section>
