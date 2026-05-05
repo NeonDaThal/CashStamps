@@ -431,6 +431,57 @@
             </q-item>
           </q-list>
 
+          <q-banner
+            v-if="draftAudit"
+            :class="
+              draftAudit.status === 'passed'
+                ? 'bg-green-1 text-green-10'
+                : 'bg-red-1 text-red-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  draftAudit.status === 'passed' ? 'check_circle' : 'warning'
+                "
+              />
+            </template>
+
+            <span v-if="draftAudit.status === 'passed'">
+              Transaction draft audit passed.
+            </span>
+
+            <span v-else> Transaction draft audit failed. </span>
+          </q-banner>
+
+          <q-list v-if="draftAudit" dense bordered separator class="q-mb-md">
+            <q-item v-for="check in draftAudit.checks" :key="check.key">
+              <q-item-section avatar>
+                <q-icon
+                  :name="check.passed ? 'check_circle' : 'warning'"
+                  :color="check.passed ? 'positive' : 'negative'"
+                />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label>
+                  {{ check.message }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Audit checked</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(draftAudit.checkedAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+
           <q-item>
             <q-item-section>
               <q-btn
@@ -711,7 +762,9 @@ import type { FundingReadinessCheck } from 'src/types/funding-readiness';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
+import type { TreasuryTransactionDraftAudit } from 'src/types/treasury-transaction-audit';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
+import { auditTreasuryTransactionDraft } from 'src/services/treasury-transaction-audit';
 import { createFundingReadinessCheck } from 'src/services/funding-readiness';
 import {
   createTreasuryTransactionDraftFromPlan,
@@ -743,6 +796,7 @@ const emit = defineEmits<{
 
 const isRunningDraftCheck = ref(false);
 const draftCheckResult = ref<TreasuryTransactionDraft | null>(null);
+const draftAudit = ref<TreasuryTransactionDraftAudit | null>(null);
 
 const quoteSourceLabel = computed(() => {
   const labels: Record<FakeVoucherPricingQuote['quoteSource'], string> = {
@@ -810,12 +864,15 @@ async function handleRunDraftCheck(): Promise<void> {
   }
 
   draftCheckResult.value = null;
+  draftAudit.value = null;
   isRunningDraftCheck.value = true;
 
   try {
     draftCheckResult.value = await createTreasuryTransactionDraftFromPlan(
       transactionPlan.value
     );
+
+    draftAudit.value = auditTreasuryTransactionDraft(draftCheckResult.value);
   } catch (error) {
     draftCheckResult.value = {
       status: 'not_created',
@@ -827,6 +884,8 @@ async function handleRunDraftCheck(): Promise<void> {
           : 'Developer draft check failed.',
       createdAt: new Date().toISOString(),
     };
+
+    draftAudit.value = auditTreasuryTransactionDraft(draftCheckResult.value);
   } finally {
     isRunningDraftCheck.value = false;
   }
