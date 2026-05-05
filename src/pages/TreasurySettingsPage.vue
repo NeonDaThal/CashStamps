@@ -197,6 +197,11 @@
         </q-card-actions>
       </q-card>
 
+      <TreasuryTopUpQrCard
+        v-if="treasuryWallet.isSetup"
+        :treasury-address="treasuryWallet.address"
+      />
+
       <q-card v-if="treasuryWallet.isSetup" flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-h5 q-mb-xs">Development Treasury Backup</div>
@@ -606,6 +611,8 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+
+import TreasuryTopUpQrCard from 'src/components/TreasuryTopUpQrCard.vue';
 
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
