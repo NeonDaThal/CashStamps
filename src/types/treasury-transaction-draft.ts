@@ -13,6 +13,17 @@ export interface TreasuryTransactionDraft {
   rawTransactionHex?: string;
   rawTransactionBytesLength?: number;
 
+  actualFeeSats?: number;
+  actualChangeSats?: number;
+
+  outputCount?: number;
+  inputCount?: number;
+
+  /**
+   * Safety marker: the app must not broadcast from this draft service.
+   */
+  broadcastEnabled: false;
+
   errorMessage?: string;
 
   createdAt: string;

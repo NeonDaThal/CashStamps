@@ -281,6 +281,19 @@
             </span>
           </q-banner>
 
+          <q-item v-if="transactionDraft">
+            <q-item-section>
+              <q-item-label caption>Draft generation mode</q-item-label>
+              <q-item-label>
+                {{
+                  transactionDraft.broadcastEnabled
+                    ? 'Broadcast enabled'
+                    : 'Broadcast disabled'
+                }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
           <template v-if="treasuryFundingPreview">
             <q-item>
               <q-item-section>
@@ -503,9 +516,9 @@
         </q-list>
 
         <q-banner class="bg-orange-1 text-orange-10 q-mt-md" rounded>
-          This is still a dry-run only. No transaction is built, signed, or
-          broadcast yet. Real treasury funding will be added after this preview
-          layer is correct.
+          This is still a dry-run only. No transaction is broadcast. Any future
+          raw transaction draft must be treated as sensitive and only broadcast
+          after explicit confirmation in a later phase.
         </q-banner>
       </q-card-section>
 
@@ -540,7 +553,7 @@ import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-dr
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import { createFundingReadinessCheck } from 'src/services/funding-readiness';
-import { createTreasuryTransactionDraftFromPlan } from 'src/services/treasury-transaction-draft';
+import { createTreasuryTransactionDraftStatusFromPlan } from 'src/services/treasury-transaction-draft';
 import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
 import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
@@ -601,7 +614,7 @@ const transactionDraft = computed<TreasuryTransactionDraft | null>(() => {
     return null;
   }
 
-  return createTreasuryTransactionDraftFromPlan(transactionPlan.value);
+  return createTreasuryTransactionDraftStatusFromPlan(transactionPlan.value);
 });
 
 const fundingReadiness = computed<FundingReadinessCheck | null>(() => {
