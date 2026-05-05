@@ -260,9 +260,9 @@
           </q-banner>
 
           <q-banner
-            v-if="transactionDraft"
+            v-if="transactionDraftStatus"
             :class="
-              transactionDraft.status === 'created'
+              transactionDraftStatus.status === 'created'
                 ? 'bg-green-1 text-green-10'
                 : 'bg-grey-2 text-grey-9'
             "
@@ -272,29 +272,29 @@
             <template #avatar>
               <q-icon
                 :name="
-                  transactionDraft.status === 'created'
+                  transactionDraftStatus.status === 'created'
                     ? 'check_circle'
                     : 'info'
                 "
               />
             </template>
 
-            <span v-if="transactionDraft.status === 'created'">
+            <span v-if="transactionDraftStatus.status === 'created'">
               Transaction draft created. Broadcast is still disabled.
             </span>
 
             <span v-else>
               Transaction draft not created yet:
-              {{ transactionDraft.errorMessage }}
+              {{ transactionDraftStatus.errorMessage }}
             </span>
           </q-banner>
 
-          <q-item v-if="transactionDraft">
+          <q-item v-if="transactionDraftStatus">
             <q-item-section>
               <q-item-label caption>Draft generation mode</q-item-label>
               <q-item-label>
                 {{
-                  transactionDraft.broadcastEnabled
+                  transactionDraftStatus.broadcastEnabled
                     ? 'Broadcast enabled'
                     : 'Broadcast disabled'
                 }}
@@ -302,7 +302,159 @@
             </q-item-section>
           </q-item>
 
+          <q-separator spaced />
+
+          <q-item-label header>
+            Developer transaction draft check
+          </q-item-label>
+
+          <q-banner class="bg-orange-1 text-orange-10 q-mb-md" rounded>
+            <template #avatar>
+              <q-icon name="warning" />
+            </template>
+
+            Developer-only check. This may create a signed raw transaction draft
+            in memory, but it will not broadcast it and the raw hex is not
+            displayed here.
+          </q-banner>
+
+          <q-banner
+            v-if="draftCheckResult"
+            :class="
+              draftCheckResult.status === 'created'
+                ? 'bg-green-1 text-green-10'
+                : 'bg-red-1 text-red-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  draftCheckResult.status === 'created'
+                    ? 'check_circle'
+                    : 'warning'
+                "
+              />
+            </template>
+
+            <span v-if="draftCheckResult.status === 'created'">
+              Developer transaction draft check created a transaction draft.
+              Broadcast is disabled.
+            </span>
+
+            <span v-else>
+              Developer transaction draft check did not create a draft:
+              {{ draftCheckResult.errorMessage }}
+            </span>
+          </q-banner>
+
+          <q-list
+            v-if="draftCheckResult"
+            dense
+            bordered
+            separator
+            class="q-mb-md"
+          >
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Draft status</q-item-label>
+                <q-item-label>
+                  {{ draftCheckResult.status }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Broadcast enabled</q-item-label>
+                <q-item-label>
+                  {{ draftCheckResult.broadcastEnabled ? 'Yes' : 'No' }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="draftCheckResult.inputCount !== undefined">
+              <q-item-section>
+                <q-item-label caption>Input count</q-item-label>
+                <q-item-label>
+                  {{ draftCheckResult.inputCount }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="draftCheckResult.outputCount !== undefined">
+              <q-item-section>
+                <q-item-label caption>Output count</q-item-label>
+                <q-item-label>
+                  {{ draftCheckResult.outputCount }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item
+              v-if="draftCheckResult.rawTransactionBytesLength !== undefined"
+            >
+              <q-item-section>
+                <q-item-label caption>Raw transaction byte length</q-item-label>
+                <q-item-label>
+                  {{ draftCheckResult.rawTransactionBytesLength }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="draftCheckResult.actualFeeSats !== undefined">
+              <q-item-section>
+                <q-item-label caption>Actual fee</q-item-label>
+                <q-item-label>
+                  {{ formatBchSats(draftCheckResult.actualFeeSats) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="draftCheckResult.actualChangeSats !== undefined">
+              <q-item-section>
+                <q-item-label caption>Actual change</q-item-label>
+                <q-item-label>
+                  {{ formatBchSats(draftCheckResult.actualChangeSats) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="draftCheckResult.createdAt">
+              <q-item-section>
+                <q-item-label caption>Draft checked</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(draftCheckResult.createdAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+
+          <q-item>
+            <q-item-section>
+              <q-btn
+                color="secondary"
+                outline
+                label="Run Developer Draft Check"
+                :loading="isRunningDraftCheck"
+                :disable="!canRunDraftCheck"
+                @click="handleRunDraftCheck"
+              />
+            </q-item-section>
+          </q-item>
+
+          <q-item v-if="!canRunDraftCheck">
+            <q-item-section>
+              <q-item-label caption>
+                Draft check requires a valid internal transaction plan.
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
           <template v-if="treasuryFundingPreview">
+            <q-separator spaced />
+
             <q-item>
               <q-item-section>
                 <q-item-label caption>Treasury address</q-item-label>
@@ -553,7 +705,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 import type { FundingReadinessCheck } from 'src/types/funding-readiness';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
@@ -561,7 +713,10 @@ import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-dr
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import { createFundingReadinessCheck } from 'src/services/funding-readiness';
-import { createTreasuryTransactionDraftStatusFromPlan } from 'src/services/treasury-transaction-draft';
+import {
+  createTreasuryTransactionDraftFromPlan,
+  createTreasuryTransactionDraftStatusFromPlan,
+} from 'src/services/treasury-transaction-draft';
 import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
 import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
@@ -585,6 +740,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   confirm: [];
 }>();
+
+const isRunningDraftCheck = ref(false);
+const draftCheckResult = ref<TreasuryTransactionDraft | null>(null);
 
 const quoteSourceLabel = computed(() => {
   const labels: Record<FakeVoucherPricingQuote['quoteSource'], string> = {
@@ -619,12 +777,15 @@ const transactionPlan = computed<TreasuryTransactionPlan | null>(() => {
   );
 });
 
-const transactionDraft = computed<TreasuryTransactionDraft | null>(() => {
+const transactionDraftStatus = computed<TreasuryTransactionDraft | null>(() => {
   if (!transactionPlan.value) {
     return null;
   }
 
-  return createTreasuryTransactionDraftStatusFromPlan(transactionPlan.value);
+  return (
+    draftCheckResult.value ??
+    createTreasuryTransactionDraftStatusFromPlan(transactionPlan.value)
+  );
 });
 
 const fundingReadiness = computed<FundingReadinessCheck | null>(() => {
@@ -633,9 +794,43 @@ const fundingReadiness = computed<FundingReadinessCheck | null>(() => {
     treasuryBalanceSats: props.treasuryBalanceSats,
     requiredSats: props.treasuryFundingPreview?.estimatedTotalRequiredSats,
     transactionPlan: transactionPlan.value,
-    transactionDraft: transactionDraft.value,
+    transactionDraft: transactionDraftStatus.value,
   });
 });
+
+const canRunDraftCheck = computed(() => {
+  return (
+    transactionPlan.value?.status === 'valid' && !isRunningDraftCheck.value
+  );
+});
+
+async function handleRunDraftCheck(): Promise<void> {
+  if (!transactionPlan.value || transactionPlan.value.status !== 'valid') {
+    return;
+  }
+
+  draftCheckResult.value = null;
+  isRunningDraftCheck.value = true;
+
+  try {
+    draftCheckResult.value = await createTreasuryTransactionDraftFromPlan(
+      transactionPlan.value
+    );
+  } catch (error) {
+    draftCheckResult.value = {
+      status: 'not_created',
+      plan: transactionPlan.value,
+      broadcastEnabled: false,
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : 'Developer draft check failed.',
+      createdAt: new Date().toISOString(),
+    };
+  } finally {
+    isRunningDraftCheck.value = false;
+  }
+}
 
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat('en-GB', {

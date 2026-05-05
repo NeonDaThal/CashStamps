@@ -5,6 +5,7 @@ import {
   getMinimumFee,
 } from '@bitauth/libauth';
 
+import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
 import { getTreasuryWalletRecord } from 'src/services/treasury-wallet';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
@@ -14,12 +15,6 @@ import type {
 } from 'src/types/treasury-transaction';
 import { Address } from 'src/utils/address';
 import { WalletHD } from 'src/utils/wallet-hd';
-
-/**
- * This Electrum service is only used for deriving the treasury wallet and
- * preparing local signing directives. It is not started here.
- */
-const DRAFT_ONLY_ELECTRUM = new ElectrumService([]);
 
 function createInvalidDraft(
   plan: TreasuryTransactionPlan,
@@ -87,9 +82,12 @@ async function getSelectedTreasuryInputDirectives(
     throw new Error('Treasury wallet is not set up.');
   }
 
+  const electrum = new ElectrumService(ELECTRUM_SERVERS);
+  await electrum.start();
+
   const walletHd = await WalletHD.fromMnemonic(
     treasuryWallet.mnemonic,
-    DRAFT_ONLY_ELECTRUM
+    electrum
   );
 
   const [treasuryWalletP2pkh] = walletHd.deriveWallets(1, 0);
