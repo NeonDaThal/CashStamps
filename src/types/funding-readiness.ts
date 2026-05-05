@@ -1,6 +1,7 @@
 export type FundingReadinessStatus = 'ready' | 'not_ready';
 
 export type FundingReadinessBlocker =
+  | 'real_broadcast_disabled'
   | 'platform_fee_address_missing'
   | 'buffer_reserve_address_missing'
   | 'treasury_not_setup'
