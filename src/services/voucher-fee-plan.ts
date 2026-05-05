@@ -1,6 +1,7 @@
 import {
   BUFFER_RESERVE_ADDRESS,
   BUFFER_RESERVE_BASIS_POINTS,
+  BUFFER_RESERVE_OUTPUT_ENABLED,
   MERCHANT_RETAINED_BASIS_POINTS,
   PLATFORM_FEE_ADDRESS,
   PLATFORM_FEE_BASIS_POINTS,
@@ -48,9 +49,12 @@ export function createVoucherFeeOutputPlan(
     merchantRetainedSats,
     merchantRetainedBasisPoints: MERCHANT_RETAINED_BASIS_POINTS,
 
-    bufferReserveAddress: optionalAddress(BUFFER_RESERVE_ADDRESS),
+    bufferReserveAddress: BUFFER_RESERVE_OUTPUT_ENABLED
+      ? optionalAddress(BUFFER_RESERVE_ADDRESS)
+      : undefined,
     bufferReserveSats,
     bufferReserveBasisPoints: BUFFER_RESERVE_BASIS_POINTS,
+    bufferReserveOutputEnabled: BUFFER_RESERVE_OUTPUT_ENABLED,
 
     totalServiceFeeSats:
       platformFeeSats + merchantRetainedSats + bufferReserveSats,

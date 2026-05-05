@@ -15,10 +15,20 @@ export const TOTAL_SERVICE_FEE_BASIS_POINTS =
 export const PLATFORM_FEE_ADDRESS = '';
 
 /**
+ * MVP decision:
+ *
+ * Keep the buffer reserve calculation, but do not require a separate on-chain
+ * buffer output yet.
+ *
+ * If this is false, the buffer reserve amount is tracked in the fee plan but
+ * is not added as a required transaction output.
+ */
+export const BUFFER_RESERVE_OUTPUT_ENABLED = false;
+
+/**
  * Optional future reserve wallet.
  *
- * For now, this is required only if BUFFER_RESERVE_BASIS_POINTS is greater than 0
- * and we decide the buffer should be paid as an on-chain output.
+ * This is only required if BUFFER_RESERVE_OUTPUT_ENABLED is true.
  */
 export const BUFFER_RESERVE_ADDRESS = '';
 
@@ -27,5 +37,9 @@ export function isPlatformFeeAddressConfigured(): boolean {
 }
 
 export function isBufferReserveAddressConfigured(): boolean {
+  if (!BUFFER_RESERVE_OUTPUT_ENABLED) {
+    return true;
+  }
+
   return BUFFER_RESERVE_ADDRESS.trim().length > 0;
 }

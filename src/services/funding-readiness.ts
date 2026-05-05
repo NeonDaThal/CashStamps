@@ -1,5 +1,6 @@
 import {
   BUFFER_RESERVE_BASIS_POINTS,
+  BUFFER_RESERVE_OUTPUT_ENABLED,
   PLATFORM_FEE_BASIS_POINTS,
   isBufferReserveAddressConfigured,
   isPlatformFeeAddressConfigured,
@@ -57,7 +58,11 @@ export function createFundingReadinessCheck(
     );
   }
 
-  if (BUFFER_RESERVE_BASIS_POINTS > 0 && !isBufferReserveAddressConfigured()) {
+  if (
+    BUFFER_RESERVE_OUTPUT_ENABLED &&
+    BUFFER_RESERVE_BASIS_POINTS > 0 &&
+    !isBufferReserveAddressConfigured()
+  ) {
     addBlocker(
       blockers,
       messages,

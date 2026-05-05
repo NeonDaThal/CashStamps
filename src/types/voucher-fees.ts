@@ -9,6 +9,7 @@ export interface VoucherFeeOutputPlan {
   bufferReserveAddress?: string;
   bufferReserveSats: number;
   bufferReserveBasisPoints: number;
+  bufferReserveOutputEnabled: boolean;
 
   totalServiceFeeSats: number;
   totalServiceFeeBasisPoints: number;

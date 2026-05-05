@@ -209,10 +209,18 @@
                     feeOutputPlan.bufferReserveBasisPoints
                   )
                 }}
-                <span v-if="feeOutputPlan.bufferReserveAddress">
+                <span
+                  v-if="
+                    feeOutputPlan.bufferReserveOutputEnabled &&
+                    feeOutputPlan.bufferReserveAddress
+                  "
+                >
                   · output configured
                 </span>
-                <span v-else> · address not configured yet </span>
+                <span v-else-if="feeOutputPlan.bufferReserveOutputEnabled">
+                  · address not configured yet
+                </span>
+                <span v-else> · tracked only, no separate output for MVP </span>
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -604,7 +612,9 @@ const transactionPlan = computed<TreasuryTransactionPlan | null>(() => {
       platformFeeAddress: feeOutputPlan.value.platformFeeAddress,
       platformFeeSats: feeOutputPlan.value.platformFeeSats,
       bufferReserveAddress: feeOutputPlan.value.bufferReserveAddress,
-      bufferReserveSats: feeOutputPlan.value.bufferReserveSats,
+      bufferReserveSats: feeOutputPlan.value.bufferReserveOutputEnabled
+        ? feeOutputPlan.value.bufferReserveSats
+        : 0,
     }
   );
 });

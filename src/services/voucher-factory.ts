@@ -106,6 +106,7 @@ function cloneFeeOutputPlan(
     bufferReserveAddress: feeOutputPlan.bufferReserveAddress,
     bufferReserveSats: feeOutputPlan.bufferReserveSats,
     bufferReserveBasisPoints: feeOutputPlan.bufferReserveBasisPoints,
+    bufferReserveOutputEnabled: feeOutputPlan.bufferReserveOutputEnabled,
 
     totalServiceFeeSats: feeOutputPlan.totalServiceFeeSats,
     totalServiceFeeBasisPoints: feeOutputPlan.totalServiceFeeBasisPoints,
