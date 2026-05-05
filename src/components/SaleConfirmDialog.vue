@@ -548,6 +548,49 @@
             </q-item>
           </q-list>
 
+          <q-separator spaced />
+
+          <q-item-label header> Broadcast gate </q-item-label>
+
+          <q-banner
+            :class="
+              broadcastGate.canBroadcast
+                ? 'bg-green-1 text-green-10'
+                : 'bg-red-1 text-red-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="broadcastGate.canBroadcast ? 'check_circle' : 'block'"
+              />
+            </template>
+
+            {{ broadcastGate.message }}
+          </q-banner>
+
+          <q-item>
+            <q-item-section>
+              <q-btn
+                color="negative"
+                label="Broadcast Real Funding Transaction"
+                :disable="!broadcastGate.canBroadcast"
+              />
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>
+                This button is intentionally disabled until the pre-broadcast
+                checklist passes.
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-separator spaced />
+
           <q-item>
             <q-item-section>
               <q-btn
@@ -826,6 +869,7 @@ import { computed, ref } from 'vue';
 
 import type { FundingReadinessCheck } from 'src/types/funding-readiness';
 import type { PreBroadcastChecklist } from 'src/types/pre-broadcast-checklist';
+import type { TreasuryBroadcastGate } from 'src/types/treasury-broadcast-gate';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
@@ -834,6 +878,7 @@ import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import { auditTreasuryTransactionDraft } from 'src/services/treasury-transaction-audit';
 import { createFundingReadinessCheck } from 'src/services/funding-readiness';
 import { createPreBroadcastChecklist } from 'src/services/pre-broadcast-checklist';
+import { createTreasuryBroadcastGate } from 'src/services/treasury-broadcast-gate';
 import {
   createTreasuryTransactionDraftFromPlan,
   createTreasuryTransactionDraftStatusFromPlan,
@@ -934,6 +979,10 @@ const preBroadcastChecklist = computed<PreBroadcastChecklist | null>(() => {
     voucherKeyMetadata: props.voucherKeyMetadata,
   });
 });
+
+const broadcastGate = computed<TreasuryBroadcastGate>(() =>
+  createTreasuryBroadcastGate(preBroadcastChecklist.value)
+);
 
 const canRunDraftCheck = computed(() => {
   return (
