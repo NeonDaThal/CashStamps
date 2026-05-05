@@ -482,6 +482,72 @@
             </q-item>
           </q-list>
 
+          <q-separator spaced />
+
+          <q-item-label header> Pre-broadcast checklist </q-item-label>
+
+          <q-banner
+            v-if="preBroadcastChecklist"
+            :class="
+              preBroadcastChecklist.status === 'passed'
+                ? 'bg-green-1 text-green-10'
+                : 'bg-red-1 text-red-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  preBroadcastChecklist.status === 'passed'
+                    ? 'check_circle'
+                    : 'block'
+                "
+              />
+            </template>
+
+            <span v-if="preBroadcastChecklist.status === 'passed'">
+              Pre-broadcast checklist passed.
+            </span>
+
+            <span v-else> Pre-broadcast checklist is blocked. </span>
+          </q-banner>
+
+          <q-list
+            v-if="preBroadcastChecklist"
+            dense
+            bordered
+            separator
+            class="q-mb-md"
+          >
+            <q-item
+              v-for="check in preBroadcastChecklist.checks"
+              :key="check.key"
+            >
+              <q-item-section avatar>
+                <q-icon
+                  :name="check.passed ? 'check_circle' : 'block'"
+                  :color="check.passed ? 'positive' : 'negative'"
+                />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label>
+                  {{ check.message }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Checklist checked</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(preBroadcastChecklist.checkedAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+
           <q-item>
             <q-item-section>
               <q-btn
@@ -759,6 +825,7 @@
 import { computed, ref } from 'vue';
 
 import type { FundingReadinessCheck } from 'src/types/funding-readiness';
+import type { PreBroadcastChecklist } from 'src/types/pre-broadcast-checklist';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
@@ -766,6 +833,7 @@ import type { TreasuryTransactionDraftAudit } from 'src/types/treasury-transacti
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import { auditTreasuryTransactionDraft } from 'src/services/treasury-transaction-audit';
 import { createFundingReadinessCheck } from 'src/services/funding-readiness';
+import { createPreBroadcastChecklist } from 'src/services/pre-broadcast-checklist';
 import {
   createTreasuryTransactionDraftFromPlan,
   createTreasuryTransactionDraftStatusFromPlan,
@@ -773,6 +841,7 @@ import {
 import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
 import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
+import type { VoucherKeyMetadata } from 'src/types/voucher';
 import {
   formatBasisPointsAsPercent,
   formatBchSats,
@@ -787,6 +856,7 @@ const props = defineProps<{
   treasuryWarning?: string;
   treasuryBalanceSats?: number;
   treasuryFundingPreview?: TreasuryFundingPreview | null;
+  voucherKeyMetadata?: VoucherKeyMetadata | null;
 }>();
 
 const emit = defineEmits<{
@@ -849,6 +919,19 @@ const fundingReadiness = computed<FundingReadinessCheck | null>(() => {
     requiredSats: props.treasuryFundingPreview?.estimatedTotalRequiredSats,
     transactionPlan: transactionPlan.value,
     transactionDraft: transactionDraftStatus.value,
+  });
+});
+
+const preBroadcastChecklist = computed<PreBroadcastChecklist | null>(() => {
+  if (!draftCheckResult.value || !draftAudit.value) {
+    return null;
+  }
+
+  return createPreBroadcastChecklist({
+    treasuryFundingPreview: props.treasuryFundingPreview,
+    transactionDraft: draftCheckResult.value,
+    transactionDraftAudit: draftAudit.value,
+    voucherKeyMetadata: props.voucherKeyMetadata,
   });
 });
 

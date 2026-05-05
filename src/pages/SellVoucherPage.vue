@@ -222,6 +222,7 @@
         :treasury-warning="treasuryWarning"
         :treasury-balance-sats="treasuryBalance?.balanceSats"
         :treasury-funding-preview="pendingTreasuryFundingPreview"
+        :voucher-key-metadata="pendingKeyMetadata"
         @confirm="handleCreateDraftVoucher"
       />
 
