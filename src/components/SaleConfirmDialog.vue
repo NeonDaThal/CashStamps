@@ -570,6 +570,77 @@
             {{ broadcastGate.message }}
           </q-banner>
 
+          <q-banner
+            v-if="broadcastGuardTestResult"
+            :class="
+              broadcastGuardTestResult.status === 'blocked'
+                ? 'bg-green-1 text-green-10'
+                : 'bg-red-1 text-red-10'
+            "
+            rounded
+            class="q-mb-md"
+          >
+            <template #avatar>
+              <q-icon
+                :name="
+                  broadcastGuardTestResult.status === 'blocked'
+                    ? 'check_circle'
+                    : 'warning'
+                "
+              />
+            </template>
+
+            <span v-if="broadcastGuardTestResult.status === 'blocked'">
+              Blocked broadcast guard test passed:
+              {{ broadcastGuardTestResult.errorMessage }}
+            </span>
+
+            <span v-else-if="broadcastGuardTestResult.status === 'broadcasted'">
+              Unexpected: transaction was broadcast. Txid:
+              {{ broadcastGuardTestResult.txid }}
+            </span>
+
+            <span v-else>
+              Broadcast test failed:
+              {{ broadcastGuardTestResult.errorMessage }}
+            </span>
+          </q-banner>
+
+          <q-list
+            v-if="broadcastGuardTestResult"
+            dense
+            bordered
+            separator
+            class="q-mb-md"
+          >
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Broadcast test status</q-item-label>
+                <q-item-label>
+                  {{ broadcastGuardTestResult.status }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item>
+              <q-item-section>
+                <q-item-label caption>Broadcast enabled</q-item-label>
+                <q-item-label>
+                  {{ broadcastGuardTestResult.broadcastEnabled ? 'Yes' : 'No' }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-item v-if="broadcastGuardTestResult.attemptedAt">
+              <q-item-section>
+                <q-item-label caption>Attempted</q-item-label>
+                <q-item-label>
+                  {{ formatDateTime(broadcastGuardTestResult.attemptedAt) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+
           <q-item>
             <q-item-section>
               <q-btn
@@ -582,9 +653,32 @@
 
           <q-item>
             <q-item-section>
+              <q-btn
+                color="secondary"
+                outline
+                label="Test Blocked Broadcast Guard"
+                :loading="isTestingBroadcastGuard"
+                :disable="!draftCheckResult"
+                @click="handleTestBlockedBroadcastGuard"
+              />
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
               <q-item-label caption>
-                This button is intentionally disabled until the pre-broadcast
-                checklist passes.
+                This button intentionally calls the broadcast service while the
+                global safety guard is disabled. The expected result is blocked.
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section>
+              <q-item-label caption>
+                The real broadcast button is intentionally disabled until the
+                pre-broadcast checklist passes and the global guard is
+                explicitly enabled.
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -870,12 +964,14 @@ import { computed, ref } from 'vue';
 import type { FundingReadinessCheck } from 'src/types/funding-readiness';
 import type { PreBroadcastChecklist } from 'src/types/pre-broadcast-checklist';
 import type { TreasuryBroadcastGate } from 'src/types/treasury-broadcast-gate';
+import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
 import type { TreasuryTransactionDraftAudit } from 'src/types/treasury-transaction-audit';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import { auditTreasuryTransactionDraft } from 'src/services/treasury-transaction-audit';
+import { broadcastTreasuryTransactionDraft } from 'src/services/treasury-broadcast';
 import { createFundingReadinessCheck } from 'src/services/funding-readiness';
 import { createPreBroadcastChecklist } from 'src/services/pre-broadcast-checklist';
 import { createTreasuryBroadcastGate } from 'src/services/treasury-broadcast-gate';
@@ -910,8 +1006,10 @@ const emit = defineEmits<{
 }>();
 
 const isRunningDraftCheck = ref(false);
+const isTestingBroadcastGuard = ref(false);
 const draftCheckResult = ref<TreasuryTransactionDraft | null>(null);
 const draftAudit = ref<TreasuryTransactionDraftAudit | null>(null);
+const broadcastGuardTestResult = ref<TreasuryBroadcastResult | null>(null);
 
 const quoteSourceLabel = computed(() => {
   const labels: Record<FakeVoucherPricingQuote['quoteSource'], string> = {
@@ -997,6 +1095,7 @@ async function handleRunDraftCheck(): Promise<void> {
 
   draftCheckResult.value = null;
   draftAudit.value = null;
+  broadcastGuardTestResult.value = null;
   isRunningDraftCheck.value = true;
 
   try {
@@ -1020,6 +1119,33 @@ async function handleRunDraftCheck(): Promise<void> {
     draftAudit.value = auditTreasuryTransactionDraft(draftCheckResult.value);
   } finally {
     isRunningDraftCheck.value = false;
+  }
+}
+
+async function handleTestBlockedBroadcastGuard(): Promise<void> {
+  if (!draftCheckResult.value) {
+    return;
+  }
+
+  broadcastGuardTestResult.value = null;
+  isTestingBroadcastGuard.value = true;
+
+  try {
+    broadcastGuardTestResult.value = await broadcastTreasuryTransactionDraft(
+      draftCheckResult.value
+    );
+  } catch (error) {
+    broadcastGuardTestResult.value = {
+      status: 'failed',
+      broadcastEnabled: false,
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : 'Blocked broadcast guard test failed.',
+      attemptedAt: new Date().toISOString(),
+    };
+  } finally {
+    isTestingBroadcastGuard.value = false;
   }
 }
 
