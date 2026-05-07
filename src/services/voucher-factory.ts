@@ -4,6 +4,7 @@ import type {
 } from 'src/types/treasury-funding';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import type {
+  VoucherFundingBroadcast,
   VoucherKeyMetadata,
   VoucherRecord,
   VoucherQuoteSource,
@@ -20,6 +21,7 @@ export interface CreateVoucherRecordOptions {
   keyMetadata?: VoucherKeyMetadata | null;
   feeOutputPlan?: VoucherFeeOutputPlan | null;
   treasuryFundingPreview?: TreasuryFundingPreview | null;
+  fundingBroadcast?: VoucherFundingBroadcast | null;
 }
 
 function createVoucherId(): string {
@@ -126,6 +128,22 @@ function cloneKeyMetadata(
   };
 }
 
+function cloneFundingBroadcast(
+  fundingBroadcast?: VoucherFundingBroadcast | null
+): VoucherFundingBroadcast | undefined {
+  if (!fundingBroadcast) {
+    return undefined;
+  }
+
+  return {
+    status: fundingBroadcast.status,
+    txid: fundingBroadcast.txid,
+    errorMessage: fundingBroadcast.errorMessage,
+    broadcastEnabled: fundingBroadcast.broadcastEnabled,
+    attemptedAt: fundingBroadcast.attemptedAt,
+  };
+}
+
 export function createDraftVoucherRecord(
   fiatAmountMinor: number,
   fiatCurrency = 'GBP',
@@ -133,6 +151,8 @@ export function createDraftVoucherRecord(
   options?: CreateVoucherRecordOptions
 ): VoucherRecord {
   const now = new Date().toISOString();
+
+  const fundingBroadcast = cloneFundingBroadcast(options?.fundingBroadcast);
 
   return {
     id: createVoucherId(),
@@ -175,7 +195,8 @@ export function createDraftVoucherRecord(
     treasuryFundingPreview: cloneTreasuryFundingPreview(
       options?.treasuryFundingPreview
     ),
+    fundingBroadcast,
 
-    status: pricing ? 'funded' : 'draft',
+    status: fundingBroadcast?.status === 'broadcasted' ? 'funded' : 'draft',
   };
 }

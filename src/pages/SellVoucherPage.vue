@@ -224,6 +224,7 @@
         :treasury-balance-sats="treasuryBalance?.balanceSats"
         :treasury-funding-preview="pendingTreasuryFundingPreview"
         :voucher-key-metadata="pendingKeyMetadata"
+        @broadcast-result="handleFundingBroadcastResult"
         @confirm="handleCreateDraftVoucher"
       />
 
@@ -272,6 +273,7 @@ import {
 import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
+import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
 
 const pricingService = new PricingService();
 
@@ -289,6 +291,7 @@ const pendingFiatCurrency = ref('GBP');
 const pendingPricing = ref<FakeVoucherPricingQuote | null>(null);
 const pendingFeeOutputPlan = ref<VoucherFeeOutputPlan | null>(null);
 const pendingTreasuryFundingPreview = ref<TreasuryFundingPreview | null>(null);
+const pendingFundingBroadcast = ref<TreasuryBroadcastResult | null>(null);
 const pendingVoucherAddress = ref<DerivedVoucherAddress | null>(null);
 const pendingKeyMetadata = ref<VoucherKeyMetadata | null>(null);
 
@@ -434,6 +437,7 @@ async function handleReviewVoucher(
   pendingPricing.value = null;
   pendingFeeOutputPlan.value = null;
   pendingTreasuryFundingPreview.value = null;
+  pendingFundingBroadcast.value = null;
   pendingVoucherAddress.value = null;
   pendingKeyMetadata.value = null;
 
@@ -535,6 +539,12 @@ function handleResetLastIssuedVoucher(): void {
   lastIssuedVoucher.value = null;
 }
 
+function handleFundingBroadcastResult(
+  result: TreasuryBroadcastResult | null
+): void {
+  pendingFundingBroadcast.value = result;
+}
+
 async function runFakeIssueProgress(): Promise<void> {
   resetIssueProgressSteps();
 
@@ -588,6 +598,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
         keyMetadata: pendingKeyMetadata.value,
         feeOutputPlan: pendingFeeOutputPlan.value,
         treasuryFundingPreview: pendingTreasuryFundingPreview.value,
+        fundingBroadcast: pendingFundingBroadcast.value,
       }
     );
 
@@ -600,6 +611,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
     pendingPricing.value = null;
     pendingFeeOutputPlan.value = null;
     pendingTreasuryFundingPreview.value = null;
+    pendingFundingBroadcast.value = null;
     pendingVoucherAddress.value = null;
     pendingKeyMetadata.value = null;
     isProgressDialogOpen.value = false;

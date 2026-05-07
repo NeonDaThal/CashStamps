@@ -1080,6 +1080,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   confirm: [];
+  'broadcast-result': [value: TreasuryBroadcastResult | null];
 }>();
 
 const isRunningDraftCheck = ref(false);
@@ -1241,6 +1242,8 @@ async function handleBroadcastRealFundingTransaction(): Promise<void> {
     realBroadcastResult.value = await broadcastTreasuryTransactionDraft(
       draftCheckResult.value
     );
+
+    emit('broadcast-result', realBroadcastResult.value);
   } catch (error) {
     realBroadcastResult.value = {
       status: 'failed',
@@ -1251,6 +1254,8 @@ async function handleBroadcastRealFundingTransaction(): Promise<void> {
           : 'Real funding broadcast failed.',
       attemptedAt: new Date().toISOString(),
     };
+
+    emit('broadcast-result', realBroadcastResult.value);
   } finally {
     isBroadcastingRealFunding.value = false;
   }

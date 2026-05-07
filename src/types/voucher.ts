@@ -63,6 +63,8 @@ export interface VoucherRecord {
 
   keyMetadata?: VoucherKeyMetadata;
 
+  fundingBroadcast?: VoucherFundingBroadcast;
+
   feeOutputPlan?: VoucherFeeOutputPlan;
   treasuryFundingPreview?: TreasuryFundingPreview;
 
@@ -77,4 +79,12 @@ export interface VoucherRecord {
 
   printerJobId?: string;
   errorMessage?: string;
+}
+
+export interface VoucherFundingBroadcast {
+  status: 'blocked' | 'broadcasted' | 'failed';
+  txid?: string;
+  errorMessage?: string;
+  broadcastEnabled: boolean;
+  attemptedAt: string;
 }
