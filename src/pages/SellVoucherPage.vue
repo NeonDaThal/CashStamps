@@ -115,11 +115,12 @@
           <div class="row items-start q-col-gutter-md">
             <div class="col">
               <div class="text-h6 text-green-10">
-                Fake voucher issued successfully
+                Voucher record created successfully
               </div>
 
               <p class="text-green-10 q-mb-sm">
-                This test voucher has been saved locally. No BCH was sent.
+                This voucher has been saved locally. Review the voucher history
+                for funding details and test notes.
               </p>
 
               <div class="text-body2">
@@ -339,8 +340,9 @@ const issueProgressSteps = ref<IssueProgressStep[]>([
   },
   {
     key: 'funding',
-    label: 'Simulate treasury funding',
-    description: 'No BCH is sent yet.',
+    label: 'Prepare treasury funding',
+    description:
+      'Dry-run by default. Real broadcast only happens when explicitly enabled.',
     status: 'pending',
   },
   {
