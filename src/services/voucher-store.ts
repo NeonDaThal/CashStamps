@@ -1,5 +1,9 @@
 import { get, set } from 'idb-keyval';
-import type { VoucherRecord, VoucherStatus } from 'src/types/voucher';
+import type {
+  VoucherManualRedemption,
+  VoucherRecord,
+  VoucherStatus,
+} from 'src/types/voucher';
 
 const VOUCHER_RECORDS_KEY = 'bch-voucher-records';
 
@@ -66,6 +70,32 @@ export async function updateVoucherStatus(
   return updateVoucherRecord(id, {
     status,
     errorMessage,
+  });
+}
+
+export async function markVoucherManuallyRedeemed(
+  id: string,
+  redemption: Omit<VoucherManualRedemption, 'status' | 'redeemedAt'> & {
+    redeemedAt?: string;
+  }
+): Promise<VoucherRecord | undefined> {
+  return updateVoucherRecord(id, {
+    manualRedemption: {
+      status: 'swept',
+      txid: redemption.txid,
+      note: redemption.note,
+      redeemedAt: redemption.redeemedAt ?? new Date().toISOString(),
+    },
+    status: 'redeemed',
+  });
+}
+
+export async function clearVoucherManualRedemption(
+  id: string
+): Promise<VoucherRecord | undefined> {
+  return updateVoucherRecord(id, {
+    manualRedemption: undefined,
+    status: 'funded',
   });
 }
 

@@ -175,6 +175,121 @@
           </q-card-section>
         </q-card>
 
+        <q-card flat bordered class="q-mt-sm">
+          <q-card-section>
+            <div class="text-subtitle2 q-mb-sm">Manual redemption status</div>
+
+            <q-banner
+              v-if="voucher.manualRedemption"
+              class="bg-green-1 text-green-10 q-mb-sm"
+              rounded
+            >
+              <template #avatar>
+                <q-icon name="check_circle" />
+              </template>
+
+              Voucher manually marked as swept/redeemed.
+            </q-banner>
+
+            <q-banner v-else class="bg-grey-2 text-grey-9 q-mb-sm" rounded>
+              <template #avatar>
+                <q-icon name="info" />
+              </template>
+
+              Voucher has not been manually marked as swept/redeemed.
+            </q-banner>
+
+            <q-list
+              v-if="voucher.manualRedemption"
+              dense
+              bordered
+              separator
+              class="q-mb-md"
+            >
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Status</q-item-label>
+                  <q-item-label>
+                    {{ voucher.manualRedemption.status }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item v-if="voucher.manualRedemption.txid">
+                <q-item-section>
+                  <q-item-label caption>Sweep transaction ID</q-item-label>
+                  <q-item-label class="text-break">
+                    {{ voucher.manualRedemption.txid }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item v-if="voucher.manualRedemption.note">
+                <q-item-section>
+                  <q-item-label caption>Note</q-item-label>
+                  <q-item-label>
+                    {{ voucher.manualRedemption.note }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Redeemed</q-item-label>
+                  <q-item-label>
+                    {{ formatDate(voucher.manualRedemption.redeemedAt) }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <div
+              v-if="!voucher.manualRedemption"
+              class="row q-col-gutter-sm q-mb-sm"
+            >
+              <div class="col-12 col-md-6">
+                <q-input
+                  v-model="redemptionInputs[voucher.id].txid"
+                  dense
+                  outlined
+                  label="Sweep TXID optional"
+                />
+              </div>
+
+              <div class="col-12 col-md-6">
+                <q-input
+                  v-model="redemptionInputs[voucher.id].note"
+                  dense
+                  outlined
+                  label="Note optional"
+                />
+              </div>
+            </div>
+
+            <div class="row q-col-gutter-sm">
+              <div class="col-12 col-sm-auto">
+                <q-btn
+                  v-if="!voucher.manualRedemption"
+                  color="positive"
+                  outline
+                  label="Mark as Manually Swept"
+                  @click="handleMarkManualRedemption(voucher.id)"
+                />
+              </div>
+
+              <div class="col-12 col-sm-auto">
+                <q-btn
+                  v-if="voucher.manualRedemption"
+                  color="grey-8"
+                  outline
+                  label="Clear Manual Sweep Status"
+                  @click="emit('clearManualRedemption', voucher.id)"
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
         <q-item-label caption>
           Rate:
           {{ formatMarketRate(voucher.quote.marketRate, voucher.fiatCurrency) }}
@@ -205,13 +320,65 @@
 </template>
 
 <script setup lang="ts">
+import { reactive, watch } from 'vue';
+
 import VoucherWifRevealCard from 'src/components/VoucherWifRevealCard.vue';
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import { formatBchSats, formatMarketRate } from 'src/services/voucher-pricing';
 
-defineProps<{
+const props = defineProps<{
   voucherRecords: VoucherRecord[];
 }>();
+
+const emit = defineEmits<{
+  markManualRedemption: [
+    payload: {
+      voucherId: string;
+      txid?: string;
+      note?: string;
+    }
+  ];
+  clearManualRedemption: [voucherId: string];
+}>();
+
+const redemptionInputs = reactive<
+  Record<string, { txid: string; note: string }>
+>({});
+
+function ensureRedemptionInputs(): void {
+  props.voucherRecords.forEach((voucher) => {
+    if (!redemptionInputs[voucher.id]) {
+      redemptionInputs[voucher.id] = {
+        txid: '',
+        note: '',
+      };
+    }
+  });
+}
+
+watch(
+  () => props.voucherRecords,
+  () => {
+    ensureRedemptionInputs();
+  },
+  {
+    immediate: true,
+    deep: true,
+  }
+);
+
+function handleMarkManualRedemption(voucherId: string): void {
+  const input = redemptionInputs[voucherId] ?? {
+    txid: '',
+    note: '',
+  };
+
+  emit('markManualRedemption', {
+    voucherId,
+    txid: input.txid.trim() || undefined,
+    note: input.note.trim() || undefined,
+  });
+}
 
 function formatFiatAmount(amountMinor: number, currency: string): string {
   return new Intl.NumberFormat('en-GB', {

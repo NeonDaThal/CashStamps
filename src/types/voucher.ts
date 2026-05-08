@@ -42,6 +42,13 @@ export interface VoucherKeyMetadata {
   checkedAt: string;
 }
 
+export interface VoucherManualRedemption {
+  status: 'swept';
+  txid?: string;
+  note?: string;
+  redeemedAt: string;
+}
+
 export interface VoucherRecord {
   id: string;
   serial: string;
@@ -64,6 +71,8 @@ export interface VoucherRecord {
   keyMetadata?: VoucherKeyMetadata;
 
   fundingBroadcast?: VoucherFundingBroadcast;
+
+  manualRedemption?: VoucherManualRedemption;
 
   feeOutputPlan?: VoucherFeeOutputPlan;
   treasuryFundingPreview?: TreasuryFundingPreview;

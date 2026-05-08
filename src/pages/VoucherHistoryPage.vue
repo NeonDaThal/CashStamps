@@ -6,15 +6,17 @@
           <q-icon name="info" />
         </template>
 
-        This is a temporary Phase 1 development screen for testing local voucher
-        records. It is not the final merchant-facing voucher history UI.
+        This is a temporary Phase 3 development screen for testing local voucher
+        records, funding, and manual redemption. It is not the final
+        merchant-facing voucher history UI.
       </q-banner>
 
       <div class="row items-center justify-between q-mb-md">
         <div>
           <h1 class="text-h4 q-mb-xs">Voucher History</h1>
           <p class="text-grey-7 q-mb-none">
-            Phase 1 test page for locally stored BCH voucher records.
+            Local BCH voucher records for testing issue, funding, and sweep
+            flows.
           </p>
         </div>
 
@@ -47,7 +49,11 @@
         {{ errorMessage }}
       </q-banner>
 
-      <VoucherHistoryList :voucher-records="voucherRecords" />
+      <VoucherHistoryList
+        :voucher-records="voucherRecords"
+        @mark-manual-redemption="handleMarkManualRedemption"
+        @clear-manual-redemption="handleClearManualRedemption"
+      />
     </div>
   </q-page>
 </template>
@@ -59,8 +65,10 @@ import VoucherHistoryList from 'src/components/VoucherHistoryList.vue';
 import type { VoucherRecord } from 'src/types/voucher';
 import {
   addVoucherRecord,
+  clearVoucherManualRedemption,
   clearVoucherRecords,
   getVoucherRecords,
+  markVoucherManuallyRedeemed,
 } from 'src/services/voucher-store';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 
@@ -93,6 +101,52 @@ async function handleCreateTestVoucher(): Promise<void> {
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not create test voucher.';
+  }
+}
+
+async function handleMarkManualRedemption(payload: {
+  voucherId: string;
+  txid?: string;
+  note?: string;
+}): Promise<void> {
+  errorMessage.value = '';
+  successMessage.value = '';
+
+  try {
+    const updatedVoucher = await markVoucherManuallyRedeemed(
+      payload.voucherId,
+      {
+        txid: payload.txid,
+        note: payload.note,
+      }
+    );
+
+    await loadVoucherRecords();
+
+    successMessage.value = updatedVoucher
+      ? `Marked ${updatedVoucher.serial} as manually swept/redeemed.`
+      : 'Could not find voucher record to update.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = 'Could not mark voucher as manually redeemed.';
+  }
+}
+
+async function handleClearManualRedemption(voucherId: string): Promise<void> {
+  errorMessage.value = '';
+  successMessage.value = '';
+
+  try {
+    const updatedVoucher = await clearVoucherManualRedemption(voucherId);
+
+    await loadVoucherRecords();
+
+    successMessage.value = updatedVoucher
+      ? `Cleared manual redemption status for ${updatedVoucher.serial}.`
+      : 'Could not find voucher record to update.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = 'Could not clear manual redemption status.';
   }
 }
 
