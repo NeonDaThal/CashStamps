@@ -40,6 +40,12 @@
           <span v-else> Not checked </span>
         </q-item-label>
 
+        <VoucherWifRevealCard
+          :derivation-index="voucher.derivationIndex"
+          :voucher-address="voucher.address"
+          :has-wif="voucher.keyMetadata?.hasWif === true"
+        />
+
         <q-item-label caption>
           Fee output plan:
           <span v-if="voucher.feeOutputPlan">
@@ -199,6 +205,7 @@
 </template>
 
 <script setup lang="ts">
+import VoucherWifRevealCard from 'src/components/VoucherWifRevealCard.vue';
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import { formatBchSats, formatMarketRate } from 'src/services/voucher-pricing';
 

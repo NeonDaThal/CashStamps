@@ -3,7 +3,6 @@ import {
   BUFFER_RESERVE_OUTPUT_ENABLED,
   PLATFORM_FEE_ADDRESS,
   isBufferReserveAddressConfigured,
-  isPlatformFeeAddressConfigured,
 } from 'src/services/platform-fee-config';
 import type {
   FeeAddressConfigStatus,
