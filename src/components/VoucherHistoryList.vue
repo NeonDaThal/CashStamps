@@ -59,9 +59,7 @@
           <span v-if="voucher.treasuryFundingPreview">
             selected {{ getSelectedUtxoCount(voucher) }} UTXOs · inputs
             {{ formatBchSats(getSelectedInputSats(voucher)) }} · fee
-            {{
-              formatBchSats(voucher.treasuryFundingPreview.estimatedFeeSats)
-            }}
+            {{ formatBchSats(voucher.treasuryFundingPreview.estimatedFeeSats) }}
             · total
             {{
               formatBchSats(
@@ -81,6 +79,95 @@
           </span>
           <span v-else> Not available </span>
         </q-item-label>
+
+        <q-card v-if="voucher.fundingBroadcast" flat bordered class="q-mt-sm">
+          <q-card-section>
+            <div class="text-subtitle2 q-mb-sm">Funding broadcast</div>
+
+            <q-banner
+              :class="
+                voucher.fundingBroadcast.status === 'broadcasted'
+                  ? 'bg-green-1 text-green-10'
+                  : voucher.fundingBroadcast.status === 'blocked'
+                  ? 'bg-orange-1 text-orange-10'
+                  : 'bg-red-1 text-red-10'
+              "
+              rounded
+              class="q-mb-sm"
+            >
+              <template #avatar>
+                <q-icon
+                  :name="
+                    voucher.fundingBroadcast.status === 'broadcasted'
+                      ? 'check_circle'
+                      : voucher.fundingBroadcast.status === 'blocked'
+                      ? 'block'
+                      : 'warning'
+                  "
+                />
+              </template>
+
+              <span v-if="voucher.fundingBroadcast.status === 'broadcasted'">
+                Real funding transaction was broadcast.
+              </span>
+
+              <span v-else-if="voucher.fundingBroadcast.status === 'blocked'">
+                Funding broadcast was blocked.
+              </span>
+
+              <span v-else> Funding broadcast failed. </span>
+            </q-banner>
+
+            <q-list dense bordered separator>
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Status</q-item-label>
+                  <q-item-label>
+                    {{ voucher.fundingBroadcast.status }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item v-if="voucher.fundingBroadcast.txid">
+                <q-item-section>
+                  <q-item-label caption>Funding transaction ID</q-item-label>
+                  <q-item-label class="text-break">
+                    {{ voucher.fundingBroadcast.txid }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item v-if="voucher.fundingBroadcast.errorMessage">
+                <q-item-section>
+                  <q-item-label caption>Broadcast message</q-item-label>
+                  <q-item-label>
+                    {{ voucher.fundingBroadcast.errorMessage }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Broadcast enabled</q-item-label>
+                  <q-item-label>
+                    {{
+                      voucher.fundingBroadcast.broadcastEnabled ? 'Yes' : 'No'
+                    }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Attempted</q-item-label>
+                  <q-item-label>
+                    {{ formatDate(voucher.fundingBroadcast.attemptedAt) }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-card-section>
+        </q-card>
 
         <q-item-label caption>
           Rate:
