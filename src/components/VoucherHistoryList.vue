@@ -290,6 +290,105 @@
           </q-card-section>
         </q-card>
 
+        <q-card flat bordered class="q-mt-sm">
+          <q-card-section>
+            <div class="text-subtitle2 q-mb-sm">
+              On-chain redemption detection
+            </div>
+
+            <q-banner
+              v-if="voucher.redemptionDetection"
+              :class="
+                voucher.redemptionDetection.status === 'funded'
+                  ? 'bg-green-1 text-green-10'
+                  : voucher.redemptionDetection.status === 'swept'
+                  ? 'bg-blue-1 text-blue-10'
+                  : voucher.redemptionDetection.status === 'unfunded'
+                  ? 'bg-grey-2 text-grey-9'
+                  : 'bg-orange-1 text-orange-10'
+              "
+              rounded
+              class="q-mb-sm"
+            >
+              <template #avatar>
+                <q-icon
+                  :name="
+                    voucher.redemptionDetection.status === 'funded'
+                      ? 'account_balance_wallet'
+                      : voucher.redemptionDetection.status === 'swept'
+                      ? 'check_circle'
+                      : voucher.redemptionDetection.status === 'unfunded'
+                      ? 'info'
+                      : 'warning'
+                  "
+                />
+              </template>
+
+              {{ voucher.redemptionDetection.message }}
+            </q-banner>
+
+            <q-banner v-else class="bg-grey-2 text-grey-9 q-mb-sm" rounded>
+              <template #avatar>
+                <q-icon name="info" />
+              </template>
+
+              On-chain redemption status has not been checked yet.
+            </q-banner>
+
+            <q-list
+              v-if="voucher.redemptionDetection"
+              dense
+              bordered
+              separator
+              class="q-mb-md"
+            >
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Detected status</q-item-label>
+                  <q-item-label>
+                    {{ voucher.redemptionDetection.status }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Detected balance</q-item-label>
+                  <q-item-label>
+                    {{ formatBchSats(voucher.redemptionDetection.balanceSats) }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Detected UTXOs</q-item-label>
+                  <q-item-label>
+                    {{ voucher.redemptionDetection.utxoCount }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Checked</q-item-label>
+                  <q-item-label>
+                    {{ formatDate(voucher.redemptionDetection.checkedAt) }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <q-btn
+              color="secondary"
+              outline
+              label="Check On-Chain Redemption Status"
+              :loading="checkingRedemptionVoucherId === voucher.id"
+              @click="emit('checkOnChainRedemption', voucher.id)"
+            />
+          </q-card-section>
+        </q-card>
+
         <q-item-label caption>
           Rate:
           {{ formatMarketRate(voucher.quote.marketRate, voucher.fiatCurrency) }}
@@ -328,6 +427,7 @@ import { formatBchSats, formatMarketRate } from 'src/services/voucher-pricing';
 
 const props = defineProps<{
   voucherRecords: VoucherRecord[];
+  checkingRedemptionVoucherId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -339,6 +439,7 @@ const emit = defineEmits<{
     }
   ];
   clearManualRedemption: [voucherId: string];
+  checkOnChainRedemption: [voucherId: string];
 }>();
 
 const redemptionInputs = reactive<

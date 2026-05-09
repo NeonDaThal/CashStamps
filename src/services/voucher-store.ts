@@ -2,6 +2,7 @@ import { get, set } from 'idb-keyval';
 import type {
   VoucherManualRedemption,
   VoucherRecord,
+  VoucherRedemptionDetection,
   VoucherStatus,
 } from 'src/types/voucher';
 
@@ -96,6 +97,23 @@ export async function clearVoucherManualRedemption(
   return updateVoucherRecord(id, {
     manualRedemption: undefined,
     status: 'funded',
+  });
+}
+
+export async function updateVoucherRedemptionDetection(
+  id: string,
+  detection: VoucherRedemptionDetection
+): Promise<VoucherRecord | undefined> {
+  const nextStatus: VoucherStatus | undefined =
+    detection.status === 'swept'
+      ? 'redeemed'
+      : detection.status === 'funded'
+      ? 'funded'
+      : undefined;
+
+  return updateVoucherRecord(id, {
+    redemptionDetection: detection,
+    ...(nextStatus ? { status: nextStatus } : {}),
   });
 }
 

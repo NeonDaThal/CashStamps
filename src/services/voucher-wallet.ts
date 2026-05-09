@@ -1,7 +1,12 @@
 import { generateBip39Mnemonic } from '@bitauth/libauth';
 import { get, set } from 'idb-keyval';
 
+import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
+import type {
+  VoucherAddressBalance,
+  VoucherAddressUtxo,
+} from 'src/types/voucher-redemption-detection';
 import type {
   VoucherKeyExport,
   VoucherKeyPublicInfo,
@@ -70,6 +75,32 @@ async function deriveVoucherWalletAtIndex(derivationIndex: number) {
   }
 
   return wallet;
+}
+
+async function deriveVoucherWalletAtIndexWithElectrum(
+  derivationIndex: number,
+  electrum: ElectrumService
+) {
+  const mnemonic = await getOrCreateVoucherMnemonic();
+
+  const walletHd = await WalletHD.fromMnemonic(mnemonic, electrum);
+
+  const [wallet] = walletHd.deriveWallets(1, derivationIndex);
+
+  if (!wallet) {
+    throw new Error('Could not derive voucher wallet.');
+  }
+
+  return wallet;
+}
+
+function mapVoucherUtxos(unspentOutputs: any[]): VoucherAddressUtxo[] {
+  return unspentOutputs.map((utxo) => ({
+    outpointTransactionHash:
+      utxo.outpointTransactionHash ?? utxo.tx_hash ?? utxo.txHash ?? '',
+    outpointIndex: utxo.outpointIndex ?? utxo.tx_pos ?? utxo.vout ?? 0,
+    valueSats: Number(utxo.valueSatoshis ?? utxo.value ?? utxo.satoshis ?? 0),
+  }));
 }
 
 function tryGetWalletWif(wallet: unknown): string {
@@ -153,5 +184,29 @@ export async function exportVoucherKeyAtIndex(
     address: wallet.getAddress(),
     wif,
     createdAt: new Date().toISOString(),
+  };
+}
+
+export async function getVoucherWalletBalanceAtIndex(
+  derivationIndex: number
+): Promise<VoucherAddressBalance> {
+  const electrum = new ElectrumService(ELECTRUM_SERVERS);
+  await electrum.start();
+
+  const wallet = await deriveVoucherWalletAtIndexWithElectrum(
+    derivationIndex,
+    electrum
+  );
+
+  const unspentOutputs = await wallet.getUnspentOutputs();
+  const utxos = mapVoucherUtxos(unspentOutputs);
+
+  return {
+    derivationIndex,
+    address: wallet.getAddress(),
+    balanceSats: wallet.balance.value,
+    utxoCount: utxos.length,
+    utxos,
+    checkedAt: new Date().toISOString(),
   };
 }

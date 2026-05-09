@@ -30,6 +30,22 @@ export interface VoucherQuote {
   isFallbackQuote: boolean;
 }
 
+export type VoucherRedemptionDetectionStatus =
+  | 'unfunded'
+  | 'funded'
+  | 'swept'
+  | 'unknown';
+
+export interface VoucherRedemptionDetection {
+  status: VoucherRedemptionDetectionStatus;
+  address: string;
+  derivationIndex: number;
+  balanceSats: number;
+  utxoCount: number;
+  checkedAt: string;
+  message: string;
+}
+
 export interface VoucherFee {
   type: VoucherFeeType;
   basisPoints: number;
@@ -71,6 +87,8 @@ export interface VoucherRecord {
   keyMetadata?: VoucherKeyMetadata;
 
   fundingBroadcast?: VoucherFundingBroadcast;
+
+  redemptionDetection?: VoucherRedemptionDetection;
 
   manualRedemption?: VoucherManualRedemption;
 

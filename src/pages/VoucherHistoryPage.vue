@@ -7,16 +7,16 @@
         </template>
 
         This is a temporary Phase 3 development screen for testing local voucher
-        records, funding, and manual redemption. It is not the final
-        merchant-facing voucher history UI.
+        records, funding, redemption, and on-chain status detection. It is not
+        the final merchant-facing voucher history UI.
       </q-banner>
 
       <div class="row items-center justify-between q-mb-md">
         <div>
           <h1 class="text-h4 q-mb-xs">Voucher History</h1>
           <p class="text-grey-7 q-mb-none">
-            Local BCH voucher records for testing issue, funding, and sweep
-            flows.
+            Local BCH voucher records for testing issue, funding, sweep, and
+            on-chain detection flows.
           </p>
         </div>
 
@@ -51,8 +51,10 @@
 
       <VoucherHistoryList
         :voucher-records="voucherRecords"
+        :checking-redemption-voucher-id="checkingRedemptionVoucherId"
         @mark-manual-redemption="handleMarkManualRedemption"
         @clear-manual-redemption="handleClearManualRedemption"
+        @check-on-chain-redemption="handleCheckOnChainRedemption"
       />
     </div>
   </q-page>
@@ -69,12 +71,15 @@ import {
   clearVoucherRecords,
   getVoucherRecords,
   markVoucherManuallyRedeemed,
+  updateVoucherRedemptionDetection,
 } from 'src/services/voucher-store';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
+import { detectVoucherRedemptionStatus } from 'src/services/voucher-redemption-detector';
 
 const voucherRecords = ref<VoucherRecord[]>([]);
 const errorMessage = ref('');
 const successMessage = ref('');
+const checkingRedemptionVoucherId = ref<string | null>(null);
 
 async function loadVoucherRecords(): Promise<void> {
   errorMessage.value = '';
@@ -147,6 +152,43 @@ async function handleClearManualRedemption(voucherId: string): Promise<void> {
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Could not clear manual redemption status.';
+  }
+}
+
+async function handleCheckOnChainRedemption(voucherId: string): Promise<void> {
+  errorMessage.value = '';
+  successMessage.value = '';
+  checkingRedemptionVoucherId.value = voucherId;
+
+  try {
+    const voucher = voucherRecords.value.find(
+      (record) => record.id === voucherId
+    );
+
+    if (!voucher) {
+      errorMessage.value = 'Could not find voucher record to check.';
+      return;
+    }
+
+    const detection = await detectVoucherRedemptionStatus(voucher);
+    const updatedVoucher = await updateVoucherRedemptionDetection(
+      voucherId,
+      detection
+    );
+
+    await loadVoucherRecords();
+
+    successMessage.value = updatedVoucher
+      ? `Checked on-chain redemption status for ${updatedVoucher.serial}: ${detection.status}.`
+      : 'Could not update voucher redemption detection result.';
+  } catch (error) {
+    console.error(error);
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : 'Could not check voucher redemption status.';
+  } finally {
+    checkingRedemptionVoucherId.value = null;
   }
 }
 
