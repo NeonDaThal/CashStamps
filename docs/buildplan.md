@@ -713,189 +713,153 @@ The app now has a working fake cashier flow:
 - voucher appears in history
 - fee details appear in history
 
-Note: Phase 2 does not yet use a real BCH market rate. The current “quote” is represented by fake Phase 2 quote metadata. Real pricing, quote locking, fallback quote handling, and real BCH amount calculation are handled in Phase 3.
-
----
-
-### Phase 3 — Replace fake funding with real treasury funding
+Note: Phase 2 does not yet use a real BCH market rate. The current “quote” is represented by fake Phase 2 quote metadata. Real pricing, quote locking, fallback quote handling, and real BCH amount calculation are handled in ### Phase 3 — Replace fake funding with real treasury funding
 
 #### Goal
 
-Connect real BCH funding logic.
+Connect the voucher sale flow to real BCH funding from a merchant-controlled treasury wallet, while keeping enough safety gates in place to test with small amounts of real BCH.
 
-#### Additional implementation notes
+The core objective was to prove the full voucher loop:
 
-- Introduce a pricing provider layer before real funding begins.
-- Use General Protocols Oracles where available.
-- Use CoinGecko for GBP or any other unsupported currency if required.
-- Lock a quote before broadcasting any funding transaction.
-- Only allow a cached fallback quote to be used if it is still within a strict freshness window.
-- If no valid quote is available, do not broadcast a transaction. Instead, block issuance cleanly and show that pricing is temporarily unavailable.
-- Store the exact quote used for the sale so the funding and receipt history can always be reconciled later.
-- Ensure the sale flow is atomic from the merchant's point of view:
-  - quote locked
-  - derive wallet
-  - build transaction
-  - broadcast
-  - detect funded state
-  - print
-- If broadcast result is uncertain, reconcile using transaction ID and Electrum/address status before showing a final result to the merchant.
+merchant treasury top-up → quote lock → voucher wallet derivation → funding transaction → platform fee output → voucher receives BCH → customer sweeps voucher WIF → app detects redeemed/swept state.
 
-#### Done when
+#### Implementation summary
 
-- app gets live conversion
-- fresh voucher wallet is derived
-- funding transaction is broadcast
-- funded state is detected successfully
-- fee is added to real funding calculation
-- pricing provider layer is in place
-- GBP pricing is supported through the selected pricing provider
-- quote is locked before funding begins
-- stale cached quotes are rejected outside the allowed freshness window
-- no funding transaction is broadcast unless a valid quote is available
-- the exact quote used is stored with the voucher record
-- treasury funding transaction plan is created and validated before signing/broadcasting
-- voucher WIF/private-key export structure is prepared for future sweepable QR printing
+Phase 3 introduced the real funding foundation for BCH vouchers.
 
-#### Current Phase 3 progress note
+Completed:
 
-Phase 3 has now reached the treasury funding dry-run stage.
+- live BCH/GBP pricing through CoinGecko
+- quote locking before voucher confirmation
+- quote timestamp/expiry shown in confirmation and saved with voucher records
+- stale quote protection/freshness window
+- fresh voucher wallet/address derivation before confirmation
+- voucher address and derivation index stored with voucher records
+- voucher WIF export capability tested
+- voucher records store WIF-ready metadata without storing the full WIF
+- merchant treasury wallet created locally for MVP testing
+- treasury address shown
+- treasury seed backup/reveal added with warnings
+- treasury seed restore/check/import flow added
+- treasury top-up QR added
+- treasury balance and UTXOs checked through Electrum
+- read-only treasury UTXO details displayed
+- UTXO-aware funding preview created before issue
+- fee-output model added:
+  - voucher output
+  - platform fee output
+  - optional buffer reserve output
+  - treasury change output
+- platform fee address configured and validated
+- buffer reserve is tracked but not required as separate output for MVP
+- transaction plan created from treasury UTXOs
+- real transaction draft generated from real treasury input
+- transaction draft audit added
+- pre-broadcast checklist added
+- global broadcast safety guard added
+- guarded broadcast service added
+- disabled/blocked broadcast UI gate added
+- first tiny real BCH broadcast test completed successfully
+- platform fee output received in platform wallet
+- voucher address received BCH
+- voucher WIF QR revealed from Voucher History for testing
+- external BCH wallet swept voucher successfully
+- voucher address later showed 0 BCH
+- manual redemption status added to Voucher History
+- on-chain redemption detection added
+- app detected swept/redeemed state from chain
 
-Completed so far:
+#### Fee and transaction model
 
-- real BCH/GBP pricing is fetched through CoinGecko
-- quotes are locked before voucher confirmation
-- quote timestamp and expiry are shown in the confirmation dialog and history
-- service fee and estimated BCH loaded are calculated from the locked quote
-- fresh voucher addresses are derived before confirmation
-- voucher address and derivation index are stored with each voucher record
-- merchant treasury wallet setup exists
-- treasury address is generated and stored locally for MVP testing
-- treasury balance can be checked through Electrum
-- read-only treasury UTXO details are displayed
-- dry-run funding preview is shown before fake issue
-- dry-run preview uses actual treasury UTXO details where available
-- dry-run preview is saved with the voucher record
-- voucher history displays the saved funding preview details
-
-Important: this stage is still read-only / fake-funding only.
-
-No real transaction is currently built, signed, or broadcast. No BCH is moved yet.
-
-#### Fee address configuration note
-
-The treasury funding model now assumes merchant-controlled treasury funding.
-
-The intended real-funding transaction shape is:
+The real-funding transaction shape is:
 
 - voucher output — BCH loaded for the customer
 - platform fee output — automatic fee paid to the platform wallet
-- optional buffer reserve output — reserve/buffer wallet if used
-- change output — remaining BCH returned to the merchant treasury wallet
+- optional buffer reserve output — disabled for MVP but tracked in fee plan
+- change output — remaining BCH returned to merchant treasury
 
-Current implementation status:
+Current MVP fee model:
 
-- platform fee calculation model exists
-- merchant retained spread calculation exists
-- buffer reserve calculation exists
-- fee-output plan is shown during voucher confirmation
-- fee-output plan is saved with the voucher record
-- Treasury Settings shows fee address configuration status
-- real funding is blocked/not ready while required fee addresses are blank
+- 10% total customer premium
+- 5% platform fee output
+- 3% merchant retained spread, accounting only, not separate output
+- 2% buffer reserve tracked, not currently separate on-chain output
 
-Important: no real transaction is currently built, signed, or broadcast.
+#### Safety model
 
-#### Voucher WIF readiness note
+Real BCH movement is protected by a global broadcast safety guard.
 
-Phase 3 now includes the sweepable voucher key side of the funding model.
+The app now includes:
 
-A funded voucher requires two pieces:
+- transaction draft check
+- transaction draft audit
+- pre-broadcast checklist
+- broadcast gate
+- guarded broadcast service
+- blocked broadcast guard test
 
-- voucher address — where the merchant treasury sends BCH
-- voucher WIF/private key — what the customer wallet will later sweep from the printed QR
+The broadcast service refuses to broadcast while the global safety guard is disabled.
 
-Current implementation status:
+For the first real test, the safety guard was temporarily enabled, one tiny funding transaction was broadcast successfully, and the guard was turned back off immediately.
 
-- voucher addresses are derived before confirmation
-- WIF export capability has been tested through a developer-only check page
-- the app confirms WIF export is available for derived voucher wallets
-- voucher records store a safe WIF-ready marker
-- voucher history shows whether WIF export was checked
-- full WIF/private key is not stored in voucher history
-- full WIF/private key is not shown in normal merchant UI
+#### Redemption model
 
-Important: WIF/private key exposure must be limited to the final secure print/export flow only.
+A funded voucher has two key parts:
 
-#### Treasury wallet backup and restore requirement
+- voucher address — where BCH is loaded
+- voucher WIF/private key — what the customer sweeps from the printed QR
 
-Before real merchant funding is enabled, the treasury wallet must support safe backup and restore.
+For MVP testing:
 
-The merchant treasury wallet is the wallet that funds BCH vouchers. If it holds real BCH, the merchant must be able to recover it if:
+- WIF export works
+- WIF QR reveal works in Voucher History
+- a BCH wallet successfully swept the voucher
+- on-chain detection confirmed the voucher address was swept/empty
 
-- the browser storage is cleared
-- the device is lost
-- the app is reinstalled
-- the merchant moves to a new device
+Important: WIF reveal in Voucher History is a development/testing tool only. In the final merchant app, WIF QR access should be limited to the receipt print/issue flow.
 
-Required before production use:
+#### Done when
 
-- show treasury seed phrase with strong warnings
-- require merchant to confirm they have backed it up
-- restore/import treasury wallet from seed phrase
-- verify restored wallet derives the same treasury address
-- show receive/top-up address for adding BCH to treasury
-- allow merchant to send BCH out of treasury to another BCH wallet
-- prevent accidental wallet reset while funds may still exist
+Phase 3 is complete when:
 
-Current implementation status:
+- app gets live conversion
+- quote is locked before funding begins
+- exact quote is stored with the voucher record
+- fresh voucher wallet/address is derived
+- voucher WIF export is available for receipt QR creation
+- treasury wallet exists and can be topped up
+- treasury balance and UTXOs are detected
+- funding transaction plan is created and validated
+- funding transaction draft can be generated from real UTXOs
+- fee output is included in real funding calculation
+- platform fee output works
+- real funding transaction can be broadcast under explicit safety guard
+- voucher receives BCH
+- treasury change returns correctly
+- customer can sweep voucher WIF
+- app can detect the voucher as swept/redeemed on-chain
 
-- treasury wallet can be created locally
-- treasury address is shown
-- treasury balance can be checked
-- treasury UTXOs can be viewed
-- treasury wallet is still MVP/local-storage only
-- backup/restore/send-out flows are not yet implemented
+#### Phase 3 result
 
-Important: real funding should not be enabled for merchants until backup/restore is implemented and tested.
+Phase 3 is functionally complete.
 
-#### Treasury restore/import requirement
+A full live BCH test proved:
 
-A merchant must be able to restore their treasury wallet from seed phrase before real production use.
+- treasury funding transaction succeeded
+- platform fee arrived
+- voucher received BCH
+- voucher WIF QR swept successfully
+- voucher address became empty
+- app detected swept/redemption status
 
-The restore/import flow should:
+Remaining polish items should move into later phases, including:
 
-- accept a valid treasury seed phrase
-- derive the treasury address from the imported seed
-- show the derived address before saving
-- require confirmation before replacing any existing local treasury wallet
-- warn clearly if a wallet already exists
-- verify that the restored wallet can check balance through Electrum
-- never overwrite an existing treasury wallet accidentally
-- keep real funding disabled until backup and restore have both been tested
-
-Current implementation status:
-
-- development seed backup/reveal exists
-- seed can be hidden after reveal
-- restore/import flow is not yet implemented
-- replacing an existing treasury wallet is not yet supported safely
-
-Important: the restore flow must be tested before real merchant funds are used.
-
-#### Treasury restore check progress
-
-The development restore-check flow is now implemented.
-
-Current implementation status:
-
-- merchant/developer can reveal the local treasury seed phrase for MVP backup testing
-- pasted seed phrases can be checked without replacing the current treasury wallet
-- restore check derives the treasury address from the pasted seed
-- restore check shows whether the pasted seed matches the current treasury wallet
-- incorrect or different seed phrases are detected as non-matching or invalid
-- current treasury wallet is not overwritten during restore check
-
-Important: this is still check-only. A full restore/import flow that can safely replace the local treasury wallet is not yet implemented.
+- merchant-friendly UI wording
+- hiding developer-only panels
+- cleaner receipt/print flow
+- stronger production security around WIF exposure
+- automatic refresh intervals
+- final printer integration
 
 ### Phase 4 — Browser receipt preview
 
