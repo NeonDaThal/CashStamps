@@ -46,6 +46,29 @@
           :has-wif="voucher.keyMetadata?.hasWif === true"
         />
 
+        <q-card flat bordered class="q-mt-sm">
+          <q-card-section>
+            <div class="text-subtitle2 q-mb-sm">Developer receipt preview</div>
+
+            <q-banner class="bg-orange-1 text-orange-10 q-mb-sm" rounded>
+              <template #avatar>
+                <q-icon name="warning" />
+              </template>
+
+              Testing only. The receipt QR contains sweepable private key
+              material and should not be freely accessible in the final merchant
+              history screen.
+            </q-banner>
+
+            <q-btn
+              color="primary"
+              outline
+              label="Preview Receipt"
+              @click="handlePreviewReceipt(voucher)"
+            />
+          </q-card-section>
+        </q-card>
+
         <q-item-label caption>
           Fee output plan:
           <span v-if="voucher.feeOutputPlan">
@@ -416,11 +439,40 @@
       </q-item-section>
     </q-item>
   </q-list>
+
+  <q-dialog
+    v-model="isReceiptPreviewDialogOpen"
+    @hide="handleReceiptPreviewDialogHide"
+  >
+    <q-card style="width: 440px; max-width: 95vw">
+      <q-card-section class="row items-center justify-between">
+        <div>
+          <div class="text-h6">Voucher Receipt Preview</div>
+          <div class="text-caption text-grey-7">
+            Development/test preview only
+          </div>
+        </div>
+
+        <q-btn v-close-popup dense flat round icon="close" />
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section v-if="selectedReceiptVoucher">
+        <VoucherReceiptPreview :voucher="selectedReceiptVoucher" />
+      </q-card-section>
+
+      <q-card-actions align="right">
+        <q-btn v-close-popup color="primary" flat label="Close" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 
+import VoucherReceiptPreview from 'src/components/VoucherReceiptPreview.vue';
 import VoucherWifRevealCard from 'src/components/VoucherWifRevealCard.vue';
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import { formatBchSats, formatMarketRate } from 'src/services/voucher-pricing';
@@ -445,6 +497,9 @@ const emit = defineEmits<{
 const redemptionInputs = reactive<
   Record<string, { txid: string; note: string }>
 >({});
+
+const isReceiptPreviewDialogOpen = ref(false);
+const selectedReceiptVoucher = ref<VoucherRecord | null>(null);
 
 function ensureRedemptionInputs(): void {
   props.voucherRecords.forEach((voucher) => {
@@ -479,6 +534,15 @@ function handleMarkManualRedemption(voucherId: string): void {
     txid: input.txid.trim() || undefined,
     note: input.note.trim() || undefined,
   });
+}
+
+function handlePreviewReceipt(voucher: VoucherRecord): void {
+  selectedReceiptVoucher.value = voucher;
+  isReceiptPreviewDialogOpen.value = true;
+}
+
+function handleReceiptPreviewDialogHide(): void {
+  selectedReceiptVoucher.value = null;
 }
 
 function formatFiatAmount(amountMinor: number, currency: string): string {
