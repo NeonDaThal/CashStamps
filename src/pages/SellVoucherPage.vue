@@ -232,6 +232,31 @@
         v-model="isProgressDialogOpen"
         :steps="issueProgressSteps"
       />
+
+      <q-dialog v-model="isReceiptPreviewDialogOpen">
+        <q-card style="width: 440px; max-width: 95vw">
+          <q-card-section class="row items-center justify-between">
+            <div>
+              <div class="text-h6">Voucher Receipt Preview</div>
+              <div class="text-caption text-grey-7">
+                Simulated issue-time print preview
+              </div>
+            </div>
+
+            <q-btn v-close-popup dense flat round icon="close" />
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section v-if="lastIssuedVoucher">
+            <VoucherReceiptPreview :voucher="lastIssuedVoucher" />
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn v-close-popup color="primary" flat label="Close" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -243,6 +268,7 @@ import IssueProgressDialog, {
   type IssueProgressStep,
 } from 'src/components/IssueProgressDialog.vue';
 import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
+import VoucherReceiptPreview from 'src/components/VoucherReceiptPreview.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
 import type {
   TreasuryWalletBalance,
@@ -285,6 +311,7 @@ const errorMessage = ref('');
 
 const isConfirmDialogOpen = ref(false);
 const isProgressDialogOpen = ref(false);
+const isReceiptPreviewDialogOpen = ref(false);
 
 const pendingFiatAmountMinor = ref(0);
 const pendingFiatCurrency = ref('GBP');
@@ -434,6 +461,7 @@ async function handleReviewVoucher(
 ): Promise<void> {
   clearMessages();
   lastIssuedVoucher.value = null;
+  isReceiptPreviewDialogOpen.value = false;
   pendingPricing.value = null;
   pendingFeeOutputPlan.value = null;
   pendingTreasuryFundingPreview.value = null;
@@ -536,6 +564,7 @@ async function handleReviewVoucher(
 
 function handleResetLastIssuedVoucher(): void {
   clearMessages();
+  isReceiptPreviewDialogOpen.value = false;
   lastIssuedVoucher.value = null;
 }
 
@@ -566,6 +595,7 @@ async function runFakeIssueProgress(): Promise<void> {
 async function handleCreateDraftVoucher(): Promise<void> {
   clearMessages();
   lastIssuedVoucher.value = null;
+  isReceiptPreviewDialogOpen.value = false;
 
   if (!pendingPricing.value) {
     errorMessage.value =
@@ -615,6 +645,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
     pendingVoucherAddress.value = null;
     pendingKeyMetadata.value = null;
     isProgressDialogOpen.value = false;
+    isReceiptPreviewDialogOpen.value = true;
 
     await loadTreasuryWallet();
   } catch (error) {
