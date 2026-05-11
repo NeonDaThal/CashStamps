@@ -872,6 +872,76 @@ Create a simple browser-visible thermal-style receipt preview.
 - the voucher receipt can be previewed
 - QR and voucher information render correctly
 
+#### Status: Completed
+
+Phase 4 is complete.
+
+The app now has a working browser-visible thermal-style voucher receipt preview. This preview simulates the receipt that will later be printed by a real ESC/POS thermal printer.
+
+Completed:
+
+- created a reusable receipt data builder:
+  - `src/services/voucher-receipt.ts`
+- created a reusable receipt preview component:
+  - `src/components/VoucherReceiptPreview.vue`
+- added local TypeScript declaration support for the QR browser import:
+  - `src/types/qrcode-lib-browser.d.ts`
+- added a developer/testing “Preview Receipt” button in Voucher History
+- added an issue-time receipt preview popup after voucher creation
+- receipt preview uses real voucher record data
+- receipt preview generates a real QR code
+- QR payload is the voucher WIF/private key, not the voucher address
+- WIF/private key is not displayed as plain text on the receipt
+- receipt includes essential customer-facing information only:
+  - BCH Voucher label
+  - loaded fiat value
+  - BCH amount loaded
+  - sweepable QR code
+  - short redemption instruction
+  - cash-style warning
+  - voucher serial/reference
+  - issue date/time
+  - voucher address for verification
+  - support/safety note
+- receipt avoids internal/developer funding details:
+  - no treasury address
+  - no UTXO details
+  - no platform fee breakdown
+  - no merchant retained spread
+  - no buffer reserve
+  - no quote internals
+  - no derivation index on the receipt
+  - no transaction draft/audit/checklist details
+
+#### Security note
+
+The receipt QR contains the voucher WIF/private key.
+
+This means the receipt behaves like a bearer cash instrument: anyone who can see, scan, photograph, or copy the QR can sweep the voucher funds.
+
+For MVP testing, the receipt can be previewed from Voucher History and after issue. This is development-only behaviour.
+
+In the final merchant-facing app:
+
+- the WIF QR should only appear at issue/print time
+- old receipt previews should not be freely accessible from history
+- the Voucher History screen should show safe metadata only unless developer mode is enabled
+- the real production flow should become:
+  - merchant issues voucher
+  - app prints receipt
+  - customer receives printed voucher
+  - WIF/private key is not repeatedly exposed in normal app screens
+
+#### Phase 4 result
+
+Phase 4 successfully proves the browser receipt/print-preview stage.
+
+The app can now simulate the real voucher handover flow:
+
+merchant enters amount → quote is locked → voucher is created → receipt preview opens → receipt contains sweepable WIF QR → voucher record is saved in history.
+
+This provides the foundation for the later ESC/POS printer work, where the same receipt data can be converted into thermal printer output.
+
 ### Phase 5 — Add Capacitor / Android
 
 #### Goal
