@@ -1,84 +1,78 @@
 <template>
-  <q-page class="flex">
-    <div class="container strong">
-      <div
-        class="left column q-col-gutter-y-md cursor-pointer"
-        @click="$router.push('/create')"
-      >
-        <div class="text-center">{{ t('title') }}</div>
-        <div class="q-gutter-md">
-          <img class="stamp-icon" src="/icon.svg" />
-          <img class="stamp-icon" src="/icon.svg" />
-          <img class="stamp-icon" src="/icon.svg" />
-        </div>
-      </div>
-      <div
-        class="right column q-col-gutter-y-md cursor-pointer"
-        @click="$router.push('/redeem')"
-      >
-        <div class="text-center">{{ t('redeem') }}</div>
-        <div>
-          <img src="/redeem.png" />
-        </div>
-      </div>
+  <q-page padding class="landing-page">
+    <div class="landing-container">
+      <q-card flat bordered class="landing-card">
+        <q-card-section class="text-center">
+          <div class="text-h4 text-weight-bold q-mb-sm">BCH Voucher</div>
+
+          <p class="text-grey-7 q-mb-none">
+            Development landing page for the BCH voucher merchant app.
+          </p>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section>
+          <div class="column q-gutter-md">
+            <q-btn
+              color="primary"
+              size="lg"
+              label="Sell BCH Voucher"
+              icon="point_of_sale"
+              to="/sell-voucher"
+              unelevated
+            />
+
+            <q-btn
+              color="secondary"
+              size="lg"
+              label="Voucher History"
+              icon="receipt_long"
+              to="/voucher-history"
+              unelevated
+            />
+
+            <q-btn
+              color="green-8"
+              size="lg"
+              label="Treasury Settings"
+              icon="account_balance_wallet"
+              to="/treasury-settings"
+              unelevated
+            />
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section>
+          <q-banner class="bg-orange-1 text-orange-10" rounded>
+            <template #avatar>
+              <q-icon name="construction" />
+            </template>
+
+            Temporary Phase 5 Android testing screen. Final merchant branding,
+            splash screen, and production navigation will be designed later.
+          </q-banner>
+        </q-card-section>
+      </q-card>
     </div>
   </q-page>
 </template>
 
 <style lang="scss" scoped>
-.container {
+.landing-page {
+  background: #f5f7f8;
+}
+
+.landing-container {
   display: flex;
-  flex: 1;
-  color: #fff;
-  font-size: clamp(15px, 10vw, 48px); /* Scalable font size */
-  // font-size: 48px;
+  justify-content: center;
+  width: 100%;
 }
 
-.left,
-.right {
-  display: flex;
-  justify-content: center; /* Center items horizontally */
-  align-items: center; /* Center items vertically */
-  flex: 1;
-}
-
-.left {
-  background-color: #000; /* Light grey background for the left side */
-}
-
-.right {
-  background-color: #7dd955; /* Darker grey background for the right side */
-}
-
-@media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
-
-  .left {
-    order: 2; /* Move left container to the bottom */
-  }
-
-  .right {
-    order: 1; /* Move right container to the top */
-  }
-}
-
-.stamp-icon {
-  width: 64px;
-  height: 64px;
+.landing-card {
+  width: 100%;
+  max-width: 520px;
 }
 </style>
-
-<script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
-import translations from './IndexPage.i18n.json';
-
-const $router = useRouter();
-
-const { t } = useI18n({
-  useScope: 'local',
-  messages: translations.messages,
-});
-</script>
