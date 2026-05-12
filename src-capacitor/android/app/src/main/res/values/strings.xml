@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BCH Voucher</string>
+    <string name="title_activity_main">BCH Voucher</string>
+    <string name="package_name">com.konk.bchvoucher</string>
+    <string name="custom_url_scheme">com.konk.bchvoucher</string>
+</resources>
