@@ -953,6 +953,49 @@ Package the app for Android and test it on device.
 - app launches on Android
 - basic voucher flow works on device
 
+#### Status: In progress
+
+Capacitor has been added to the project and the Android platform has been generated.
+
+Completed so far:
+
+- added Capacitor project shell in `src-capacitor/`
+- configured Android app ID:
+  - `com.konk.bchvoucher`
+- configured app name:
+  - `BCH Voucher`
+- generated the Android project under `src-capacitor/android/`
+- installed and configured Android Studio, Android SDK, emulator tools, ADB, and Java/JVM support
+- created and ran a Pixel 9a emulator
+- launched the BCH Voucher app successfully in the emulator
+- added a simple Android-friendly development landing page with navigation to:
+  - Sell BCH Voucher
+  - Voucher History
+  - Treasury Settings
+- tested the core voucher flow in the Android emulator:
+  - Sell Voucher
+  - Review Voucher
+  - Confirm Fake Issue
+  - receipt preview opens
+  - QR renders
+  - voucher record appears in History
+- connected a physical Pixel 9a phone using USB debugging
+- launched and tested the app on the physical Pixel 9a using the development server over a private hotspot network
+- confirmed the core voucher flow also works on the physical phone
+
+#### Notes
+
+The physical phone could not load the app while using public Wi-Fi because the Android dev build was trying to reach the local Quasar dev server on the laptop. Switching to a private hotspot network allowed the phone to reach the dev server and the app worked correctly.
+
+A small first-load observation was noted: on the physical phone, homepage buttons needed a few taps immediately after first load, then behaved normally. This should be retested with a packaged APK before treating it as a real app bug.
+
+#### Remaining Phase 5 work
+
+- create a packaged Android debug APK
+- install and test the APK directly on the physical Pixel 9a
+- confirm the APK does not depend on the laptop dev server
+- continue Android-focused UX and layout polish before printer integration
+
 ### Phase 6 — Add native printer bridge
 
 #### Goal
