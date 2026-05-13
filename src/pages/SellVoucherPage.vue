@@ -1,38 +1,45 @@
 <template>
-  <q-page padding>
-    <div class="q-mx-auto" style="max-width: 760px">
-      <q-banner class="bg-blue-1 text-blue-10 q-mb-md" rounded>
-        <template #avatar>
-          <q-icon name="info" />
-        </template>
+  <q-page padding class="sell-page">
+    <div class="sell-container">
+      <section class="sell-hero">
+        <div>
+          <p class="eyebrow">Merchant checkout</p>
+          <h1>Sell BCH Voucher</h1>
+          <p class="intro">
+            Enter the customer&apos;s cash amount, review the BCH value, issue
+            the voucher, and present the receipt QR to the customer.
+          </p>
+        </div>
 
-        Phase 3 has started. This screen now locks a real BCH/GBP quote before
-        confirmation, but funding is still fake and no BCH is sent yet.
-      </q-banner>
+        <q-btn
+          class="history-button"
+          label="Voucher History"
+          icon="receipt_long"
+          to="/voucher-history"
+          outline
+          no-caps
+        />
+      </section>
 
-      <q-banner class="bg-orange-1 text-orange-10 q-mb-md" rounded>
-        <template #avatar>
-          <q-icon name="warning" />
-        </template>
-
-        Development note: voucher addresses are now derived from a local test
-        mnemonic stored in browser storage. This is acceptable for MVP testing
-        only. Secure storage and merchant wallet setup will be hardened before
-        real funds are used.
-      </q-banner>
-
-      <q-card flat bordered class="q-mb-md">
+      <q-card flat bordered class="status-card">
         <q-card-section>
           <div class="row items-start q-col-gutter-md">
             <div class="col">
-              <div class="text-h6">Treasury wallet status</div>
+              <div class="status-heading-row">
+                <div class="status-icon">
+                  <q-icon name="account_balance_wallet" />
+                </div>
 
-              <p class="text-grey-7 q-mb-sm">
-                The treasury wallet will later fund issued BCH vouchers.
-              </p>
+                <div>
+                  <div class="text-h6">Treasury Wallet</div>
+                  <p class="text-grey-7 q-mb-none">
+                    This wallet supplies BCH for issued vouchers.
+                  </p>
+                </div>
+              </div>
 
-              <div v-if="treasuryWallet.isSetup">
-                <q-badge color="positive" class="q-mb-sm"> Set up </q-badge>
+              <div v-if="treasuryWallet.isSetup" class="q-mt-md">
+                <q-badge class="success-badge q-mb-sm"> Ready </q-badge>
 
                 <div class="text-body2 text-break q-mb-xs">
                   <strong>Address:</strong>
@@ -42,12 +49,6 @@
                 <div v-if="treasuryBalance" class="text-body2 q-mb-xs">
                   <strong>Balance:</strong>
                   {{ formatBchSats(treasuryBalance.balanceSats) }}
-                  / {{ treasuryBalance.balanceSats.toLocaleString() }} sats
-                </div>
-
-                <div v-if="treasuryBalance" class="text-body2 q-mb-xs">
-                  <strong>UTXOs:</strong>
-                  {{ treasuryBalance.utxoCount }}
                 </div>
 
                 <div v-if="treasuryBalance" class="text-caption text-grey-7">
@@ -60,30 +61,33 @@
                 </div>
               </div>
 
-              <div v-else>
+              <div v-else class="q-mt-md">
                 <q-badge color="grey-7" class="q-mb-sm"> Not set up </q-badge>
 
                 <div class="text-body2 text-grey-7">
-                  Create a local test treasury wallet before real funding is
-                  added.
+                  Set up the treasury wallet before live merchant use.
                 </div>
               </div>
             </div>
 
-            <div class="col-auto column q-gutter-sm">
+            <div class="col-12 col-sm-auto column q-gutter-sm">
               <q-btn
-                flat
-                color="primary"
-                label="Treasury Settings"
+                class="secondary-button"
+                label="Treasury Wallet"
+                icon="settings"
                 to="/treasury-settings"
+                outline
+                no-caps
               />
 
               <q-btn
                 v-if="treasuryWallet.isSetup"
-                outline
-                color="secondary"
+                class="secondary-button"
                 label="Refresh Balance"
+                icon="refresh"
                 :loading="isCheckingTreasuryBalance"
+                outline
+                no-caps
                 @click="handleRefreshTreasuryBalance"
               />
             </div>
@@ -91,12 +95,20 @@
         </q-card-section>
       </q-card>
 
-      <q-card flat bordered>
+      <q-card flat bordered class="sale-card">
         <q-card-section>
-          <div class="text-h4 q-mb-xs">Sell BCH Voucher</div>
-          <p class="text-grey-7 q-mb-none">
-            Enter the customer&apos;s cash amount to review a real BCH quote and
-            create a test voucher record.
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">New voucher</p>
+              <h2>Enter sale amount</h2>
+            </div>
+
+            <q-icon name="point_of_sale" />
+          </div>
+
+          <p class="section-copy">
+            Add the cash amount the customer is paying. The app will lock a BCH
+            quote and show a review screen before issuing the voucher.
           </p>
         </q-card-section>
 
@@ -110,69 +122,115 @@
         </q-card-section>
       </q-card>
 
-      <q-card v-if="lastIssuedVoucher" flat bordered class="q-mt-md bg-green-1">
+      <q-card v-if="lastIssuedVoucher" flat bordered class="issued-card">
         <q-card-section>
           <div class="row items-start q-col-gutter-md">
             <div class="col">
-              <div class="text-h6 text-green-10">
-                Voucher record created successfully
+              <div class="issued-heading">
+                <q-icon name="check_circle" />
+
+                <div>
+                  <div class="text-h6">Voucher issued</div>
+                  <p class="q-mb-none">
+                    The voucher has been saved and the receipt preview is ready
+                    for the customer.
+                  </p>
+                </div>
               </div>
 
-              <p class="text-green-10 q-mb-sm">
-                This voucher has been saved locally. Review the voucher history
-                for funding details and test notes.
-              </p>
+              <q-list dense class="q-mt-md">
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption>Voucher reference</q-item-label>
+                    <q-item-label class="text-weight-bold">
+                      {{ lastIssuedVoucher.serial }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
 
-              <div class="text-body2">
-                <strong>Voucher reference:</strong>
-                {{ lastIssuedVoucher.serial }}
-              </div>
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption>Customer paid</q-item-label>
+                    <q-item-label>
+                      {{
+                        formatFiatAmount(
+                          lastIssuedVoucher.fiatAmountMinor,
+                          lastIssuedVoucher.fiatCurrency
+                        )
+                      }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
 
-              <div class="text-body2">
-                <strong>Customer paid:</strong>
-                {{
-                  formatFiatAmount(
-                    lastIssuedVoucher.fiatAmountMinor,
-                    lastIssuedVoucher.fiatCurrency
-                  )
-                }}
-              </div>
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption>BCH loaded</q-item-label>
+                    <q-item-label>
+                      {{ formatBchSats(lastIssuedVoucher.finalBchSats) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
 
-              <div class="text-body2">
-                <strong>Estimated BCH loaded:</strong>
-                {{ formatBchSats(lastIssuedVoucher.finalBchSats) }}
-              </div>
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption>Voucher address</q-item-label>
+                    <q-item-label class="text-break">
+                      {{ lastIssuedVoucher.address }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
 
-              <div class="text-body2">
-                <strong>Voucher address:</strong>
-                {{ lastIssuedVoucher.address }}
-              </div>
+              <q-expansion-item
+                dense
+                class="developer-details q-mt-sm"
+                icon="code"
+                label="Development details"
+              >
+                <q-list dense bordered separator>
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label caption>Derivation index</q-item-label>
+                      <q-item-label>
+                        {{ lastIssuedVoucher.derivationIndex }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
 
-              <div class="text-body2">
-                <strong>Derivation index:</strong>
-                {{ lastIssuedVoucher.derivationIndex }}
-              </div>
+                  <q-item v-if="lastIssuedVoucher.keyMetadata">
+                    <q-item-section>
+                      <q-item-label caption>WIF export ready</q-item-label>
+                      <q-item-label>
+                        {{
+                          lastIssuedVoucher.keyMetadata.hasWif ? 'Yes' : 'No'
+                        }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
 
-              <div v-if="lastIssuedVoucher.keyMetadata" class="text-body2">
-                <strong>WIF ready:</strong>
-                {{ lastIssuedVoucher.keyMetadata.hasWif ? 'Yes' : 'No' }}
-              </div>
+                  <q-item v-if="lastIssuedVoucher.feeOutputPlan">
+                    <q-item-section>
+                      <q-item-label caption>Platform fee plan</q-item-label>
+                      <q-item-label>
+                        {{
+                          formatBchSats(
+                            lastIssuedVoucher.feeOutputPlan.platformFeeSats
+                          )
+                        }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
 
-              <div v-if="lastIssuedVoucher.feeOutputPlan" class="text-body2">
-                <strong>Platform fee plan:</strong>
-                {{
-                  formatBchSats(lastIssuedVoucher.feeOutputPlan.platformFeeSats)
-                }}
-              </div>
-
-              <div class="text-body2">
-                <strong>Status:</strong>
-                {{ lastIssuedVoucher.status }}
-              </div>
-            </div>
-
-            <div class="col-auto">
-              <q-icon name="check_circle" color="positive" size="42px" />
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label caption>Record status</q-item-label>
+                      <q-item-label>
+                        {{ lastIssuedVoucher.status }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-expansion-item>
             </div>
           </div>
         </q-card-section>
@@ -185,34 +243,43 @@
             color="primary"
             label="View History"
             to="/voucher-history"
+            no-caps
           />
 
           <q-btn
-            color="primary"
+            class="primary-button"
             label="Issue Another"
+            no-caps
+            unelevated
             @click="handleResetLastIssuedVoucher"
           />
         </q-card-actions>
       </q-card>
 
-      <q-banner
-        v-if="successMessage"
-        class="bg-green-1 text-green-9 q-mt-md"
-        rounded
-      >
+      <q-banner v-if="successMessage" class="bg-green-1 text-green-9" rounded>
         {{ successMessage }}
       </q-banner>
 
       <q-banner
         v-if="warningMessage"
-        class="bg-orange-1 text-orange-10 q-mt-md"
+        class="bg-orange-1 text-orange-10"
         rounded
       >
         {{ warningMessage }}
       </q-banner>
 
-      <q-banner v-if="errorMessage" class="bg-red-1 text-red-9 q-mt-md" rounded>
+      <q-banner v-if="errorMessage" class="bg-red-1 text-red-9" rounded>
         {{ errorMessage }}
+      </q-banner>
+
+      <q-banner class="bg-grey-2 text-grey-9" rounded>
+        <template #avatar>
+          <q-icon name="shield" />
+        </template>
+
+        Development safety mode is still active. The merchant UX is being
+        polished, but live transaction broadcasting remains protected by the
+        existing guardrails until explicitly changed.
       </q-banner>
 
       <SaleConfirmDialog
@@ -237,9 +304,9 @@
         <q-card style="width: 440px; max-width: 95vw">
           <q-card-section class="row items-center justify-between">
             <div>
-              <div class="text-h6">Voucher Receipt Preview</div>
+              <div class="text-h6">Voucher Receipt</div>
               <div class="text-caption text-grey-7">
-                Simulated issue-time print preview
+                Issue-time receipt preview
               </div>
             </div>
 
@@ -339,11 +406,11 @@ const treasuryWarning = computed(() => {
   }
 
   if (!treasuryWallet.value.isSetup) {
-    return 'Treasury wallet is not set up. Fake issuing can continue, but real funding will be blocked until a treasury wallet exists.';
+    return 'Treasury wallet is not set up. Voucher review can continue, but live funding will be blocked until a treasury wallet exists.';
   }
 
   if (!treasuryBalance.value) {
-    return 'Treasury balance has not been checked. Fake issuing can continue, but real funding will require a fresh balance check.';
+    return 'Treasury balance has not been checked. Voucher review can continue, but live funding will require a fresh balance check.';
   }
 
   if (treasuryBalance.value.balanceSats < pendingPricing.value.finalBchSats) {
@@ -358,27 +425,27 @@ const treasuryWarning = computed(() => {
 const issueProgressSteps = ref<IssueProgressStep[]>([
   {
     key: 'quote',
-    label: 'Use locked quote',
+    label: 'Confirm locked quote',
     description: 'Use the BCH/GBP quote locked before confirmation.',
     status: 'pending',
   },
   {
     key: 'wallet',
-    label: 'Use derived voucher wallet',
+    label: 'Prepare voucher wallet',
     description: 'Use the voucher address prepared before confirmation.',
     status: 'pending',
   },
   {
     key: 'funding',
-    label: 'Prepare treasury funding',
+    label: 'Prepare funding plan',
     description:
-      'Dry-run by default. Real broadcast only happens when explicitly enabled.',
+      'Check the prepared funding plan while live broadcast remains guarded.',
     status: 'pending',
   },
   {
     key: 'store',
     label: 'Save voucher record',
-    description: 'Store the test voucher in local browser storage.',
+    description: 'Store the voucher sale record locally.',
     status: 'pending',
   },
 ]);
@@ -493,7 +560,7 @@ async function handleReviewVoucher(
         console.error(error);
         treasuryBalance.value = null;
         warningMessage.value =
-          'Treasury balance could not be checked. Fake issuing can continue, but real funding will require a fresh balance check.';
+          'Treasury balance could not be checked. Voucher review can continue, but live funding will require a fresh balance check.';
       }
     }
 
@@ -526,7 +593,7 @@ async function handleReviewVoucher(
         checkedAt: new Date().toISOString(),
       };
       warningMessage.value =
-        'Voucher WIF capability check failed. Fake issuing can continue, but printing/sweeping will require WIF export.';
+        'Voucher key export check failed. Review can continue, but printing/sweeping will require WIF export.';
     }
 
     if (treasuryWallet.value.isSetup && treasuryWallet.value.address) {
@@ -650,7 +717,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
     await loadTreasuryWallet();
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not create fake voucher.';
+    errorMessage.value = 'Could not issue voucher.';
     setIssueProgressStepStatus('store', 'error');
   } finally {
     isSubmitting.value = false;
@@ -675,3 +742,154 @@ onMounted(() => {
   void loadTreasuryWallet();
 });
 </script>
+
+<style lang="scss" scoped>
+.sell-page {
+  min-height: 100%;
+  background: radial-gradient(
+      circle at top left,
+      rgba(0, 206, 27, 0.14),
+      transparent 32%
+    ),
+    linear-gradient(180deg, #f7f8f7 0%, #eeeeee 100%);
+  color: #111111;
+}
+
+.sell-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0 auto;
+  max-width: 760px;
+  width: 100%;
+}
+
+.sell-hero,
+.status-card,
+.sale-card,
+.issued-card {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 24px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+}
+
+.sell-hero {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 24px;
+}
+
+.eyebrow {
+  color: #4b4b4b;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+h1,
+h2 {
+  color: #111111;
+  line-height: 1.08;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(32px, 8vw, 48px);
+  font-weight: 900;
+  letter-spacing: -1.2px;
+}
+
+h2 {
+  font-size: 26px;
+  font-weight: 850;
+}
+
+.intro,
+.section-copy {
+  color: #444444;
+  font-size: 16px;
+  line-height: 1.45;
+  margin: 12px 0 0;
+}
+
+.history-button,
+.secondary-button {
+  border-color: #222222;
+  border-radius: 14px;
+  color: #111111;
+  font-weight: 800;
+}
+
+.status-heading-row,
+.section-heading,
+.issued-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+}
+
+.status-icon,
+.section-heading > .q-icon,
+.issued-heading > .q-icon {
+  align-items: center;
+  border-radius: 16px;
+  display: flex;
+  flex: 0 0 46px;
+  font-size: 26px;
+  height: 46px;
+  justify-content: center;
+  width: 46px;
+}
+
+.status-icon,
+.section-heading > .q-icon {
+  background: #f0f0f0;
+  color: #00a816;
+}
+
+.issued-heading > .q-icon {
+  background: #00ce1b;
+  color: #000000;
+}
+
+.success-badge {
+  background: #00ce1b;
+  color: #000000;
+  font-weight: 800;
+}
+
+.sale-card :deep(.q-card__section),
+.status-card :deep(.q-card__section),
+.issued-card :deep(.q-card__section) {
+  padding: 22px;
+}
+
+.primary-button {
+  background: #00ce1b;
+  border-radius: 14px;
+  color: #000000;
+  font-weight: 800;
+}
+
+.developer-details {
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .sell-hero {
+    flex-direction: column;
+    padding: 22px;
+  }
+
+  .history-button {
+    width: 100%;
+  }
+}
+</style>
