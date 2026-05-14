@@ -953,7 +953,7 @@ Package the app for Android and test it on device.
 - app launches on Android
 - basic voucher flow works on device
 
-#### Status: In progress
+#### Status: First APK milestone completed
 
 Capacitor has been added to the project and the Android platform has been generated.
 
@@ -982,6 +982,32 @@ Completed so far:
 - connected a physical Pixel 9a phone using USB debugging
 - launched and tested the app on the physical Pixel 9a using the development server over a private hotspot network
 - confirmed the core voucher flow also works on the physical phone
+- polished the Android-facing merchant UX before APK creation:
+  - homepage / merchant landing screen
+  - Sell Voucher page
+  - voucher sale form
+  - voucher confirmation dialog
+  - voucher issue progress dialog
+  - Treasury Wallet page
+  - Voucher History page shell
+  - Voucher History list/cards
+  - receipt preview layout and wording
+- moved many developer-heavy details behind expandable sections while keeping testing tools available
+- reduced visible “fake/test” wording in the merchant flow while keeping development safety guardrails active
+- added missing `ace-builds` dependency so the inherited CashStamps template editor code can build successfully
+- built the Capacitor Android app successfully
+- created the first debug APK:
+  - `src-capacitor/android/app/build/outputs/apk/debug/app-debug.apk`
+- installed the APK directly onto the physical Pixel 9a using ADB
+- confirmed the APK-installed app opens without relying on the laptop dev server
+- confirmed the full voucher flow works from the APK-installed app:
+  - Home
+  - Sell Voucher
+  - Review Voucher
+  - Issue Voucher
+  - receipt preview opens
+  - QR renders
+  - voucher record appears in History
 
 #### Notes
 
@@ -989,12 +1015,18 @@ The physical phone could not load the app while using public Wi-Fi because the A
 
 A small first-load observation was noted: on the physical phone, homepage buttons needed a few taps immediately after first load, then behaved normally. This should be retested with a packaged APK before treating it as a real app bug.
 
+The packaged APK was later built and installed successfully on the physical Pixel 9a. This confirmed the app can run as a self-contained installed Android app without depending on the laptop dev server.
+
+Development safety mode remains active. Real BCH transaction broadcasting is still protected by the existing guardrails until explicitly changed in a later step.
+
 #### Remaining Phase 5 work
 
 - create a packaged Android debug APK
 - install and test the APK directly on the physical Pixel 9a
 - confirm the APK does not depend on the laptop dev server
 - continue Android-focused UX and layout polish before printer integration
+
+The main Phase 5 APK milestone is now complete. The remaining work before printer integration is optional polish, cleanup, and deciding when/how to replace development guardrails with production-safe merchant controls.
 
 ### Phase 6 — Add native printer bridge
 
