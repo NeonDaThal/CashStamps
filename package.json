@@ -22,6 +22,7 @@
     "@guolao/vue-monaco-editor": "1.4.0",
     "@quasar/extras": "^1.16.4",
     "@sanity/eventsource": "^5.0.2",
+    "ace-builds": "^1.44.0",
     "easyqrcodejs": "^4.6.1",
     "electrum-cash": "2.0.10-development.3428777728",
     "events": "^3.3.0",
