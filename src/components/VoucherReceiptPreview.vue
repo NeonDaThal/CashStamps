@@ -1,20 +1,20 @@
 <template>
-  <div>
+  <div class="receipt-preview">
     <q-banner
       v-if="showPrivateKeyWarning"
-      class="bg-orange-1 text-orange-10 q-mb-md"
+      class="private-key-warning q-mb-md"
       rounded
     >
       <template #avatar>
         <q-icon name="warning" />
       </template>
 
-      Development preview only. This receipt contains a sweepable private key QR.
-      Anyone who scans or copies it can sweep the voucher funds.
+      Development preview only. This receipt contains a sweepable private key
+      QR. Anyone who scans or copies it can sweep the voucher funds.
     </q-banner>
 
     <q-card flat bordered class="voucher-receipt-preview-card">
-      <q-card-section v-if="isLoading" class="text-center">
+      <q-card-section v-if="isLoading" class="loading-state">
         <q-spinner size="32px" color="primary" />
         <div class="q-mt-sm text-grey-7">Building receipt preview...</div>
       </q-card-section>
@@ -32,18 +32,17 @@
       <q-card-section v-else-if="receiptData" class="receipt-shell">
         <div class="receipt-paper">
           <div class="receipt-header">
+            <div class="receipt-brand">Bitcoin Cash</div>
             <div class="receipt-title">{{ receiptData.title }}</div>
-            <div class="receipt-subtitle">Bitcoin Cash Voucher</div>
+            <div class="receipt-subtitle">Sweepable BCH voucher receipt</div>
           </div>
 
           <div class="receipt-divider"></div>
 
           <div class="receipt-value">
+            <div class="receipt-value-label">Voucher value loaded</div>
             <div class="receipt-value-main">
               {{ receiptData.loadedFiatLabel }}
-            </div>
-            <div class="receipt-value-sub">
-              in Bitcoin Cash
             </div>
             <div class="receipt-bch">
               {{ receiptData.bchAmountLabel }}
@@ -52,18 +51,22 @@
 
           <div class="receipt-divider"></div>
 
-          <div class="receipt-qr-wrap">
-            <img
-              v-if="qrCodeDataUrl"
-              :src="qrCodeDataUrl"
-              alt="Sweepable BCH voucher QR code"
-              class="receipt-qr"
-            />
-          </div>
+          <div class="receipt-qr-section">
+            <div class="qr-label">Scan to sweep</div>
 
-          <p class="receipt-instruction">
-            {{ receiptData.redemptionInstruction }}
-          </p>
+            <div class="receipt-qr-wrap">
+              <img
+                v-if="qrCodeDataUrl"
+                :src="qrCodeDataUrl"
+                alt="Sweepable BCH voucher QR code"
+                class="receipt-qr"
+              />
+            </div>
+
+            <p class="receipt-instruction">
+              {{ receiptData.redemptionInstruction }}
+            </p>
+          </div>
 
           <div class="receipt-warning">
             {{ receiptData.cashWarning }}
@@ -81,6 +84,11 @@
             <strong>{{ receiptData.issuedAtLabel }}</strong>
           </div>
 
+          <div class="receipt-row">
+            <span>Customer paid</span>
+            <strong>{{ receiptData.customerPaidLabel }}</strong>
+          </div>
+
           <div class="receipt-block">
             <div class="receipt-label">Voucher address</div>
             <div class="receipt-address">
@@ -93,6 +101,8 @@
           <p class="receipt-support">
             {{ receiptData.supportNote }}
           </p>
+
+          <div class="receipt-footer">Keep safe until redeemed</div>
         </div>
       </q-card-section>
     </q-card>
@@ -138,7 +148,7 @@ async function buildReceiptPreview(): Promise<void> {
       {
         errorCorrectionLevel: 'M',
         margin: 2,
-        width: 240,
+        width: 260,
       }
     );
 
@@ -168,41 +178,73 @@ watch(
 </script>
 
 <style scoped>
+.receipt-preview {
+  width: 100%;
+}
+
+.private-key-warning {
+  background: #fff4df;
+  color: #8a4b00;
+}
+
 .voucher-receipt-preview-card {
-  background: #f5f5f5;
+  background: #f1f1f1;
+  border-color: #dddddd;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.loading-state {
+  padding: 28px 16px;
+  text-align: center;
 }
 
 .receipt-shell {
   display: flex;
   justify-content: center;
-  padding: 24px 12px;
+  padding: 22px 10px;
 }
 
 .receipt-paper {
-  width: 320px;
-  max-width: 100%;
   background: #ffffff;
+  border: 1px solid #d8d8d8;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
   color: #111111;
-  border: 1px solid #dddddd;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
   font-family: 'Courier New', Courier, monospace;
+  max-width: 100%;
   padding: 18px 14px;
+  width: 330px;
 }
 
 .receipt-header {
   text-align: center;
 }
 
+.receipt-brand {
+  background: #00ce1b;
+  color: #000000;
+  display: inline-block;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
 .receipt-title {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 900;
   letter-spacing: 0.5px;
+  line-height: 1.05;
   text-transform: uppercase;
 }
 
 .receipt-subtitle {
   font-size: 12px;
-  margin-top: 4px;
+  margin-top: 5px;
+  text-transform: uppercase;
 }
 
 .receipt-divider {
@@ -214,76 +256,130 @@ watch(
   text-align: center;
 }
 
-.receipt-value-main {
-  font-size: 24px;
-  font-weight: 700;
+.receipt-value-label,
+.qr-label {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
 }
 
-.receipt-value-sub {
-  font-size: 13px;
-  margin-top: 2px;
+.receipt-value-main {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.1;
 }
 
 .receipt-bch {
   font-size: 13px;
-  margin-top: 6px;
+  font-weight: 700;
+  margin-top: 7px;
   word-break: break-word;
 }
 
+.receipt-qr-section {
+  text-align: center;
+}
+
 .receipt-qr-wrap {
-  display: flex;
+  background: #ffffff;
+  border: 2px solid #111111;
+  display: inline-flex;
   justify-content: center;
-  margin: 12px 0;
+  margin: 4px 0 12px;
+  padding: 8px;
 }
 
 .receipt-qr {
-  width: 240px;
+  display: block;
   height: 240px;
   image-rendering: pixelated;
+  width: 240px;
 }
 
 .receipt-instruction,
 .receipt-support {
   font-size: 12px;
   line-height: 1.35;
-  text-align: center;
   margin: 0;
+  text-align: center;
 }
 
 .receipt-warning {
-  border: 1px solid #111111;
+  border: 2px solid #111111;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1.35;
   margin-top: 12px;
-  padding: 8px;
+  padding: 9px 8px;
   text-align: center;
   text-transform: uppercase;
 }
 
 .receipt-row {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
   font-size: 12px;
+  gap: 12px;
+  justify-content: space-between;
   margin-bottom: 8px;
 }
 
+.receipt-row span {
+  flex: 0 0 auto;
+}
+
 .receipt-row strong {
+  font-weight: 900;
   text-align: right;
 }
 
 .receipt-block {
   font-size: 12px;
-  margin-top: 10px;
+  margin-top: 11px;
 }
 
 .receipt-label {
-  font-weight: 700;
-  margin-bottom: 4px;
+  font-weight: 900;
+  margin-bottom: 5px;
+  text-transform: uppercase;
 }
 
 .receipt-address {
+  border: 1px solid #111111;
+  font-size: 11px;
+  line-height: 1.3;
+  padding: 7px;
   word-break: break-all;
+}
+
+.receipt-footer {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  margin-top: 10px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (max-width: 420px) {
+  .receipt-shell {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .receipt-paper {
+    padding: 16px 12px;
+    width: 100%;
+  }
+
+  .receipt-qr {
+    height: 220px;
+    width: 220px;
+  }
+
+  .receipt-value-main {
+    font-size: 25px;
+  }
 }
 </style>
