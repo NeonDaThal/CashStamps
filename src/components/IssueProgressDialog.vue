@@ -7,9 +7,11 @@
         </div>
 
         <div>
-          <div class="text-h5 text-weight-bold">Issuing Voucher</div>
+          <div class="text-h5 text-weight-bold">
+            {{ t('issueProgress.title') }}
+          </div>
           <p class="text-grey-7 q-mb-none">
-            Preparing the voucher record and receipt for the customer.
+            {{ t('issueProgress.subtitle') }}
           </p>
         </div>
       </q-card-section>
@@ -67,8 +69,7 @@
             <q-icon name="shield" />
           </template>
 
-          Development safety mode is active. Voucher issuing can be tested while
-          live broadcasting remains protected by the existing guardrails.
+          {{ t('issueProgress.safetyModeNotice') }}
         </q-banner>
       </q-card-section>
     </q-card>
@@ -76,6 +77,8 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
 export type IssueProgressStepStatus =
   | 'pending'
   | 'active'
@@ -93,6 +96,8 @@ defineProps<{
   modelValue: boolean;
   steps: IssueProgressStep[];
 }>();
+
+const { t } = useI18n({ useScope: 'global' });
 </script>
 
 <style lang="scss" scoped>

@@ -13,6 +13,8 @@ const en = {
     error: 'Error',
     success: 'Success',
     warning: 'Warning',
+    yes: 'Yes',
+    no: 'No',
   },
 
   language: {
@@ -60,6 +62,109 @@ const en = {
     lockedAfterReview: 'Locked after review',
     reviewVoucher: 'Review Voucher',
     viewHistory: 'View History',
+  },
+
+  issueProgress: {
+    title: 'Issuing Voucher',
+    subtitle: 'Preparing the voucher record and receipt for the customer.',
+    safetyModeNotice:
+      'Development safety mode is active. Voucher issuing can be tested while live broadcasting remains protected by the existing guardrails.',
+  },
+
+  sellPage: {
+    hero: {
+      eyebrow: 'Merchant checkout',
+      title: 'Sell BCH Voucher',
+      intro:
+        "Enter the customer's cash amount, review the BCH value, issue the voucher, and present the receipt QR to the customer.",
+    },
+    treasury: {
+      title: 'Treasury Wallet',
+      subtitle: 'This wallet supplies BCH for issued vouchers.',
+      ready: 'Ready',
+      address: 'Address',
+      balance: 'Balance',
+      lastChecked: 'Last checked',
+      balanceNotChecked: 'Balance has not been checked yet.',
+      notSetUp: 'Not set up',
+      setUpBeforeUse: 'Set up the treasury wallet before live merchant use.',
+      refreshBalance: 'Refresh Balance',
+    },
+    sale: {
+      eyebrow: 'New voucher',
+      title: 'Enter sale amount',
+      copy: 'Add the cash amount the customer is paying. The app will lock a BCH quote and show a review screen before issuing the voucher.',
+    },
+    issued: {
+      title: 'Voucher issued',
+      subtitle:
+        'The voucher has been saved and the receipt preview is ready for the customer.',
+      voucherReference: 'Voucher reference',
+      customerPaid: 'Customer paid',
+      bchLoaded: 'BCH loaded',
+      voucherAddress: 'Voucher address',
+      issueAnother: 'Issue Another',
+    },
+    developerDetails: {
+      title: 'Development details',
+      derivationIndex: 'Derivation index',
+      wifExportReady: 'WIF export ready',
+      platformFeePlan: 'Platform fee plan',
+      recordStatus: 'Record status',
+    },
+    issueSteps: {
+      quote: {
+        label: 'Confirm locked quote',
+        description: 'Use the BCH/GBP quote locked before confirmation.',
+      },
+      wallet: {
+        label: 'Prepare voucher wallet',
+        description: 'Use the voucher address prepared before confirmation.',
+      },
+      funding: {
+        label: 'Prepare funding plan',
+        description:
+          'Check the prepared funding plan while live broadcast remains guarded.',
+      },
+      store: {
+        label: 'Save voucher record',
+        description: 'Store the voucher sale record locally.',
+      },
+    },
+    receiptDialog: {
+      title: 'Voucher Receipt',
+      subtitle: 'Issue-time receipt preview',
+    },
+    safetyNotice:
+      'Development safety mode is still active. The merchant UX is being polished, but live transaction broadcasting remains protected by the existing guardrails until explicitly changed.',
+    messages: {
+      treasuryNotSetUpWarning:
+        'Treasury wallet is not set up. Voucher review can continue, but live funding will be blocked until a treasury wallet exists.',
+      treasuryBalanceNotCheckedWarning:
+        'Treasury balance has not been checked. Voucher review can continue, but live funding will require a fresh balance check.',
+      treasuryBalanceTooLow:
+        'Treasury balance is too low for this voucher. Required: {required}. Available: {available}.',
+      couldNotLoadTreasuryWallet: 'Could not load treasury wallet status.',
+      treasuryBalanceRefreshed: 'Treasury balance refreshed.',
+      couldNotRefreshTreasuryBalance:
+        'Could not refresh treasury balance. Check your connection and try again.',
+      enterValidCashAmount: 'Enter a valid cash amount first.',
+      treasuryBalanceCheckTimedOut: 'Treasury balance check timed out.',
+      treasuryBalanceCouldNotBeCheckedWarning:
+        'Treasury balance could not be checked. Voucher review can continue, but live funding will require a fresh balance check.',
+      voucherKeyExportFailed:
+        'Voucher key export check failed. Review can continue, but printing/sweeping will require WIF export.',
+      fallbackQuoteWarning:
+        'Live pricing was unavailable, so a recent cached quote is being used. Review the quote carefully before issuing.',
+      liveQuoteLocked: 'Live price quote locked successfully.',
+      couldNotPrepareReview:
+        'Could not prepare voucher review. Please check the connection and try again.',
+      noLockedQuote:
+        'No locked quote is available. Please review the voucher again.',
+      noVoucherAddress:
+        'No voucher address is available. Please review the voucher again.',
+      couldNotIssueVoucher: 'Could not issue voucher.',
+    },
   },
 };
 

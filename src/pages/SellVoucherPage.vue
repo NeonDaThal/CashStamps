@@ -3,17 +3,16 @@
     <div class="sell-container">
       <section class="sell-hero">
         <div>
-          <p class="eyebrow">Merchant checkout</p>
-          <h1>Sell BCH Voucher</h1>
+          <p class="eyebrow">{{ t('sellPage.hero.eyebrow') }}</p>
+          <h1>{{ t('sellPage.hero.title') }}</h1>
           <p class="intro">
-            Enter the customer&apos;s cash amount, review the BCH value, issue
-            the voucher, and present the receipt QR to the customer.
+            {{ t('sellPage.hero.intro') }}
           </p>
         </div>
 
         <q-btn
           class="history-button"
-          label="Voucher History"
+          :label="t('home.voucherHistory')"
           icon="receipt_long"
           to="/voucher-history"
           outline
@@ -31,41 +30,47 @@
                 </div>
 
                 <div>
-                  <div class="text-h6">Treasury Wallet</div>
+                  <div class="text-h6">
+                    {{ t('sellPage.treasury.title') }}
+                  </div>
                   <p class="text-grey-7 q-mb-none">
-                    This wallet supplies BCH for issued vouchers.
+                    {{ t('sellPage.treasury.subtitle') }}
                   </p>
                 </div>
               </div>
 
               <div v-if="treasuryWallet.isSetup" class="q-mt-md">
-                <q-badge class="success-badge q-mb-sm"> Ready </q-badge>
+                <q-badge class="success-badge q-mb-sm">
+                  {{ t('sellPage.treasury.ready') }}
+                </q-badge>
 
                 <div class="text-body2 text-break q-mb-xs">
-                  <strong>Address:</strong>
+                  <strong>{{ t('sellPage.treasury.address') }}:</strong>
                   {{ treasuryWallet.address }}
                 </div>
 
                 <div v-if="treasuryBalance" class="text-body2 q-mb-xs">
-                  <strong>Balance:</strong>
+                  <strong>{{ t('sellPage.treasury.balance') }}:</strong>
                   {{ formatBchSats(treasuryBalance.balanceSats) }}
                 </div>
 
                 <div v-if="treasuryBalance" class="text-caption text-grey-7">
-                  Last checked:
+                  {{ t('sellPage.treasury.lastChecked') }}:
                   {{ formatDateTime(treasuryBalance.checkedAt) }}
                 </div>
 
                 <div v-else class="text-body2 text-grey-7">
-                  Balance has not been checked yet.
+                  {{ t('sellPage.treasury.balanceNotChecked') }}
                 </div>
               </div>
 
               <div v-else class="q-mt-md">
-                <q-badge color="grey-7" class="q-mb-sm"> Not set up </q-badge>
+                <q-badge color="grey-7" class="q-mb-sm">
+                  {{ t('sellPage.treasury.notSetUp') }}
+                </q-badge>
 
                 <div class="text-body2 text-grey-7">
-                  Set up the treasury wallet before live merchant use.
+                  {{ t('sellPage.treasury.setUpBeforeUse') }}
                 </div>
               </div>
             </div>
@@ -73,7 +78,7 @@
             <div class="col-12 col-sm-auto column q-gutter-sm">
               <q-btn
                 class="secondary-button"
-                label="Treasury Wallet"
+                :label="t('sellPage.treasury.title')"
                 icon="settings"
                 to="/treasury-settings"
                 outline
@@ -83,7 +88,7 @@
               <q-btn
                 v-if="treasuryWallet.isSetup"
                 class="secondary-button"
-                label="Refresh Balance"
+                :label="t('sellPage.treasury.refreshBalance')"
                 icon="refresh"
                 :loading="isCheckingTreasuryBalance"
                 outline
@@ -99,16 +104,15 @@
         <q-card-section>
           <div class="section-heading">
             <div>
-              <p class="eyebrow">New voucher</p>
-              <h2>Enter sale amount</h2>
+              <p class="eyebrow">{{ t('sellPage.sale.eyebrow') }}</p>
+              <h2>{{ t('sellPage.sale.title') }}</h2>
             </div>
 
             <q-icon name="point_of_sale" />
           </div>
 
           <p class="section-copy">
-            Add the cash amount the customer is paying. The app will lock a BCH
-            quote and show a review screen before issuing the voucher.
+            {{ t('sellPage.sale.copy') }}
           </p>
         </q-card-section>
 
@@ -130,10 +134,11 @@
                 <q-icon name="check_circle" />
 
                 <div>
-                  <div class="text-h6">Voucher issued</div>
+                  <div class="text-h6">
+                    {{ t('sellPage.issued.title') }}
+                  </div>
                   <p class="q-mb-none">
-                    The voucher has been saved and the receipt preview is ready
-                    for the customer.
+                    {{ t('sellPage.issued.subtitle') }}
                   </p>
                 </div>
               </div>
@@ -141,7 +146,9 @@
               <q-list dense class="q-mt-md">
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Voucher reference</q-item-label>
+                    <q-item-label caption>
+                      {{ t('sellPage.issued.voucherReference') }}
+                    </q-item-label>
                     <q-item-label class="text-weight-bold">
                       {{ lastIssuedVoucher.serial }}
                     </q-item-label>
@@ -150,7 +157,9 @@
 
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Customer paid</q-item-label>
+                    <q-item-label caption>
+                      {{ t('sellPage.issued.customerPaid') }}
+                    </q-item-label>
                     <q-item-label>
                       {{
                         formatFiatAmount(
@@ -164,7 +173,9 @@
 
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>BCH loaded</q-item-label>
+                    <q-item-label caption>
+                      {{ t('sellPage.issued.bchLoaded') }}
+                    </q-item-label>
                     <q-item-label>
                       {{ formatBchSats(lastIssuedVoucher.finalBchSats) }}
                     </q-item-label>
@@ -173,7 +184,9 @@
 
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Voucher address</q-item-label>
+                    <q-item-label caption>
+                      {{ t('sellPage.issued.voucherAddress') }}
+                    </q-item-label>
                     <q-item-label class="text-break">
                       {{ lastIssuedVoucher.address }}
                     </q-item-label>
@@ -185,12 +198,14 @@
                 dense
                 class="developer-details q-mt-sm"
                 icon="code"
-                label="Development details"
+                :label="t('sellPage.developerDetails.title')"
               >
                 <q-list dense bordered separator>
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>Derivation index</q-item-label>
+                      <q-item-label caption>
+                        {{ t('sellPage.developerDetails.derivationIndex') }}
+                      </q-item-label>
                       <q-item-label>
                         {{ lastIssuedVoucher.derivationIndex }}
                       </q-item-label>
@@ -199,10 +214,14 @@
 
                   <q-item v-if="lastIssuedVoucher.keyMetadata">
                     <q-item-section>
-                      <q-item-label caption>WIF export ready</q-item-label>
+                      <q-item-label caption>
+                        {{ t('sellPage.developerDetails.wifExportReady') }}
+                      </q-item-label>
                       <q-item-label>
                         {{
-                          lastIssuedVoucher.keyMetadata.hasWif ? 'Yes' : 'No'
+                          lastIssuedVoucher.keyMetadata.hasWif
+                            ? t('common.yes')
+                            : t('common.no')
                         }}
                       </q-item-label>
                     </q-item-section>
@@ -210,7 +229,9 @@
 
                   <q-item v-if="lastIssuedVoucher.feeOutputPlan">
                     <q-item-section>
-                      <q-item-label caption>Platform fee plan</q-item-label>
+                      <q-item-label caption>
+                        {{ t('sellPage.developerDetails.platformFeePlan') }}
+                      </q-item-label>
                       <q-item-label>
                         {{
                           formatBchSats(
@@ -223,7 +244,9 @@
 
                   <q-item>
                     <q-item-section>
-                      <q-item-label caption>Record status</q-item-label>
+                      <q-item-label caption>
+                        {{ t('sellPage.developerDetails.recordStatus') }}
+                      </q-item-label>
                       <q-item-label>
                         {{ lastIssuedVoucher.status }}
                       </q-item-label>
@@ -241,14 +264,14 @@
           <q-btn
             flat
             color="primary"
-            label="View History"
+            :label="t('sellForm.viewHistory')"
             to="/voucher-history"
             no-caps
           />
 
           <q-btn
             class="primary-button"
-            label="Issue Another"
+            :label="t('sellPage.issued.issueAnother')"
             no-caps
             unelevated
             @click="handleResetLastIssuedVoucher"
@@ -277,9 +300,7 @@
           <q-icon name="shield" />
         </template>
 
-        Development safety mode is still active. The merchant UX is being
-        polished, but live transaction broadcasting remains protected by the
-        existing guardrails until explicitly changed.
+        {{ t('sellPage.safetyNotice') }}
       </q-banner>
 
       <SaleConfirmDialog
@@ -304,9 +325,11 @@
         <q-card style="width: 440px; max-width: 95vw">
           <q-card-section class="row items-center justify-between">
             <div>
-              <div class="text-h6">Voucher Receipt</div>
+              <div class="text-h6">
+                {{ t('sellPage.receiptDialog.title') }}
+              </div>
               <div class="text-caption text-grey-7">
-                Issue-time receipt preview
+                {{ t('sellPage.receiptDialog.subtitle') }}
               </div>
             </div>
 
@@ -320,7 +343,12 @@
           </q-card-section>
 
           <q-card-actions align="right">
-            <q-btn v-close-popup color="primary" flat label="Close" />
+            <q-btn
+              v-close-popup
+              color="primary"
+              flat
+              :label="t('common.close')"
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -329,7 +357,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import IssueProgressDialog, {
   type IssueProgressStep,
@@ -367,6 +396,8 @@ import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
+
+const { t, locale } = useI18n({ useScope: 'global' });
 
 const pricingService = new PricingService();
 
@@ -406,49 +437,77 @@ const treasuryWarning = computed(() => {
   }
 
   if (!treasuryWallet.value.isSetup) {
-    return 'Treasury wallet is not set up. Voucher review can continue, but live funding will be blocked until a treasury wallet exists.';
+    return t('sellPage.messages.treasuryNotSetUpWarning');
   }
 
   if (!treasuryBalance.value) {
-    return 'Treasury balance has not been checked. Voucher review can continue, but live funding will require a fresh balance check.';
+    return t('sellPage.messages.treasuryBalanceNotCheckedWarning');
   }
 
   if (treasuryBalance.value.balanceSats < pendingPricing.value.finalBchSats) {
-    return `Treasury balance is too low for this voucher. Required: ${formatBchSats(
-      pendingPricing.value.finalBchSats
-    )}. Available: ${formatBchSats(treasuryBalance.value.balanceSats)}.`;
+    return t('sellPage.messages.treasuryBalanceTooLow', {
+      required: formatBchSats(pendingPricing.value.finalBchSats),
+      available: formatBchSats(treasuryBalance.value.balanceSats),
+    });
   }
 
   return '';
 });
 
-const issueProgressSteps = ref<IssueProgressStep[]>([
-  {
-    key: 'quote',
-    label: 'Confirm locked quote',
-    description: 'Use the BCH/GBP quote locked before confirmation.',
-    status: 'pending',
-  },
-  {
-    key: 'wallet',
-    label: 'Prepare voucher wallet',
-    description: 'Use the voucher address prepared before confirmation.',
-    status: 'pending',
-  },
-  {
-    key: 'funding',
-    label: 'Prepare funding plan',
-    description:
-      'Check the prepared funding plan while live broadcast remains guarded.',
-    status: 'pending',
-  },
-  {
-    key: 'store',
-    label: 'Save voucher record',
-    description: 'Store the voucher sale record locally.',
-    status: 'pending',
-  },
-]);
+function createIssueProgressSteps(): IssueProgressStep[] {
+  return [
+    {
+      key: 'quote',
+      label: t('sellPage.issueSteps.quote.label'),
+      description: t('sellPage.issueSteps.quote.description'),
+      status: 'pending',
+    },
+    {
+      key: 'wallet',
+      label: t('sellPage.issueSteps.wallet.label'),
+      description: t('sellPage.issueSteps.wallet.description'),
+      status: 'pending',
+    },
+    {
+      key: 'funding',
+      label: t('sellPage.issueSteps.funding.label'),
+      description: t('sellPage.issueSteps.funding.description'),
+      status: 'pending',
+    },
+    {
+      key: 'store',
+      label: t('sellPage.issueSteps.store.label'),
+      description: t('sellPage.issueSteps.store.description'),
+      status: 'pending',
+    },
+  ];
+}
+
+const issueProgressSteps = ref<IssueProgressStep[]>(createIssueProgressSteps());
+
+function updateIssueProgressStepTranslations(): void {
+  const translatedSteps = createIssueProgressSteps();
+
+  issueProgressSteps.value = issueProgressSteps.value.map((step) => {
+    const translatedStep = translatedSteps.find(
+      (nextStep) => nextStep.key === step.key
+    );
+
+    if (!translatedStep) {
+      return step;
+    }
+
+    return {
+      ...step,
+      label: translatedStep.label,
+      description: translatedStep.description,
+    };
+  });
+}
+
+watch(locale, () => {
+  updateIssueProgressStepTranslations();
+});
 
 async function loadTreasuryWallet(): Promise<void> {
   try {
@@ -459,7 +518,7 @@ async function loadTreasuryWallet(): Promise<void> {
     }
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not load treasury wallet status.';
+    errorMessage.value = t('sellPage.messages.couldNotLoadTreasuryWallet');
   }
 }
 
@@ -469,11 +528,10 @@ async function handleRefreshTreasuryBalance(): Promise<void> {
 
   try {
     treasuryBalance.value = await getTreasuryWalletBalance();
-    successMessage.value = 'Treasury balance refreshed.';
+    successMessage.value = t('sellPage.messages.treasuryBalanceRefreshed');
   } catch (error) {
     console.error(error);
-    errorMessage.value =
-      'Could not refresh treasury balance. Check your connection and try again.';
+    errorMessage.value = t('sellPage.messages.couldNotRefreshTreasuryBalance');
   } finally {
     isCheckingTreasuryBalance.value = false;
   }
@@ -537,7 +595,7 @@ async function handleReviewVoucher(
   pendingKeyMetadata.value = null;
 
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
-    errorMessage.value = 'Enter a valid cash amount first.';
+    errorMessage.value = t('sellPage.messages.enterValidCashAmount');
     return;
   }
 
@@ -554,13 +612,14 @@ async function handleReviewVoucher(
         treasuryBalance.value = await withTimeout(
           getTreasuryWalletBalance(),
           8_000,
-          'Treasury balance check timed out.'
+          t('sellPage.messages.treasuryBalanceCheckTimedOut')
         );
       } catch (error) {
         console.error(error);
         treasuryBalance.value = null;
-        warningMessage.value =
-          'Treasury balance could not be checked. Voucher review can continue, but live funding will require a fresh balance check.';
+        warningMessage.value = t(
+          'sellPage.messages.treasuryBalanceCouldNotBeCheckedWarning'
+        );
       }
     }
 
@@ -592,8 +651,7 @@ async function handleReviewVoucher(
         hasWif: false,
         checkedAt: new Date().toISOString(),
       };
-      warningMessage.value =
-        'Voucher key export check failed. Review can continue, but printing/sweeping will require WIF export.';
+      warningMessage.value = t('sellPage.messages.voucherKeyExportFailed');
     }
 
     if (treasuryWallet.value.isSetup && treasuryWallet.value.address) {
@@ -608,10 +666,9 @@ async function handleReviewVoucher(
     }
 
     if (lockedQuote.isFallbackQuote) {
-      warningMessage.value =
-        'Live pricing was unavailable, so a recent cached quote is being used. Review the quote carefully before issuing.';
+      warningMessage.value = t('sellPage.messages.fallbackQuoteWarning');
     } else if (!warningMessage.value) {
-      successMessage.value = 'Live price quote locked successfully.';
+      successMessage.value = t('sellPage.messages.liveQuoteLocked');
     }
 
     isConfirmDialogOpen.value = true;
@@ -621,8 +678,7 @@ async function handleReviewVoucher(
     if (error instanceof PricingUnavailableError) {
       errorMessage.value = error.message;
     } else {
-      errorMessage.value =
-        'Could not prepare voucher review. Please check the connection and try again.';
+      errorMessage.value = t('sellPage.messages.couldNotPrepareReview');
     }
   } finally {
     isSubmitting.value = false;
@@ -665,14 +721,12 @@ async function handleCreateDraftVoucher(): Promise<void> {
   isReceiptPreviewDialogOpen.value = false;
 
   if (!pendingPricing.value) {
-    errorMessage.value =
-      'No locked quote is available. Please review the voucher again.';
+    errorMessage.value = t('sellPage.messages.noLockedQuote');
     return;
   }
 
   if (!pendingVoucherAddress.value) {
-    errorMessage.value =
-      'No voucher address is available. Please review the voucher again.';
+    errorMessage.value = t('sellPage.messages.noVoucherAddress');
     return;
   }
 
@@ -717,7 +771,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
     await loadTreasuryWallet();
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not issue voucher.';
+    errorMessage.value = t('sellPage.messages.couldNotIssueVoucher');
     setIssueProgressStepStatus('store', 'error');
   } finally {
     isSubmitting.value = false;
