@@ -47,6 +47,20 @@ const es = {
       },
     },
   },
+
+  sellForm: {
+    customerCashAmount: 'Importe en efectivo del cliente',
+    salePreviewTitle: 'Vista previa de la venta',
+    salePreviewSubtitle:
+      'Se bloqueará una cotización BCH en vivo en la pantalla de revisión.',
+    customerPays: 'El cliente paga',
+    serviceFee: 'Comisión de servicio',
+    voucherValueBeforeQuote: 'Valor del vale antes de la cotización',
+    quoteSource: 'Fuente de cotización',
+    lockedAfterReview: 'Bloqueada después de la revisión',
+    reviewVoucher: 'Revisar vale',
+    viewHistory: 'Ver historial',
+  },
 };
 
 export default es;

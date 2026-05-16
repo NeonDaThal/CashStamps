@@ -5,7 +5,7 @@
       type="number"
       min="1"
       step="1"
-      label="Customer cash amount"
+      :label="t('sellForm.customerCashAmount')"
       prefix="£"
       outlined
       :disable="isSubmitting"
@@ -16,9 +16,11 @@
       <q-card-section>
         <div class="pricing-header">
           <div>
-            <div class="text-subtitle1 text-weight-bold">Sale preview</div>
+            <div class="text-subtitle1 text-weight-bold">
+              {{ t('sellForm.salePreviewTitle') }}
+            </div>
             <div class="text-caption text-grey-7">
-              A live BCH quote will be locked on the review screen.
+              {{ t('sellForm.salePreviewSubtitle') }}
             </div>
           </div>
 
@@ -27,7 +29,9 @@
 
         <div class="preview-grid">
           <div class="preview-item highlight">
-            <div class="preview-label">Customer pays</div>
+            <div class="preview-label">
+              {{ t('sellForm.customerPays') }}
+            </div>
             <div class="preview-value">
               {{
                 formatMinorFiatAmount(
@@ -39,7 +43,9 @@
           </div>
 
           <div class="preview-item">
-            <div class="preview-label">Service fee</div>
+            <div class="preview-label">
+              {{ t('sellForm.serviceFee') }}
+            </div>
             <div class="preview-value">
               {{
                 formatBasisPointsAsPercent(previewPricing.serviceFeeBasisPoints)
@@ -55,7 +61,9 @@
           </div>
 
           <div class="preview-item">
-            <div class="preview-label">Voucher value before quote</div>
+            <div class="preview-label">
+              {{ t('sellForm.voucherValueBeforeQuote') }}
+            </div>
             <div class="preview-value">
               {{
                 formatMinorFiatAmount(
@@ -67,8 +75,12 @@
           </div>
 
           <div class="preview-item">
-            <div class="preview-label">Quote source</div>
-            <div class="preview-value">Locked after review</div>
+            <div class="preview-label">
+              {{ t('sellForm.quoteSource') }}
+            </div>
+            <div class="preview-value">
+              {{ t('sellForm.lockedAfterReview') }}
+            </div>
           </div>
         </div>
       </q-card-section>
@@ -78,7 +90,7 @@
       <q-btn
         type="submit"
         class="primary-button"
-        label="Review Voucher"
+        :label="t('sellForm.reviewVoucher')"
         icon="fact_check"
         :loading="isSubmitting"
         :disable="!canCreateVoucher"
@@ -88,7 +100,7 @@
 
       <q-btn
         class="secondary-button"
-        label="View History"
+        :label="t('sellForm.viewHistory')"
         icon="receipt_long"
         to="/voucher-history"
         outline
@@ -100,12 +112,15 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import {
   calculateFakeVoucherPricing,
   formatBasisPointsAsPercent,
   formatMinorFiatAmount,
 } from 'src/services/voucher-pricing';
+
+const { t } = useI18n({ useScope: 'global' });
 
 const emit = defineEmits<{
   reviewVoucher: [fiatAmountMinor: number, fiatCurrency: string];

@@ -47,6 +47,20 @@ const en = {
       },
     },
   },
+
+  sellForm: {
+    customerCashAmount: 'Customer cash amount',
+    salePreviewTitle: 'Sale preview',
+    salePreviewSubtitle:
+      'A live BCH quote will be locked on the review screen.',
+    customerPays: 'Customer pays',
+    serviceFee: 'Service fee',
+    voucherValueBeforeQuote: 'Voucher value before quote',
+    quoteSource: 'Quote source',
+    lockedAfterReview: 'Locked after review',
+    reviewVoucher: 'Review Voucher',
+    viewHistory: 'View History',
+  },
 };
 
 export default en;
