@@ -11,10 +11,11 @@
         </div>
 
         <div>
-          <div class="text-h5 text-weight-bold">Review Voucher</div>
+          <div class="text-h5 text-weight-bold">
+            {{ t('saleConfirm.title') }}
+          </div>
           <p class="text-grey-7 q-mb-none">
-            Confirm the customer payment, BCH amount, and receipt details before
-            issuing this voucher.
+            {{ t('saleConfirm.subtitle') }}
           </p>
         </div>
       </q-card-section>
@@ -38,11 +39,12 @@
           </template>
 
           <span v-if="pricing.isFallbackQuote">
-            Live pricing was unavailable, so a recent cached quote is being
-            used. Review the quote carefully before issuing.
+            {{ t('saleConfirm.quoteStatus.fallback') }}
           </span>
 
-          <span v-else> Live price quote locked successfully. </span>
+          <span v-else>
+            {{ t('saleConfirm.quoteStatus.liveLocked') }}
+          </span>
         </q-banner>
 
         <q-banner
@@ -59,7 +61,9 @@
 
         <section class="summary-grid">
           <div class="summary-tile highlight">
-            <div class="summary-label">Customer pays</div>
+            <div class="summary-label">
+              {{ t('saleConfirm.summary.customerPays') }}
+            </div>
             <div class="summary-value">
               {{
                 formatMinorFiatAmount(
@@ -71,7 +75,9 @@
           </div>
 
           <div class="summary-tile">
-            <div class="summary-label">Voucher value</div>
+            <div class="summary-label">
+              {{ t('saleConfirm.summary.voucherValue') }}
+            </div>
             <div class="summary-value">
               {{
                 formatMinorFiatAmount(
@@ -83,14 +89,18 @@
           </div>
 
           <div class="summary-tile">
-            <div class="summary-label">BCH loaded</div>
+            <div class="summary-label">
+              {{ t('saleConfirm.summary.bchLoaded') }}
+            </div>
             <div class="summary-value">
               {{ formatBchSats(pricing.finalBchSats) }}
             </div>
           </div>
 
           <div class="summary-tile">
-            <div class="summary-label">Service fee</div>
+            <div class="summary-label">
+              {{ t('saleConfirm.summary.serviceFee') }}
+            </div>
             <div class="summary-value">
               {{ formatBasisPointsAsPercent(pricing.serviceFeeBasisPoints) }}
               —
@@ -107,14 +117,14 @@
         <q-card flat bordered class="details-card q-mt-md">
           <q-card-section>
             <div class="details-row">
-              <span>Market rate</span>
+              <span>{{ t('saleConfirm.details.marketRate') }}</span>
               <strong>
                 {{ formatMarketRate(pricing.marketRate, pricing.fiatCurrency) }}
               </strong>
             </div>
 
             <div class="details-row">
-              <span>Quote source</span>
+              <span>{{ t('saleConfirm.details.quoteSource') }}</span>
               <strong>
                 {{ quoteSourceLabel }}
                 <q-badge
@@ -122,23 +132,23 @@
                   color="orange"
                   class="q-ml-sm"
                 >
-                  fallback
+                  {{ t('saleConfirm.details.fallbackBadge') }}
                 </q-badge>
               </strong>
             </div>
 
             <div class="details-row">
-              <span>Quote time</span>
+              <span>{{ t('saleConfirm.details.quoteTime') }}</span>
               <strong>{{ formatDateTime(pricing.quoteTimestamp) }}</strong>
             </div>
 
             <div v-if="pricing.quoteExpiresAt" class="details-row">
-              <span>Quote expires</span>
+              <span>{{ t('saleConfirm.details.quoteExpires') }}</span>
               <strong>{{ formatDateTime(pricing.quoteExpiresAt) }}</strong>
             </div>
 
             <div v-if="treasuryBalanceSats !== undefined" class="details-row">
-              <span>Treasury balance</span>
+              <span>{{ t('saleConfirm.details.treasuryBalance') }}</span>
               <strong>{{ formatBchSats(treasuryBalanceSats) }}</strong>
             </div>
           </q-card-section>
@@ -163,13 +173,12 @@
           </template>
 
           <div v-if="fundingReadiness.status === 'ready'">
-            Funding readiness checks passed. Live transaction broadcasting is
-            still protected by the current safety guard.
+            {{ t('saleConfirm.fundingReadiness.ready') }}
           </div>
 
           <div v-else>
             <div class="text-weight-medium q-mb-xs">
-              Live funding is not ready yet.
+              {{ t('saleConfirm.fundingReadiness.notReady') }}
             </div>
 
             <div v-for="message in fundingReadiness.messages" :key="message">
@@ -183,9 +192,7 @@
             <q-icon name="shield" />
           </template>
 
-          Development safety mode is active. This screen can issue the voucher
-          record and receipt preview, while live broadcasting remains guarded
-          until explicitly enabled.
+          {{ t('saleConfirm.safetyNotice') }}
         </q-banner>
 
         <q-expansion-item
@@ -1071,7 +1078,7 @@
       <q-card-actions align="right" class="dialog-actions">
         <q-btn
           flat
-          label="Cancel"
+          :label="t('common.cancel')"
           color="grey-8"
           :disable="isSubmitting"
           no-caps
@@ -1080,7 +1087,7 @@
 
         <q-btn
           class="primary-button"
-          label="Issue Voucher"
+          :label="t('saleConfirm.actions.issueVoucher')"
           :loading="isSubmitting"
           unelevated
           no-caps
@@ -1093,6 +1100,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import type { FundingReadinessCheck } from 'src/types/funding-readiness';
 import type { PreBroadcastChecklist } from 'src/types/pre-broadcast-checklist';
@@ -1139,6 +1147,8 @@ const emit = defineEmits<{
   'broadcast-result': [value: TreasuryBroadcastResult | null];
 }>();
 
+const { t } = useI18n({ useScope: 'global' });
+
 const isRunningDraftCheck = ref(false);
 const isTestingBroadcastGuard = ref(false);
 const isBroadcastingRealFunding = ref(false);
@@ -1149,9 +1159,9 @@ const realBroadcastResult = ref<TreasuryBroadcastResult | null>(null);
 
 const quoteSourceLabel = computed(() => {
   const labels: Record<FakeVoucherPricingQuote['quoteSource'], string> = {
-    fake_phase_2_quote: 'Development quote',
+    fake_phase_2_quote: t('saleConfirm.quoteSources.developmentQuote'),
     coingecko: 'CoinGecko',
-    cached: 'Cached quote',
+    cached: t('saleConfirm.quoteSources.cachedQuote'),
     general_protocols_oracle: 'General Protocols Oracle',
   };
 

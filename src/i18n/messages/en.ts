@@ -166,6 +166,44 @@ const en = {
       couldNotIssueVoucher: 'Could not issue voucher.',
     },
   },
+  saleConfirm: {
+    title: 'Review Voucher',
+    subtitle:
+      'Confirm the customer payment, BCH amount, and receipt details before issuing this voucher.',
+    quoteStatus: {
+      fallback:
+        'Live pricing was unavailable, so a recent cached quote is being used. Review the quote carefully before issuing.',
+      liveLocked: 'Live price quote locked successfully.',
+    },
+    summary: {
+      customerPays: 'Customer pays',
+      voucherValue: 'Voucher value',
+      bchLoaded: 'BCH loaded',
+      serviceFee: 'Service fee',
+    },
+    details: {
+      marketRate: 'Market rate',
+      quoteSource: 'Quote source',
+      fallbackBadge: 'fallback',
+      quoteTime: 'Quote time',
+      quoteExpires: 'Quote expires',
+      treasuryBalance: 'Treasury balance',
+    },
+    fundingReadiness: {
+      ready:
+        'Funding readiness checks passed. Live transaction broadcasting is still protected by the current safety guard.',
+      notReady: 'Live funding is not ready yet.',
+    },
+    safetyNotice:
+      'Development safety mode is active. This screen can issue the voucher record and receipt preview, while live broadcasting remains guarded until explicitly enabled.',
+    actions: {
+      issueVoucher: 'Issue Voucher',
+    },
+    quoteSources: {
+      developmentQuote: 'Development quote',
+      cachedQuote: 'Cached quote',
+    },
+  },
 };
 
 export default en;

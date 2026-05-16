@@ -171,6 +171,44 @@ const es = {
       couldNotIssueVoucher: 'No se pudo emitir el vale.',
     },
   },
+  saleConfirm: {
+    title: 'Revisar vale',
+    subtitle:
+      'Confirma el pago del cliente, el importe en BCH y los detalles del recibo antes de emitir este vale.',
+    quoteStatus: {
+      fallback:
+        'El precio en vivo no estaba disponible, por lo que se está usando una cotización reciente en caché. Revisa la cotización con cuidado antes de emitir.',
+      liveLocked: 'Cotización de precio en vivo bloqueada correctamente.',
+    },
+    summary: {
+      customerPays: 'El cliente paga',
+      voucherValue: 'Valor del vale',
+      bchLoaded: 'BCH cargado',
+      serviceFee: 'Comisión de servicio',
+    },
+    details: {
+      marketRate: 'Tipo de cambio de mercado',
+      quoteSource: 'Fuente de cotización',
+      fallbackBadge: 'respaldo',
+      quoteTime: 'Hora de cotización',
+      quoteExpires: 'La cotización vence',
+      treasuryBalance: 'Saldo de tesorería',
+    },
+    fundingReadiness: {
+      ready:
+        'Las comprobaciones de preparación de financiación pasaron. La transmisión de transacciones en vivo sigue protegida por la barrera de seguridad actual.',
+      notReady: 'La financiación en vivo aún no está lista.',
+    },
+    safetyNotice:
+      'El modo de seguridad de desarrollo está activo. Esta pantalla puede emitir el registro del vale y la vista previa del recibo, mientras la transmisión en vivo sigue protegida hasta que se active explícitamente.',
+    actions: {
+      issueVoucher: 'Emitir vale',
+    },
+    quoteSources: {
+      developmentQuote: 'Cotización de desarrollo',
+      cachedQuote: 'Cotización en caché',
+    },
+  },
 };
 
 export default es;
