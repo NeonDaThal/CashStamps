@@ -5,25 +5,24 @@
         <div class="brand-mark">BCH</div>
 
         <div>
-          <p class="eyebrow">Merchant voucher app</p>
-          <h1>Bitcoin Cash Vouchers</h1>
+          <p class="eyebrow">{{ t('home.eyebrow') }}</p>
+          <h1>{{ t('home.title') }}</h1>
           <p class="intro">
-            Sell Bitcoin Cash vouchers in-store, issue a receipt, and let the
-            customer sweep the BCH into their own wallet.
+            {{ t('home.intro') }}
           </p>
         </div>
       </section>
 
       <section class="action-card">
         <div class="section-header">
-          <h2>What would you like to do?</h2>
-          <p>Choose the next merchant action.</p>
+          <h2>{{ t('home.actionTitle') }}</h2>
+          <p>{{ t('home.actionSubtitle') }}</p>
         </div>
 
         <div class="action-grid">
           <q-btn
             class="primary-action"
-            label="Sell New Voucher"
+            :label="t('home.sellVoucher')"
             icon="point_of_sale"
             to="/sell-voucher"
             unelevated
@@ -32,7 +31,7 @@
 
           <q-btn
             class="secondary-action"
-            label="Voucher History"
+            :label="t('home.voucherHistory')"
             icon="receipt_long"
             to="/voucher-history"
             unelevated
@@ -41,7 +40,7 @@
 
           <q-btn
             class="secondary-action"
-            label="Treasury Wallet"
+            :label="t('home.treasuryWallet')"
             icon="account_balance_wallet"
             to="/treasury-settings"
             unelevated
@@ -58,8 +57,12 @@
             </div>
 
             <div>
-              <div class="status-title">Voucher receipts</div>
-              <div class="status-text">Browser receipt preview ready.</div>
+              <div class="status-title">
+                {{ t('home.status.receipts.title') }}
+              </div>
+              <div class="status-text">
+                {{ t('home.status.receipts.text') }}
+              </div>
             </div>
           </q-card-section>
         </q-card>
@@ -71,9 +74,11 @@
             </div>
 
             <div>
-              <div class="status-title">Thermal printer</div>
+              <div class="status-title">
+                {{ t('home.status.printer.title') }}
+              </div>
               <div class="status-text">
-                Printer connection will be added next.
+                {{ t('home.status.printer.text') }}
               </div>
             </div>
           </q-card-section>
@@ -86,9 +91,11 @@
             </div>
 
             <div>
-              <div class="status-title">Cash handling</div>
+              <div class="status-title">
+                {{ t('home.status.cashHandling.title') }}
+              </div>
               <div class="status-text">
-                Treat printed voucher QR codes like cash.
+                {{ t('home.status.cashHandling.text') }}
               </div>
             </div>
           </q-card-section>
@@ -97,6 +104,12 @@
     </div>
   </q-page>
 </template>
+
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+</script>
 
 <style lang="scss" scoped>
 .home-page {
