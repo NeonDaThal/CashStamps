@@ -10,6 +10,7 @@
 import { onErrorCaptured } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
+import { getStoredLocale } from './i18n/locale-storage';
 
 const $q = useQuasar();
 
@@ -17,7 +18,7 @@ const $q = useQuasar();
 const { locale } = useI18n({
   useScope: 'global',
 });
-locale.value = $q.lang.getLocale() || 'en';
+locale.value = getStoredLocale();
 
 //-----------------------------------------------------------------------------
 // Methods

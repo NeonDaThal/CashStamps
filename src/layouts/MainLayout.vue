@@ -52,14 +52,21 @@
           </q-btn>
 
           <!-- Locale Selector -->
-          <q-btn round flat :label="localeIcon">
+          <q-btn
+            round
+            flat
+            :label="localeShortLabel"
+            :aria-label="t('language.label')"
+          >
+            <q-tooltip>{{ t('language.label') }}</q-tooltip>
+
             <q-menu auto-close>
-              <q-list style="min-width: 100px">
-                <q-item clickable @click="() => setLocale('en')">
-                  <q-item-section>🇬🇧 English</q-item-section>
+              <q-list style="min-width: 120px">
+                <q-item clickable @click="setLocale('en')">
+                  <q-item-section>{{ t('language.english') }}</q-item-section>
                 </q-item>
-                <q-item clickable @click="() => setLocale('es')">
-                  <q-item-section>🇪🇸 Spanish</q-item-section>
+                <q-item clickable @click="setLocale('es')">
+                  <q-item-section>{{ t('language.spanish') }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -103,26 +110,25 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
+import type { SupportedLocale } from '../i18n';
+import { saveStoredLocale } from '../i18n/locale-storage';
 
 const $router = useRouter();
-const { locale } = useI18n();
+const { locale, t } = useI18n({ useScope: 'global' });
 const $q = useQuasar();
 
-const localeIcon = computed((): string => {
-  // Map of codes to icons
-  const icons: { [lang: string]: string } = {
-    en: '🇬🇧',
-    es: '🇪🇸',
-  };
-
-  // Get the main locale (e.g. "en" as opposed to "en-GB")
+const localeShortLabel = computed((): string => {
   const localeMain = locale.value.substring(0, 2);
 
-  // Return the matching icon from our map.
-  return icons[localeMain];
+  if (localeMain === 'es') {
+    return 'ES';
+  }
+
+  return 'EN';
 });
 
-const setLocale = (newLocale: string) => {
+const setLocale = (newLocale: SupportedLocale) => {
   locale.value = newLocale;
+  saveStoredLocale(newLocale);
 };
 </script>
