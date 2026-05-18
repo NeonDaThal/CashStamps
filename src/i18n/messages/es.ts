@@ -209,6 +209,57 @@ const es = {
       cachedQuote: 'Cotización en caché',
     },
   },
+  historyPage: {
+    hero: {
+      eyebrow: 'Registros de vales',
+      title: 'Historial de vales',
+      intro:
+        'Revisa los vales BCH emitidos, comprueba el estado de redención y accede a vistas previas de recibos de desarrollo mientras se prepara la prueba de impresora.',
+    },
+    actions: {
+      sellVoucher: 'Vender vale',
+    },
+    summary: {
+      totalVouchers: 'Total de vales',
+      openActive: 'Abiertos / activos',
+      sweptRedeemed: 'Barridos / redimidos',
+    },
+    records: {
+      title: 'Registros de vales',
+      subtitle:
+        'La información del vale orientada al cliente aparece primero. Las herramientas técnicas de financiación y prueba se mantienen dentro de cada registro.',
+    },
+    safetyNotice:
+      'El modo de seguridad de desarrollo sigue activo. La vista previa del recibo y las herramientas de redención siguen disponibles para pruebas antes de conectar el flujo final de impresora.',
+    messages: {
+      couldNotLoadVoucherRecords:
+        'No se pudieron cargar los registros de vales.',
+      createdTestVoucher: 'Vale de prueba {serial} creado.',
+      couldNotCreateTestVoucher: 'No se pudo crear el vale de prueba.',
+      markedManualRedemption:
+        '{serial} marcado como barrido/redimido manualmente.',
+      couldNotFindVoucherRecordToUpdate:
+        'No se pudo encontrar el registro de vale para actualizar.',
+      couldNotMarkVoucherAsManuallyRedeemed:
+        'No se pudo marcar el vale como redimido manualmente.',
+      clearedManualRedemption:
+        'Estado de redención manual borrado para {serial}.',
+      couldNotClearManualRedemption:
+        'No se pudo borrar el estado de redención manual.',
+      couldNotFindVoucherRecordToCheck:
+        'No se pudo encontrar el registro de vale para comprobar.',
+      checkedOnChainRedemptionStatus:
+        'Estado de redención en cadena comprobado para {serial}: {status}.',
+      couldNotUpdateVoucherRedemptionDetectionResult:
+        'No se pudo actualizar el resultado de detección de redención del vale.',
+      couldNotCheckVoucherRedemptionStatus:
+        'No se pudo comprobar el estado de redención del vale.',
+      clearedAllLocalTestVoucherRecords:
+        'Todos los registros locales de vales de prueba fueron borrados.',
+      couldNotClearVoucherRecords:
+        'No se pudieron borrar los registros de vales.',
+    },
+  },
 };
 
 export default es;

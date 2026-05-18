@@ -204,6 +204,53 @@ const en = {
       cachedQuote: 'Cached quote',
     },
   },
+  historyPage: {
+    hero: {
+      eyebrow: 'Voucher records',
+      title: 'Voucher History',
+      intro:
+        'Review issued BCH vouchers, check redemption status, and access development receipt previews while printer testing is still being prepared.',
+    },
+    actions: {
+      sellVoucher: 'Sell Voucher',
+    },
+    summary: {
+      totalVouchers: 'Total vouchers',
+      openActive: 'Open / active',
+      sweptRedeemed: 'Swept / redeemed',
+    },
+    records: {
+      title: 'Voucher records',
+      subtitle:
+        'Customer-facing voucher information appears first. Technical funding and testing tools are kept inside each record.',
+    },
+    safetyNotice:
+      'Development safety mode is still active. Receipt preview and redemption tools remain available for testing before the final printer flow is connected.',
+    messages: {
+      couldNotLoadVoucherRecords: 'Could not load voucher records.',
+      createdTestVoucher: 'Created test voucher {serial}.',
+      couldNotCreateTestVoucher: 'Could not create test voucher.',
+      markedManualRedemption: 'Marked {serial} as manually swept/redeemed.',
+      couldNotFindVoucherRecordToUpdate:
+        'Could not find voucher record to update.',
+      couldNotMarkVoucherAsManuallyRedeemed:
+        'Could not mark voucher as manually redeemed.',
+      clearedManualRedemption: 'Cleared manual redemption status for {serial}.',
+      couldNotClearManualRedemption:
+        'Could not clear manual redemption status.',
+      couldNotFindVoucherRecordToCheck:
+        'Could not find voucher record to check.',
+      checkedOnChainRedemptionStatus:
+        'Checked on-chain redemption status for {serial}: {status}.',
+      couldNotUpdateVoucherRedemptionDetectionResult:
+        'Could not update voucher redemption detection result.',
+      couldNotCheckVoucherRedemptionStatus:
+        'Could not check voucher redemption status.',
+      clearedAllLocalTestVoucherRecords:
+        'Cleared all local test voucher records.',
+      couldNotClearVoucherRecords: 'Could not clear voucher records.',
+    },
+  },
 };
 
 export default en;

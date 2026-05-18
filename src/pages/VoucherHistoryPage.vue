@@ -3,18 +3,16 @@
     <div class="history-container">
       <section class="history-hero">
         <div>
-          <p class="eyebrow">Voucher records</p>
-          <h1>Voucher History</h1>
+          <p class="eyebrow">{{ t('historyPage.hero.eyebrow') }}</p>
+          <h1>{{ t('historyPage.hero.title') }}</h1>
           <p class="intro">
-            Review issued BCH vouchers, check redemption status, and access
-            development receipt previews while printer testing is still being
-            prepared.
+            {{ t('historyPage.hero.intro') }}
           </p>
         </div>
 
         <q-btn
           class="primary-button"
-          label="Sell Voucher"
+          :label="t('historyPage.actions.sellVoucher')"
           icon="point_of_sale"
           to="/sell-voucher"
           unelevated
@@ -25,21 +23,27 @@
       <section class="summary-grid">
         <q-card flat bordered class="summary-card">
           <q-card-section>
-            <div class="summary-label">Total vouchers</div>
+            <div class="summary-label">
+              {{ t('historyPage.summary.totalVouchers') }}
+            </div>
             <div class="summary-value">{{ voucherRecords.length }}</div>
           </q-card-section>
         </q-card>
 
         <q-card flat bordered class="summary-card">
           <q-card-section>
-            <div class="summary-label">Open / active</div>
+            <div class="summary-label">
+              {{ t('historyPage.summary.openActive') }}
+            </div>
             <div class="summary-value">{{ activeVoucherCount }}</div>
           </q-card-section>
         </q-card>
 
         <q-card flat bordered class="summary-card">
           <q-card-section>
-            <div class="summary-label">Swept / redeemed</div>
+            <div class="summary-label">
+              {{ t('historyPage.summary.sweptRedeemed') }}
+            </div>
             <div class="summary-value">{{ redeemedVoucherCount }}</div>
           </q-card-section>
         </q-card>
@@ -61,10 +65,11 @@
             </div>
 
             <div>
-              <div class="text-h6">Voucher records</div>
+              <div class="text-h6">
+                {{ t('historyPage.records.title') }}
+              </div>
               <p class="text-grey-7 q-mb-none">
-                Customer-facing voucher information appears first. Technical
-                funding and testing tools are kept inside each record.
+                {{ t('historyPage.records.subtitle') }}
               </p>
             </div>
           </div>
@@ -128,9 +133,7 @@
           <q-icon name="shield" />
         </template>
 
-        Development safety mode is still active. Receipt preview and redemption
-        tools remain available for testing before the final printer flow is
-        connected.
+        {{ t('historyPage.safetyNotice') }}
       </q-banner>
     </div>
   </q-page>
@@ -138,6 +141,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import VoucherHistoryList from 'src/components/VoucherHistoryList.vue';
 import type { VoucherRecord } from 'src/types/voucher';
@@ -151,6 +155,8 @@ import {
 } from 'src/services/voucher-store';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import { detectVoucherRedemptionStatus } from 'src/services/voucher-redemption-detector';
+
+const { t } = useI18n({ useScope: 'global' });
 
 const voucherRecords = ref<VoucherRecord[]>([]);
 const errorMessage = ref('');
@@ -178,7 +184,7 @@ async function loadVoucherRecords(): Promise<void> {
     voucherRecords.value = await getVoucherRecords();
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not load voucher records.';
+    errorMessage.value = t('historyPage.messages.couldNotLoadVoucherRecords');
   }
 }
 
@@ -192,10 +198,12 @@ async function handleCreateTestVoucher(): Promise<void> {
     await addVoucherRecord(testVoucher);
     await loadVoucherRecords();
 
-    successMessage.value = `Created test voucher ${testVoucher.serial}.`;
+    successMessage.value = t('historyPage.messages.createdTestVoucher', {
+      serial: testVoucher.serial,
+    });
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not create test voucher.';
+    errorMessage.value = t('historyPage.messages.couldNotCreateTestVoucher');
   }
 }
 
@@ -219,11 +227,15 @@ async function handleMarkManualRedemption(payload: {
     await loadVoucherRecords();
 
     successMessage.value = updatedVoucher
-      ? `Marked ${updatedVoucher.serial} as manually swept/redeemed.`
-      : 'Could not find voucher record to update.';
+      ? t('historyPage.messages.markedManualRedemption', {
+          serial: updatedVoucher.serial,
+        })
+      : t('historyPage.messages.couldNotFindVoucherRecordToUpdate');
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not mark voucher as manually redeemed.';
+    errorMessage.value = t(
+      'historyPage.messages.couldNotMarkVoucherAsManuallyRedeemed'
+    );
   }
 }
 
@@ -237,11 +249,15 @@ async function handleClearManualRedemption(voucherId: string): Promise<void> {
     await loadVoucherRecords();
 
     successMessage.value = updatedVoucher
-      ? `Cleared manual redemption status for ${updatedVoucher.serial}.`
-      : 'Could not find voucher record to update.';
+      ? t('historyPage.messages.clearedManualRedemption', {
+          serial: updatedVoucher.serial,
+        })
+      : t('historyPage.messages.couldNotFindVoucherRecordToUpdate');
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not clear manual redemption status.';
+    errorMessage.value = t(
+      'historyPage.messages.couldNotClearManualRedemption'
+    );
   }
 }
 
@@ -256,7 +272,9 @@ async function handleCheckOnChainRedemption(voucherId: string): Promise<void> {
     );
 
     if (!voucher) {
-      errorMessage.value = 'Could not find voucher record to check.';
+      errorMessage.value = t(
+        'historyPage.messages.couldNotFindVoucherRecordToCheck'
+      );
       return;
     }
 
@@ -269,14 +287,19 @@ async function handleCheckOnChainRedemption(voucherId: string): Promise<void> {
     await loadVoucherRecords();
 
     successMessage.value = updatedVoucher
-      ? `Checked on-chain redemption status for ${updatedVoucher.serial}: ${detection.status}.`
-      : 'Could not update voucher redemption detection result.';
+      ? t('historyPage.messages.checkedOnChainRedemptionStatus', {
+          serial: updatedVoucher.serial,
+          status: detection.status,
+        })
+      : t(
+          'historyPage.messages.couldNotUpdateVoucherRedemptionDetectionResult'
+        );
   } catch (error) {
     console.error(error);
     errorMessage.value =
       error instanceof Error
         ? error.message
-        : 'Could not check voucher redemption status.';
+        : t('historyPage.messages.couldNotCheckVoucherRedemptionStatus');
   } finally {
     checkingRedemptionVoucherId.value = null;
   }
@@ -290,10 +313,12 @@ async function handleClearTestRecords(): Promise<void> {
     await clearVoucherRecords();
     await loadVoucherRecords();
 
-    successMessage.value = 'Cleared all local test voucher records.';
+    successMessage.value = t(
+      'historyPage.messages.clearedAllLocalTestVoucherRecords'
+    );
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not clear voucher records.';
+    errorMessage.value = t('historyPage.messages.couldNotClearVoucherRecords');
   }
 }
 
