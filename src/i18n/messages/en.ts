@@ -251,6 +251,64 @@ const en = {
       couldNotClearVoucherRecords: 'Could not clear voucher records.',
     },
   },
+  historyList: {
+    empty: {
+      title: 'No voucher records yet',
+      text: 'Issued vouchers will appear here after a sale is completed.',
+    },
+    issuedDate: 'Issued {date}',
+    summary: {
+      customerPaid: 'Customer paid',
+      bchLoaded: 'BCH loaded',
+      redemption: 'Redemption',
+      quote: 'Quote',
+    },
+    address: {
+      voucherAddress: 'Voucher address',
+      notDerivedYet: 'Not derived yet',
+    },
+    actions: {
+      previewReceipt: 'Preview Receipt',
+      checkRedemption: 'Check Redemption',
+      checkOnChainStatus: 'Check On-Chain Status',
+      markAsManuallySwept: 'Mark as Manually Swept',
+      clearManualSweepStatus: 'Clear Manual Sweep Status',
+    },
+    status: {
+      redeemed: 'Redeemed',
+      funded: 'Funded',
+      error: 'Error',
+      issued: 'Issued',
+    },
+    redemption: {
+      manualSwept: 'Manual swept',
+      swept: 'Swept',
+      funded: 'Funded',
+      unfunded: 'Unfunded',
+      notChecked: 'Not checked',
+    },
+    redemptionTools: {
+      label: 'Redemption tools',
+      caption: 'Manual sweep status and on-chain redemption check',
+      manualMarked: 'Voucher manually marked as swept/redeemed.',
+      notCheckedYet: 'Redemption status has not been checked yet.',
+      status: 'Status',
+      sweepTransactionId: 'Sweep transaction ID',
+      note: 'Note',
+      redeemed: 'Redeemed',
+      detectedStatus: 'Detected status',
+      detectedBalance: 'Detected balance',
+      detectedUtxos: 'Detected UTXOs',
+      checked: 'Checked',
+      sweepTxidOptional: 'Sweep TXID optional',
+      noteOptional: 'Note optional',
+    },
+    quoteSources: {
+      cached: 'Cached',
+      manual: 'Manual',
+      unknown: 'Unknown',
+    },
+  },
 };
 
 export default en;

@@ -260,6 +260,64 @@ const es = {
         'No se pudieron borrar los registros de vales.',
     },
   },
+  historyList: {
+    empty: {
+      title: 'Aún no hay registros de vales',
+      text: 'Los vales emitidos aparecerán aquí después de completar una venta.',
+    },
+    issuedDate: 'Emitido {date}',
+    summary: {
+      customerPaid: 'El cliente pagó',
+      bchLoaded: 'BCH cargado',
+      redemption: 'Redención',
+      quote: 'Cotización',
+    },
+    address: {
+      voucherAddress: 'Dirección del vale',
+      notDerivedYet: 'Aún no derivada',
+    },
+    actions: {
+      previewReceipt: 'Vista previa del recibo',
+      checkRedemption: 'Comprobar redención',
+      checkOnChainStatus: 'Comprobar estado en cadena',
+      markAsManuallySwept: 'Marcar como barrido manualmente',
+      clearManualSweepStatus: 'Borrar estado de barrido manual',
+    },
+    status: {
+      redeemed: 'Redimido',
+      funded: 'Financiado',
+      error: 'Error',
+      issued: 'Emitido',
+    },
+    redemption: {
+      manualSwept: 'Barrido manual',
+      swept: 'Barrido',
+      funded: 'Financiado',
+      unfunded: 'Sin fondos',
+      notChecked: 'No comprobado',
+    },
+    redemptionTools: {
+      label: 'Herramientas de redención',
+      caption: 'Estado de barrido manual y comprobación de redención en cadena',
+      manualMarked: 'Vale marcado manualmente como barrido/redimido.',
+      notCheckedYet: 'El estado de redención aún no se ha comprobado.',
+      status: 'Estado',
+      sweepTransactionId: 'ID de transacción de barrido',
+      note: 'Nota',
+      redeemed: 'Redimido',
+      detectedStatus: 'Estado detectado',
+      detectedBalance: 'Saldo detectado',
+      detectedUtxos: 'UTXOs detectados',
+      checked: 'Comprobado',
+      sweepTxidOptional: 'TXID de barrido opcional',
+      noteOptional: 'Nota opcional',
+    },
+    quoteSources: {
+      cached: 'En caché',
+      manual: 'Manual',
+      unknown: 'Desconocida',
+    },
+  },
 };
 
 export default es;

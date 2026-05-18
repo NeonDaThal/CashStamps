@@ -2,9 +2,11 @@
   <q-card v-if="voucherRecords.length === 0" flat bordered class="empty-card">
     <q-card-section class="text-center">
       <q-icon name="receipt_long" size="42px" color="grey-6" />
-      <div class="text-h6 q-mt-sm">No voucher records yet</div>
+      <div class="text-h6 q-mt-sm">
+        {{ t('historyList.empty.title') }}
+      </div>
       <p class="text-grey-7 q-mb-none">
-        Issued vouchers will appear here after a sale is completed.
+        {{ t('historyList.empty.text') }}
       </p>
     </q-card-section>
   </q-card>
@@ -22,7 +24,11 @@
           <div>
             <div class="voucher-serial">{{ voucher.serial }}</div>
             <div class="voucher-date">
-              Issued {{ formatDate(voucher.createdAt) }}
+              {{
+                t('historyList.issuedDate', {
+                  date: formatDate(voucher.createdAt),
+                })
+              }}
             </div>
           </div>
 
@@ -33,7 +39,9 @@
 
         <div class="voucher-summary-grid q-mt-md">
           <div class="summary-tile highlight">
-            <div class="summary-label">Customer paid</div>
+            <div class="summary-label">
+              {{ t('historyList.summary.customerPaid') }}
+            </div>
             <div class="summary-value">
               {{
                 formatFiatAmount(voucher.fiatAmountMinor, voucher.fiatCurrency)
@@ -42,21 +50,27 @@
           </div>
 
           <div class="summary-tile">
-            <div class="summary-label">BCH loaded</div>
+            <div class="summary-label">
+              {{ t('historyList.summary.bchLoaded') }}
+            </div>
             <div class="summary-value">
               {{ formatBchSats(voucher.finalBchSats) }}
             </div>
           </div>
 
           <div class="summary-tile">
-            <div class="summary-label">Redemption</div>
+            <div class="summary-label">
+              {{ t('historyList.summary.redemption') }}
+            </div>
             <div class="summary-value">
               {{ getRedemptionLabel(voucher) }}
             </div>
           </div>
 
           <div class="summary-tile">
-            <div class="summary-label">Quote</div>
+            <div class="summary-label">
+              {{ t('historyList.summary.quote') }}
+            </div>
             <div class="summary-value">
               {{ formatQuoteSource(voucher.quote.source) }}
             </div>
@@ -65,9 +79,11 @@
 
         <q-card flat bordered class="address-card q-mt-md">
           <q-card-section>
-            <div class="address-label">Voucher address</div>
+            <div class="address-label">
+              {{ t('historyList.address.voucherAddress') }}
+            </div>
             <div class="address-value">
-              {{ voucher.address || 'Not derived yet' }}
+              {{ voucher.address || t('historyList.address.notDerivedYet') }}
             </div>
           </q-card-section>
         </q-card>
@@ -75,7 +91,7 @@
         <div class="action-row q-mt-md">
           <q-btn
             class="primary-button"
-            label="Preview Receipt"
+            :label="t('historyList.actions.previewReceipt')"
             icon="receipt"
             unelevated
             no-caps
@@ -84,7 +100,7 @@
 
           <q-btn
             class="secondary-button"
-            label="Check Redemption"
+            :label="t('historyList.actions.checkRedemption')"
             icon="travel_explore"
             outline
             no-caps
@@ -99,8 +115,8 @@
       <q-card-section class="accordion-section">
         <q-expansion-item
           icon="check_circle"
-          label="Redemption tools"
-          caption="Manual sweep status and on-chain redemption check"
+          :label="t('historyList.redemptionTools.label')"
+          :caption="t('historyList.redemptionTools.caption')"
           class="history-expansion"
         >
           <q-card flat bordered>
@@ -114,7 +130,7 @@
                   <q-icon name="check_circle" />
                 </template>
 
-                Voucher manually marked as swept/redeemed.
+                {{ t('historyList.redemptionTools.manualMarked') }}
               </q-banner>
 
               <q-banner
@@ -153,7 +169,7 @@
                   <q-icon name="info" />
                 </template>
 
-                Redemption status has not been checked yet.
+                {{ t('historyList.redemptionTools.notCheckedYet') }}
               </q-banner>
 
               <q-list
@@ -165,7 +181,9 @@
               >
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Status</q-item-label>
+                    <q-item-label caption>
+                      {{ t('historyList.redemptionTools.status') }}
+                    </q-item-label>
                     <q-item-label>
                       {{ voucher.manualRedemption.status }}
                     </q-item-label>
@@ -174,7 +192,9 @@
 
                 <q-item v-if="voucher.manualRedemption.txid">
                   <q-item-section>
-                    <q-item-label caption>Sweep transaction ID</q-item-label>
+                    <q-item-label caption>
+                      {{ t('historyList.redemptionTools.sweepTransactionId') }}
+                    </q-item-label>
                     <q-item-label class="text-break">
                       {{ voucher.manualRedemption.txid }}
                     </q-item-label>
@@ -183,7 +203,9 @@
 
                 <q-item v-if="voucher.manualRedemption.note">
                   <q-item-section>
-                    <q-item-label caption>Note</q-item-label>
+                    <q-item-label caption>
+                      {{ t('historyList.redemptionTools.note') }}
+                    </q-item-label>
                     <q-item-label>
                       {{ voucher.manualRedemption.note }}
                     </q-item-label>
@@ -192,7 +214,9 @@
 
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Redeemed</q-item-label>
+                    <q-item-label caption>
+                      {{ t('historyList.redemptionTools.redeemed') }}
+                    </q-item-label>
                     <q-item-label>
                       {{ formatDate(voucher.manualRedemption.redeemedAt) }}
                     </q-item-label>
@@ -209,7 +233,9 @@
               >
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Detected status</q-item-label>
+                    <q-item-label caption>
+                      {{ t('historyList.redemptionTools.detectedStatus') }}
+                    </q-item-label>
                     <q-item-label>
                       {{ voucher.redemptionDetection.status }}
                     </q-item-label>
@@ -218,7 +244,9 @@
 
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Detected balance</q-item-label>
+                    <q-item-label caption>
+                      {{ t('historyList.redemptionTools.detectedBalance') }}
+                    </q-item-label>
                     <q-item-label>
                       {{
                         formatBchSats(voucher.redemptionDetection.balanceSats)
@@ -229,7 +257,9 @@
 
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Detected UTXOs</q-item-label>
+                    <q-item-label caption>
+                      {{ t('historyList.redemptionTools.detectedUtxos') }}
+                    </q-item-label>
                     <q-item-label>
                       {{ voucher.redemptionDetection.utxoCount }}
                     </q-item-label>
@@ -238,7 +268,9 @@
 
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption>Checked</q-item-label>
+                    <q-item-label caption>
+                      {{ t('historyList.redemptionTools.checked') }}
+                    </q-item-label>
                     <q-item-label>
                       {{ formatDate(voucher.redemptionDetection.checkedAt) }}
                     </q-item-label>
@@ -255,7 +287,7 @@
                     v-model="redemptionInputs[voucher.id].txid"
                     dense
                     outlined
-                    label="Sweep TXID optional"
+                    :label="t('historyList.redemptionTools.sweepTxidOptional')"
                   />
                 </div>
 
@@ -264,7 +296,7 @@
                     v-model="redemptionInputs[voucher.id].note"
                     dense
                     outlined
-                    label="Note optional"
+                    :label="t('historyList.redemptionTools.noteOptional')"
                   />
                 </div>
               </div>
@@ -274,7 +306,7 @@
                   v-if="!voucher.manualRedemption"
                   color="positive"
                   outline
-                  label="Mark as Manually Swept"
+                  :label="t('historyList.actions.markAsManuallySwept')"
                   no-caps
                   @click="handleMarkManualRedemption(voucher.id)"
                 />
@@ -283,14 +315,14 @@
                   v-if="voucher.manualRedemption"
                   color="grey-8"
                   outline
-                  label="Clear Manual Sweep Status"
+                  :label="t('historyList.actions.clearManualSweepStatus')"
                   no-caps
                   @click="emit('clearManualRedemption', voucher.id)"
                 />
 
                 <q-btn
                   class="secondary-button"
-                  label="Check On-Chain Status"
+                  :label="t('historyList.actions.checkOnChainStatus')"
                   icon="travel_explore"
                   outline
                   no-caps
@@ -322,7 +354,7 @@
 
               <q-btn
                 class="primary-button"
-                label="Preview Receipt"
+                :label="t('historyList.actions.previewReceipt')"
                 icon="receipt"
                 unelevated
                 no-caps
@@ -675,11 +707,14 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import VoucherReceiptPreview from 'src/components/VoucherReceiptPreview.vue';
 import VoucherWifRevealCard from 'src/components/VoucherWifRevealCard.vue';
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import { formatBchSats, formatMarketRate } from 'src/services/voucher-pricing';
+
+type VoucherStatusKey = 'redeemed' | 'funded' | 'error' | 'issued';
 
 const props = defineProps<{
   voucherRecords: VoucherRecord[];
@@ -697,6 +732,8 @@ const emit = defineEmits<{
   clearManualRedemption: [voucherId: string];
   checkOnChainRedemption: [voucherId: string];
 }>();
+
+const { t } = useI18n({ useScope: 'global' });
 
 const redemptionInputs = reactive<
   Record<string, { txid: string; note: string }>
@@ -749,65 +786,55 @@ function handleReceiptPreviewDialogHide(): void {
   selectedReceiptVoucher.value = null;
 }
 
-function getVoucherStatusLabel(voucher: VoucherRecord): string {
+function getVoucherStatusKey(voucher: VoucherRecord): VoucherStatusKey {
   if (
     voucher.status === 'redeemed' ||
     Boolean(voucher.manualRedemption) ||
     voucher.redemptionDetection?.status === 'swept'
   ) {
-    return 'Redeemed';
+    return 'redeemed';
   }
 
   if (
     voucher.status === 'funded' ||
     voucher.redemptionDetection?.status === 'funded'
   ) {
-    return 'Funded';
+    return 'funded';
   }
 
   if (voucher.status === 'error') {
-    return 'Error';
+    return 'error';
   }
 
-  return 'Issued';
+  return 'issued';
+}
+
+function getVoucherStatusLabel(voucher: VoucherRecord): string {
+  return t(`historyList.status.${getVoucherStatusKey(voucher)}`);
 }
 
 function getRedemptionLabel(voucher: VoucherRecord): string {
   if (voucher.manualRedemption) {
-    return 'Manual swept';
+    return t('historyList.redemption.manualSwept');
   }
 
   if (voucher.redemptionDetection?.status === 'swept') {
-    return 'Swept';
+    return t('historyList.redemption.swept');
   }
 
   if (voucher.redemptionDetection?.status === 'funded') {
-    return 'Funded';
+    return t('historyList.redemption.funded');
   }
 
   if (voucher.redemptionDetection?.status === 'unfunded') {
-    return 'Unfunded';
+    return t('historyList.redemption.unfunded');
   }
 
-  return 'Not checked';
+  return t('historyList.redemption.notChecked');
 }
 
 function getStatusBadgeClass(voucher: VoucherRecord): string {
-  const label = getVoucherStatusLabel(voucher);
-
-  if (label === 'Redeemed') {
-    return 'status-badge redeemed';
-  }
-
-  if (label === 'Funded') {
-    return 'status-badge funded';
-  }
-
-  if (label === 'Error') {
-    return 'status-badge error';
-  }
-
-  return 'status-badge issued';
+  return `status-badge ${getVoucherStatusKey(voucher)}`;
 }
 
 function formatFiatAmount(amountMinor: number, currency: string): string {
@@ -847,9 +874,9 @@ function formatQuoteSource(source: VoucherQuoteSource): string {
   const labels: Record<VoucherQuoteSource, string> = {
     general_protocols_oracle: 'GP Oracle',
     coingecko: 'CoinGecko',
-    cached: 'Cached',
-    manual: 'Manual',
-    unknown: 'Unknown',
+    cached: t('historyList.quoteSources.cached'),
+    manual: t('historyList.quoteSources.manual'),
+    unknown: t('historyList.quoteSources.unknown'),
   };
 
   return labels[source];
