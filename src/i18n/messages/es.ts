@@ -318,6 +318,152 @@ const es = {
       unknown: 'Desconocida',
     },
   },
+  treasuryPage: {
+    common: {
+      notConfigured: 'No configurada',
+      valid: 'Válida',
+      notReady: 'No lista',
+      validNotRequired: 'Válida / no requerida',
+    },
+    hero: {
+      eyebrow: 'Fondos del comercio',
+      title: 'Billetera de tesorería',
+      intro:
+        'Gestiona la billetera BCH usada para financiar los recibos de vales de los clientes.',
+    },
+    walletStatus: {
+      title: 'Estado de la billetera',
+      subtitle:
+        'Comprueba si la billetera de tesorería del comercio está lista.',
+      setupBanner: 'La billetera de tesorería está configurada.',
+      notSetupBanner:
+        'Todavía no se ha configurado una billetera de tesorería.',
+    },
+    summary: {
+      status: 'Estado',
+      ready: 'Lista',
+      notSetUp: 'No configurada',
+      balance: 'Saldo',
+      notChecked: 'No comprobado',
+      utxos: 'UTXOs',
+      lastChecked: 'Última comprobación',
+      notCheckedYet: 'Aún no comprobado',
+    },
+    details: {
+      treasuryAddress: 'Dirección de tesorería',
+      created: 'Creada',
+      updated: 'Actualizada',
+    },
+    actions: {
+      sellVoucher: 'Vender vale',
+      refreshBalance: 'Actualizar saldo',
+      walletReady: 'Billetera de tesorería lista',
+      createWallet: 'Crear billetera',
+      hideSeed: 'Ocultar semilla',
+      revealSeedBackup: 'Revelar copia de seguridad de semilla',
+      clearRestoreTool: 'Limpiar herramienta de restauración',
+      checkSeed: 'Comprobar semilla',
+      importCheckedSeed: 'Importar semilla comprobada',
+      clearTreasuryWallet: 'Borrar billetera de tesorería',
+    },
+    utxoDetails: {
+      label: 'Detalles de UTXO',
+      caption: 'Salidas de tesorería avanzadas de solo lectura',
+      description:
+        'Estas son las salidas no gastadas detectadas actualmente para la billetera de tesorería. Esta sección es de solo lectura.',
+      noneDetected: 'No se detectaron UTXOs de tesorería.',
+      utxoNumber: 'UTXO {number}',
+      value: 'Valor',
+      tx: 'Tx',
+      outputIndex: 'Índice de salida',
+    },
+    fundingConfig: {
+      label: 'Configuración de financiación',
+      caption:
+        'Preparación de la dirección de comisión para financiación en vivo de tesorería',
+      platformFeeValid:
+        'La dirección de comisión de plataforma está configurada y es válida.',
+      platformFeeInvalid:
+        'La dirección de comisión de plataforma está configurada pero no es válida: {error}',
+      platformFeeNotConfigured:
+        'La dirección de comisión de plataforma no está configurada. La financiación en vivo debe permanecer desactivada.',
+      bufferReserveValid:
+        'La dirección de reserva de búfer está configurada y es válida.',
+      bufferReserveOptional:
+        'La salida de reserva de búfer es opcional para el MVP y actualmente no es requerida.',
+      platformFeeAddress: 'Dirección de comisión de plataforma',
+      platformFeeAddressStatus:
+        'Estado de la dirección de comisión de plataforma',
+      bufferReserveAddress: 'Dirección de reserva de búfer',
+      bufferReserveAddressStatus: 'Estado de la dirección de reserva de búfer',
+      configChecked: 'Configuración comprobada',
+    },
+    walletBackup: {
+      label: 'Copia de seguridad de billetera',
+      caption:
+        'Copia de seguridad sensible de semilla para desarrollo y recuperación',
+      warning:
+        'Cualquier persona con esta frase semilla puede controlar el BCH de tesorería. Revélala solo en un entorno privado y seguro.',
+      backupStatus: 'Estado de copia de seguridad',
+      seedLoaded: 'Semilla cargada para copia de seguridad',
+      seedNotRevealed: 'Semilla no revelada',
+      seedPhrase: 'Frase semilla',
+      exported: 'Exportada',
+    },
+    restore: {
+      label: 'Restaurar / importar billetera',
+      caption: 'Comprobar o importar una frase semilla de tesorería',
+      warning:
+        'Importar reemplazará la billetera de tesorería local actual. No pegues una frase semilla de producción en esta compilación de desarrollo.',
+      seedInputLabel: 'Frase semilla de tesorería para comprobar/importar',
+      matchesCurrentAddress:
+        'Esta semilla deriva la dirección de tesorería actual.',
+      differentAddress:
+        'Esta semilla deriva una dirección de tesorería diferente.',
+      importedIntoLocalStorage:
+        'Billetera de tesorería importada al almacenamiento local.',
+      derivedAddress: 'Dirección derivada',
+      currentTreasuryAddress: 'Dirección de tesorería actual',
+      noCurrentTreasuryWallet: 'No hay billetera de tesorería actual',
+      checked: 'Comprobada',
+      importedAddress: 'Dirección importada',
+      replacedExistingWallet: 'Reemplazó billetera existente',
+      imported: 'Importada',
+    },
+    dangerZone: {
+      label: 'Zona de peligro',
+      caption: 'Borrar la billetera de tesorería local',
+      warning:
+        'Borrar la billetera de tesorería local elimina los datos de billetera de tesorería guardados en este dispositivo. Hazlo solo cuando estés seguro de que la billetera está respaldada o ya no se necesita.',
+    },
+    safetyNotice:
+      'El modo de seguridad de desarrollo sigue activo. Las herramientas de tesorería están disponibles para pruebas mientras se prepara la operación real del comercio.',
+    messages: {
+      couldNotLoadWalletInfo:
+        'No se pudo cargar la información de la billetera de tesorería.',
+      createdWallet: 'Billetera de tesorería creada.',
+      couldNotCreateWallet: 'No se pudo crear la billetera de tesorería.',
+      clearedWallet: 'Billetera de tesorería borrada.',
+      couldNotClearWallet: 'No se pudo borrar la billetera de tesorería.',
+      balanceRefreshed: 'Saldo de tesorería actualizado.',
+      couldNotRefreshBalance:
+        'No se pudo actualizar el saldo de tesorería. Comprueba tu conexión e inténtalo de nuevo.',
+      seedBackupLoaded: 'Copia de seguridad de semilla de tesorería cargada.',
+      couldNotLoadBackupInfo:
+        'No se pudo cargar la información de copia de seguridad de tesorería.',
+      seedBackupHidden: 'Copia de seguridad de semilla de tesorería ocultada.',
+      restoreSeedCheckCompleted:
+        'Comprobación de semilla de restauración de tesorería completada.',
+      couldNotCheckRestoreSeed:
+        'No se pudo comprobar la semilla de restauración de tesorería.',
+      checkSeedBeforeImporting:
+        'Comprueba una frase semilla de tesorería antes de importar.',
+      importedCheckedSeed:
+        'Semilla de tesorería comprobada importada al almacenamiento local.',
+      couldNotImportSeed: 'No se pudo importar la semilla de tesorería.',
+      restoreToolCleared: 'Herramienta de restauración de tesorería limpiada.',
+    },
+  },
 };
 
 export default es;

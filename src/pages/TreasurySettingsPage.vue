@@ -3,16 +3,16 @@
     <div class="treasury-container">
       <section class="treasury-hero">
         <div>
-          <p class="eyebrow">Merchant funds</p>
-          <h1>Treasury Wallet</h1>
+          <p class="eyebrow">{{ t('treasuryPage.hero.eyebrow') }}</p>
+          <h1>{{ t('treasuryPage.hero.title') }}</h1>
           <p class="intro">
-            Manage the BCH wallet used to fund customer voucher receipts.
+            {{ t('treasuryPage.hero.intro') }}
           </p>
         </div>
 
         <q-btn
           class="secondary-button"
-          label="Sell Voucher"
+          :label="t('treasuryPage.actions.sellVoucher')"
           icon="point_of_sale"
           to="/sell-voucher"
           outline
@@ -28,9 +28,11 @@
             </div>
 
             <div>
-              <div class="text-h6">Wallet status</div>
+              <div class="text-h6">
+                {{ t('treasuryPage.walletStatus.title') }}
+              </div>
               <p class="text-grey-7 q-mb-none">
-                Check whether the merchant treasury wallet is ready.
+                {{ t('treasuryPage.walletStatus.subtitle') }}
               </p>
             </div>
           </div>
@@ -51,32 +53,44 @@
             </template>
 
             <span v-if="treasuryWallet.isSetup">
-              Treasury wallet is set up.
+              {{ t('treasuryPage.walletStatus.setupBanner') }}
             </span>
 
-            <span v-else> No treasury wallet has been set up yet. </span>
+            <span v-else>
+              {{ t('treasuryPage.walletStatus.notSetupBanner') }}
+            </span>
           </q-banner>
 
           <section class="summary-grid q-mt-md">
             <div class="summary-tile highlight">
-              <div class="summary-label">Status</div>
+              <div class="summary-label">
+                {{ t('treasuryPage.summary.status') }}
+              </div>
               <div class="summary-value">
-                {{ treasuryWallet.isSetup ? 'Ready' : 'Not set up' }}
+                {{
+                  treasuryWallet.isSetup
+                    ? t('treasuryPage.summary.ready')
+                    : t('treasuryPage.summary.notSetUp')
+                }}
               </div>
             </div>
 
             <div class="summary-tile">
-              <div class="summary-label">Balance</div>
+              <div class="summary-label">
+                {{ t('treasuryPage.summary.balance') }}
+              </div>
               <div class="summary-value">
                 <span v-if="treasuryBalance">
                   {{ formatBchSats(treasuryBalance.balanceSats) }}
                 </span>
-                <span v-else>Not checked</span>
+                <span v-else>{{ t('treasuryPage.summary.notChecked') }}</span>
               </div>
             </div>
 
             <div class="summary-tile">
-              <div class="summary-label">UTXOs</div>
+              <div class="summary-label">
+                {{ t('treasuryPage.summary.utxos') }}
+              </div>
               <div class="summary-value">
                 <span v-if="treasuryBalance">
                   {{ treasuryBalance.utxoCount }}
@@ -86,12 +100,16 @@
             </div>
 
             <div class="summary-tile">
-              <div class="summary-label">Last checked</div>
+              <div class="summary-label">
+                {{ t('treasuryPage.summary.lastChecked') }}
+              </div>
               <div class="summary-value small">
                 <span v-if="treasuryBalance">
                   {{ formatDateTime(treasuryBalance.checkedAt) }}
                 </span>
-                <span v-else>Not checked yet</span>
+                <span v-else>
+                  {{ t('treasuryPage.summary.notCheckedYet') }}
+                </span>
               </div>
             </div>
           </section>
@@ -104,19 +122,19 @@
           >
             <q-card-section>
               <div class="details-row">
-                <span>Treasury address</span>
+                <span>{{ t('treasuryPage.details.treasuryAddress') }}</span>
                 <strong class="text-break">
                   {{ treasuryWallet.address }}
                 </strong>
               </div>
 
               <div v-if="treasuryWallet.createdAt" class="details-row">
-                <span>Created</span>
+                <span>{{ t('treasuryPage.details.created') }}</span>
                 <strong>{{ formatDateTime(treasuryWallet.createdAt) }}</strong>
               </div>
 
               <div v-if="treasuryWallet.updatedAt" class="details-row">
-                <span>Updated</span>
+                <span>{{ t('treasuryPage.details.updated') }}</span>
                 <strong>{{ formatDateTime(treasuryWallet.updatedAt) }}</strong>
               </div>
             </q-card-section>
@@ -129,7 +147,7 @@
           <q-btn
             v-if="treasuryWallet.isSetup"
             class="secondary-button"
-            label="Refresh Balance"
+            :label="t('treasuryPage.actions.refreshBalance')"
             icon="refresh"
             :loading="isCheckingBalance"
             outline
@@ -140,7 +158,9 @@
           <q-btn
             class="primary-button"
             :label="
-              treasuryWallet.isSetup ? 'Treasury Wallet Ready' : 'Create Wallet'
+              treasuryWallet.isSetup
+                ? t('treasuryPage.actions.walletReady')
+                : t('treasuryPage.actions.createWallet')
             "
             :disable="treasuryWallet.isSetup"
             :loading="isSubmitting"
@@ -159,13 +179,12 @@
       <q-card v-if="treasuryBalance" flat bordered class="main-card">
         <q-expansion-item
           icon="account_tree"
-          label="UTXO details"
-          caption="Advanced read-only treasury outputs"
+          :label="t('treasuryPage.utxoDetails.label')"
+          :caption="t('treasuryPage.utxoDetails.caption')"
         >
           <q-card-section>
             <p class="text-grey-7 q-mb-md">
-              These are the unspent outputs currently detected for the treasury
-              wallet. This section is read-only.
+              {{ t('treasuryPage.utxoDetails.description') }}
             </p>
 
             <q-banner
@@ -173,7 +192,7 @@
               class="bg-grey-2 text-grey-9"
               rounded
             >
-              No treasury UTXOs detected.
+              {{ t('treasuryPage.utxoDetails.noneDetected') }}
             </q-banner>
 
             <q-list v-else bordered separator>
@@ -183,22 +202,26 @@
               >
                 <q-item-section>
                   <q-item-label class="text-weight-medium">
-                    UTXO {{ index + 1 }}
+                    {{
+                      t('treasuryPage.utxoDetails.utxoNumber', {
+                        number: index + 1,
+                      })
+                    }}
                   </q-item-label>
 
                   <q-item-label caption>
-                    Value:
+                    {{ t('treasuryPage.utxoDetails.value') }}:
                     {{ formatBchSats(utxo.valueSats) }}
                     / {{ utxo.valueSats.toLocaleString() }} sats
                   </q-item-label>
 
                   <q-item-label caption class="text-break">
-                    Tx:
+                    {{ t('treasuryPage.utxoDetails.tx') }}:
                     {{ utxo.outpointTransactionHash }}
                   </q-item-label>
 
                   <q-item-label caption>
-                    Output index:
+                    {{ t('treasuryPage.utxoDetails.outputIndex') }}:
                     {{ utxo.outpointIndex }}
                   </q-item-label>
                 </q-item-section>
@@ -211,8 +234,8 @@
       <q-card flat bordered class="main-card">
         <q-expansion-item
           icon="settings"
-          label="Funding configuration"
-          caption="Fee address readiness for live treasury funding"
+          :label="t('treasuryPage.fundingConfig.label')"
+          :caption="t('treasuryPage.fundingConfig.caption')"
         >
           <q-card-section>
             <q-banner
@@ -235,17 +258,19 @@
               </template>
 
               <span v-if="feeAddressConfig.platformFeeAddressValid">
-                Platform fee address is configured and valid.
+                {{ t('treasuryPage.fundingConfig.platformFeeValid') }}
               </span>
 
               <span v-else-if="feeAddressConfig.platformFeeAddressConfigured">
-                Platform fee address is configured but invalid:
-                {{ feeAddressConfig.platformFeeAddressError }}
+                {{
+                  t('treasuryPage.fundingConfig.platformFeeInvalid', {
+                    error: feeAddressConfig.platformFeeAddressError,
+                  })
+                }}
               </span>
 
               <span v-else>
-                Platform fee address is not configured. Live funding must stay
-                disabled.
+                {{ t('treasuryPage.fundingConfig.platformFeeNotConfigured') }}
               </span>
             </q-banner>
 
@@ -274,48 +299,24 @@
                   feeAddressConfig.bufferReserveAddress
                 "
               >
-                Buffer reserve address is configured and valid.
+                {{ t('treasuryPage.fundingConfig.bufferReserveValid') }}
               </span>
 
               <span v-else>
-                Buffer reserve output is optional for MVP and is not currently
-                required.
+                {{ t('treasuryPage.fundingConfig.bufferReserveOptional') }}
               </span>
             </q-banner>
 
             <q-list bordered separator>
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Platform fee address</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.fundingConfig.platformFeeAddress') }}
+                  </q-item-label>
                   <q-item-label class="text-break">
                     {{
-                      feeAddressConfig.platformFeeAddress || 'Not configured'
-                    }}
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption
-                    >Platform fee address status</q-item-label
-                  >
-                  <q-item-label>
-                    {{
-                      feeAddressConfig.platformFeeAddressValid
-                        ? 'Valid'
-                        : 'Not ready'
-                    }}
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption>Buffer reserve address</q-item-label>
-                  <q-item-label class="text-break">
-                    {{
-                      feeAddressConfig.bufferReserveAddress || 'Not configured'
+                      feeAddressConfig.platformFeeAddress ||
+                      t('treasuryPage.common.notConfigured')
                     }}
                   </q-item-label>
                 </q-item-section>
@@ -324,13 +325,15 @@
               <q-item>
                 <q-item-section>
                   <q-item-label caption>
-                    Buffer reserve address status
+                    {{
+                      t('treasuryPage.fundingConfig.platformFeeAddressStatus')
+                    }}
                   </q-item-label>
                   <q-item-label>
                     {{
-                      feeAddressConfig.bufferReserveAddressValid
-                        ? 'Valid / not required'
-                        : 'Not ready'
+                      feeAddressConfig.platformFeeAddressValid
+                        ? t('treasuryPage.common.valid')
+                        : t('treasuryPage.common.notReady')
                     }}
                   </q-item-label>
                 </q-item-section>
@@ -338,7 +341,40 @@
 
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Config checked</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.fundingConfig.bufferReserveAddress') }}
+                  </q-item-label>
+                  <q-item-label class="text-break">
+                    {{
+                      feeAddressConfig.bufferReserveAddress ||
+                      t('treasuryPage.common.notConfigured')
+                    }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>
+                    {{
+                      t('treasuryPage.fundingConfig.bufferReserveAddressStatus')
+                    }}
+                  </q-item-label>
+                  <q-item-label>
+                    {{
+                      feeAddressConfig.bufferReserveAddressValid
+                        ? t('treasuryPage.common.validNotRequired')
+                        : t('treasuryPage.common.notReady')
+                    }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.fundingConfig.configChecked') }}
+                  </q-item-label>
                   <q-item-label>
                     {{ formatDateTime(feeAddressConfig.checkedAt) }}
                   </q-item-label>
@@ -352,8 +388,8 @@
       <q-card v-if="treasuryWallet.isSetup" flat bordered class="main-card">
         <q-expansion-item
           icon="key"
-          label="Wallet backup"
-          caption="Sensitive seed backup for development and recovery"
+          :label="t('treasuryPage.walletBackup.label')"
+          :caption="t('treasuryPage.walletBackup.caption')"
         >
           <q-card-section>
             <q-banner class="bg-red-1 text-red-10 q-mb-md" rounded>
@@ -361,19 +397,20 @@
                 <q-icon name="dangerous" />
               </template>
 
-              Anyone with this seed phrase can control the treasury BCH. Only
-              reveal this in a safe private environment.
+              {{ t('treasuryPage.walletBackup.warning') }}
             </q-banner>
 
             <q-list bordered separator>
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Backup status</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.walletBackup.backupStatus') }}
+                  </q-item-label>
                   <q-item-label>
                     {{
                       treasuryBackup
-                        ? 'Seed loaded for backup'
-                        : 'Seed not revealed'
+                        ? t('treasuryPage.walletBackup.seedLoaded')
+                        : t('treasuryPage.walletBackup.seedNotRevealed')
                     }}
                   </q-item-label>
                 </q-item-section>
@@ -381,7 +418,9 @@
 
               <q-item v-if="treasuryBackup">
                 <q-item-section>
-                  <q-item-label caption>Treasury address</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.details.treasuryAddress') }}
+                  </q-item-label>
                   <q-item-label class="text-break">
                     {{ treasuryBackup.address }}
                   </q-item-label>
@@ -390,7 +429,9 @@
 
               <q-item v-if="treasuryBackup">
                 <q-item-section>
-                  <q-item-label caption>Seed phrase</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.walletBackup.seedPhrase') }}
+                  </q-item-label>
                   <q-item-label class="text-break text-weight-medium">
                     {{ treasuryBackup.mnemonic }}
                   </q-item-label>
@@ -399,7 +440,9 @@
 
               <q-item v-if="treasuryBackup">
                 <q-item-section>
-                  <q-item-label caption>Exported</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.walletBackup.exported') }}
+                  </q-item-label>
                   <q-item-label>
                     {{ formatDateTime(treasuryBackup.exportedAt) }}
                   </q-item-label>
@@ -415,7 +458,7 @@
               v-if="treasuryBackup"
               flat
               color="grey-8"
-              label="Hide Seed"
+              :label="t('treasuryPage.actions.hideSeed')"
               no-caps
               @click="handleHideTreasuryBackup"
             />
@@ -423,7 +466,7 @@
             <q-btn
               color="negative"
               outline
-              label="Reveal Seed Backup"
+              :label="t('treasuryPage.actions.revealSeedBackup')"
               :loading="isExportingBackup"
               no-caps
               @click="handleRevealTreasuryBackup"
@@ -435,8 +478,8 @@
       <q-card flat bordered class="main-card">
         <q-expansion-item
           icon="restore"
-          label="Wallet restore / import"
-          caption="Check or import a treasury seed phrase"
+          :label="t('treasuryPage.restore.label')"
+          :caption="t('treasuryPage.restore.caption')"
         >
           <q-card-section>
             <q-banner class="bg-orange-1 text-orange-10 q-mb-md" rounded>
@@ -444,14 +487,13 @@
                 <q-icon name="warning" />
               </template>
 
-              Importing will replace the current local treasury wallet. Do not
-              paste a production seed phrase into this development build.
+              {{ t('treasuryPage.restore.warning') }}
             </q-banner>
 
             <q-input
               v-model="restoreMnemonicInput"
               type="textarea"
-              label="Treasury seed phrase to check/import"
+              :label="t('treasuryPage.restore.seedInputLabel')"
               outlined
               autogrow
               class="q-mb-md"
@@ -478,11 +520,11 @@
               </template>
 
               <span v-if="restoreCheck.matchesCurrentWallet">
-                This seed derives the current treasury address.
+                {{ t('treasuryPage.restore.matchesCurrentAddress') }}
               </span>
 
               <span v-else>
-                This seed derives a different treasury address.
+                {{ t('treasuryPage.restore.differentAddress') }}
               </span>
             </q-banner>
 
@@ -495,13 +537,15 @@
                 <q-icon name="check_circle" />
               </template>
 
-              Imported treasury wallet into local storage.
+              {{ t('treasuryPage.restore.importedIntoLocalStorage') }}
             </q-banner>
 
             <q-list v-if="restoreCheck" bordered separator>
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Derived address</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.restore.derivedAddress') }}
+                  </q-item-label>
                   <q-item-label class="text-break">
                     {{ restoreCheck.derivedAddress }}
                   </q-item-label>
@@ -510,11 +554,13 @@
 
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Current treasury address</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.restore.currentTreasuryAddress') }}
+                  </q-item-label>
                   <q-item-label class="text-break">
                     {{
                       restoreCheck.currentAddress ||
-                      'No current treasury wallet'
+                      t('treasuryPage.restore.noCurrentTreasuryWallet')
                     }}
                   </q-item-label>
                 </q-item-section>
@@ -522,7 +568,9 @@
 
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Checked</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.restore.checked') }}
+                  </q-item-label>
                   <q-item-label>
                     {{ formatDateTime(restoreCheck.checkedAt) }}
                   </q-item-label>
@@ -538,7 +586,9 @@
             >
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Imported address</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.restore.importedAddress') }}
+                  </q-item-label>
                   <q-item-label class="text-break">
                     {{ restoreImportResult.address }}
                   </q-item-label>
@@ -547,10 +597,14 @@
 
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Replaced existing wallet</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.restore.replacedExistingWallet') }}
+                  </q-item-label>
                   <q-item-label>
                     {{
-                      restoreImportResult.replacedExistingWallet ? 'Yes' : 'No'
+                      restoreImportResult.replacedExistingWallet
+                        ? t('common.yes')
+                        : t('common.no')
                     }}
                   </q-item-label>
                 </q-item-section>
@@ -558,7 +612,9 @@
 
               <q-item>
                 <q-item-section>
-                  <q-item-label caption>Imported</q-item-label>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.restore.imported') }}
+                  </q-item-label>
                   <q-item-label>
                     {{ formatDateTime(restoreImportResult.importedAt) }}
                   </q-item-label>
@@ -574,14 +630,14 @@
               v-if="restoreCheck || restoreImportResult"
               flat
               color="grey-8"
-              label="Clear Restore Tool"
+              :label="t('treasuryPage.actions.clearRestoreTool')"
               no-caps
               @click="handleClearRestoreCheck"
             />
 
             <q-btn
               class="secondary-button"
-              label="Check Seed"
+              :label="t('treasuryPage.actions.checkSeed')"
               :loading="isCheckingRestore"
               outline
               no-caps
@@ -590,7 +646,7 @@
 
             <q-btn
               color="negative"
-              label="Import Checked Seed"
+              :label="t('treasuryPage.actions.importCheckedSeed')"
               :disable="!restoreCheck"
               :loading="isImportingRestore"
               no-caps
@@ -603,8 +659,8 @@
       <q-card v-if="treasuryWallet.isSetup" flat bordered class="main-card">
         <q-expansion-item
           icon="warning"
-          label="Danger zone"
-          caption="Clear the local treasury wallet"
+          :label="t('treasuryPage.dangerZone.label')"
+          :caption="t('treasuryPage.dangerZone.caption')"
         >
           <q-card-section>
             <q-banner class="bg-red-1 text-red-10" rounded>
@@ -612,9 +668,7 @@
                 <q-icon name="warning" />
               </template>
 
-              Clearing the local treasury wallet removes this device&apos;s
-              saved treasury wallet data. Only do this when you are sure the
-              wallet is backed up or no longer needed.
+              {{ t('treasuryPage.dangerZone.warning') }}
             </q-banner>
           </q-card-section>
 
@@ -624,7 +678,7 @@
             <q-btn
               color="negative"
               outline
-              label="Clear Treasury Wallet"
+              :label="t('treasuryPage.actions.clearTreasuryWallet')"
               :loading="isSubmitting"
               no-caps
               @click="handleClearTreasuryWallet"
@@ -646,8 +700,7 @@
           <q-icon name="shield" />
         </template>
 
-        Development safety mode is still active. Treasury tools are available
-        for testing while live merchant operation is being prepared.
+        {{ t('treasuryPage.safetyNotice') }}
       </q-banner>
     </div>
   </q-page>
@@ -655,6 +708,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import TreasuryTopUpQrCard from 'src/components/TreasuryTopUpQrCard.vue';
 
@@ -677,6 +731,8 @@ import {
 } from 'src/services/treasury-wallet';
 import { formatBchSats } from 'src/services/voucher-pricing';
 import { getFeeAddressConfigStatus } from 'src/services/fee-address-config';
+
+const { t } = useI18n({ useScope: 'global' });
 
 const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   address: '',
@@ -716,7 +772,7 @@ async function loadTreasuryWallet(): Promise<void> {
     }
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not load treasury wallet information.';
+    errorMessage.value = t('treasuryPage.messages.couldNotLoadWalletInfo');
   }
 }
 
@@ -731,10 +787,10 @@ async function handleCreateTreasuryWallet(): Promise<void> {
 
   try {
     treasuryWallet.value = await createTreasuryWallet();
-    successMessage.value = 'Created treasury wallet.';
+    successMessage.value = t('treasuryPage.messages.createdWallet');
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not create treasury wallet.';
+    errorMessage.value = t('treasuryPage.messages.couldNotCreateWallet');
   } finally {
     isSubmitting.value = false;
   }
@@ -752,10 +808,10 @@ async function handleClearTreasuryWallet(): Promise<void> {
   try {
     await clearTreasuryWallet();
     await loadTreasuryWallet();
-    successMessage.value = 'Cleared treasury wallet.';
+    successMessage.value = t('treasuryPage.messages.clearedWallet');
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not clear treasury wallet.';
+    errorMessage.value = t('treasuryPage.messages.couldNotClearWallet');
   } finally {
     isSubmitting.value = false;
   }
@@ -768,11 +824,10 @@ async function handleRefreshBalance(): Promise<void> {
 
   try {
     treasuryBalance.value = await getTreasuryWalletBalance();
-    successMessage.value = 'Treasury balance refreshed.';
+    successMessage.value = t('treasuryPage.messages.balanceRefreshed');
   } catch (error) {
     console.error(error);
-    errorMessage.value =
-      'Could not refresh treasury balance. Check your connection and try again.';
+    errorMessage.value = t('treasuryPage.messages.couldNotRefreshBalance');
   } finally {
     isCheckingBalance.value = false;
   }
@@ -785,10 +840,10 @@ async function handleRevealTreasuryBackup(): Promise<void> {
 
   try {
     treasuryBackup.value = await getTreasuryWalletBackupInfo();
-    successMessage.value = 'Treasury seed backup loaded.';
+    successMessage.value = t('treasuryPage.messages.seedBackupLoaded');
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not load treasury backup information.';
+    errorMessage.value = t('treasuryPage.messages.couldNotLoadBackupInfo');
   } finally {
     isExportingBackup.value = false;
   }
@@ -796,7 +851,7 @@ async function handleRevealTreasuryBackup(): Promise<void> {
 
 function handleHideTreasuryBackup(): void {
   treasuryBackup.value = null;
-  successMessage.value = 'Treasury seed backup hidden.';
+  successMessage.value = t('treasuryPage.messages.seedBackupHidden');
 }
 
 async function handleCheckRestoreMnemonic(): Promise<void> {
@@ -811,13 +866,13 @@ async function handleCheckRestoreMnemonic(): Promise<void> {
       restoreMnemonicInput.value
     );
 
-    successMessage.value = 'Treasury restore seed check completed.';
+    successMessage.value = t('treasuryPage.messages.restoreSeedCheckCompleted');
   } catch (error) {
     console.error(error);
     errorMessage.value =
       error instanceof Error
         ? error.message
-        : 'Could not check treasury restore seed.';
+        : t('treasuryPage.messages.couldNotCheckRestoreSeed');
   } finally {
     isCheckingRestore.value = false;
   }
@@ -828,7 +883,7 @@ async function handleImportCheckedRestoreMnemonic(): Promise<void> {
   errorMessage.value = '';
 
   if (!restoreCheck.value) {
-    errorMessage.value = 'Check a treasury seed phrase before importing.';
+    errorMessage.value = t('treasuryPage.messages.checkSeedBeforeImporting');
     return;
   }
 
@@ -844,13 +899,13 @@ async function handleImportCheckedRestoreMnemonic(): Promise<void> {
 
     await loadTreasuryWallet();
 
-    successMessage.value = 'Imported checked treasury seed into local storage.';
+    successMessage.value = t('treasuryPage.messages.importedCheckedSeed');
   } catch (error) {
     console.error(error);
     errorMessage.value =
       error instanceof Error
         ? error.message
-        : 'Could not import treasury seed.';
+        : t('treasuryPage.messages.couldNotImportSeed');
   } finally {
     isImportingRestore.value = false;
   }
@@ -860,7 +915,7 @@ function handleClearRestoreCheck(): void {
   restoreCheck.value = null;
   restoreImportResult.value = null;
   restoreMnemonicInput.value = '';
-  successMessage.value = 'Treasury restore tool cleared.';
+  successMessage.value = t('treasuryPage.messages.restoreToolCleared');
 }
 
 function formatDateTime(value: string): string {

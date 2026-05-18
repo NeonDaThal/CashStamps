@@ -309,6 +309,136 @@ const en = {
       unknown: 'Unknown',
     },
   },
+  treasuryPage: {
+    common: {
+      notConfigured: 'Not configured',
+      valid: 'Valid',
+      notReady: 'Not ready',
+      validNotRequired: 'Valid / not required',
+    },
+    hero: {
+      eyebrow: 'Merchant funds',
+      title: 'Treasury Wallet',
+      intro: 'Manage the BCH wallet used to fund customer voucher receipts.',
+    },
+    walletStatus: {
+      title: 'Wallet status',
+      subtitle: 'Check whether the merchant treasury wallet is ready.',
+      setupBanner: 'Treasury wallet is set up.',
+      notSetupBanner: 'No treasury wallet has been set up yet.',
+    },
+    summary: {
+      status: 'Status',
+      ready: 'Ready',
+      notSetUp: 'Not set up',
+      balance: 'Balance',
+      notChecked: 'Not checked',
+      utxos: 'UTXOs',
+      lastChecked: 'Last checked',
+      notCheckedYet: 'Not checked yet',
+    },
+    details: {
+      treasuryAddress: 'Treasury address',
+      created: 'Created',
+      updated: 'Updated',
+    },
+    actions: {
+      sellVoucher: 'Sell Voucher',
+      refreshBalance: 'Refresh Balance',
+      walletReady: 'Treasury Wallet Ready',
+      createWallet: 'Create Wallet',
+      hideSeed: 'Hide Seed',
+      revealSeedBackup: 'Reveal Seed Backup',
+      clearRestoreTool: 'Clear Restore Tool',
+      checkSeed: 'Check Seed',
+      importCheckedSeed: 'Import Checked Seed',
+      clearTreasuryWallet: 'Clear Treasury Wallet',
+    },
+    utxoDetails: {
+      label: 'UTXO details',
+      caption: 'Advanced read-only treasury outputs',
+      description:
+        'These are the unspent outputs currently detected for the treasury wallet. This section is read-only.',
+      noneDetected: 'No treasury UTXOs detected.',
+      utxoNumber: 'UTXO {number}',
+      value: 'Value',
+      tx: 'Tx',
+      outputIndex: 'Output index',
+    },
+    fundingConfig: {
+      label: 'Funding configuration',
+      caption: 'Fee address readiness for live treasury funding',
+      platformFeeValid: 'Platform fee address is configured and valid.',
+      platformFeeInvalid:
+        'Platform fee address is configured but invalid: {error}',
+      platformFeeNotConfigured:
+        'Platform fee address is not configured. Live funding must stay disabled.',
+      bufferReserveValid: 'Buffer reserve address is configured and valid.',
+      bufferReserveOptional:
+        'Buffer reserve output is optional for MVP and is not currently required.',
+      platformFeeAddress: 'Platform fee address',
+      platformFeeAddressStatus: 'Platform fee address status',
+      bufferReserveAddress: 'Buffer reserve address',
+      bufferReserveAddressStatus: 'Buffer reserve address status',
+      configChecked: 'Config checked',
+    },
+    walletBackup: {
+      label: 'Wallet backup',
+      caption: 'Sensitive seed backup for development and recovery',
+      warning:
+        'Anyone with this seed phrase can control the treasury BCH. Only reveal this in a safe private environment.',
+      backupStatus: 'Backup status',
+      seedLoaded: 'Seed loaded for backup',
+      seedNotRevealed: 'Seed not revealed',
+      seedPhrase: 'Seed phrase',
+      exported: 'Exported',
+    },
+    restore: {
+      label: 'Wallet restore / import',
+      caption: 'Check or import a treasury seed phrase',
+      warning:
+        'Importing will replace the current local treasury wallet. Do not paste a production seed phrase into this development build.',
+      seedInputLabel: 'Treasury seed phrase to check/import',
+      matchesCurrentAddress: 'This seed derives the current treasury address.',
+      differentAddress: 'This seed derives a different treasury address.',
+      importedIntoLocalStorage: 'Imported treasury wallet into local storage.',
+      derivedAddress: 'Derived address',
+      currentTreasuryAddress: 'Current treasury address',
+      noCurrentTreasuryWallet: 'No current treasury wallet',
+      checked: 'Checked',
+      importedAddress: 'Imported address',
+      replacedExistingWallet: 'Replaced existing wallet',
+      imported: 'Imported',
+    },
+    dangerZone: {
+      label: 'Danger zone',
+      caption: 'Clear the local treasury wallet',
+      warning:
+        "Clearing the local treasury wallet removes this device's saved treasury wallet data. Only do this when you are sure the wallet is backed up or no longer needed.",
+    },
+    safetyNotice:
+      'Development safety mode is still active. Treasury tools are available for testing while live merchant operation is being prepared.',
+    messages: {
+      couldNotLoadWalletInfo: 'Could not load treasury wallet information.',
+      createdWallet: 'Created treasury wallet.',
+      couldNotCreateWallet: 'Could not create treasury wallet.',
+      clearedWallet: 'Cleared treasury wallet.',
+      couldNotClearWallet: 'Could not clear treasury wallet.',
+      balanceRefreshed: 'Treasury balance refreshed.',
+      couldNotRefreshBalance:
+        'Could not refresh treasury balance. Check your connection and try again.',
+      seedBackupLoaded: 'Treasury seed backup loaded.',
+      couldNotLoadBackupInfo: 'Could not load treasury backup information.',
+      seedBackupHidden: 'Treasury seed backup hidden.',
+      restoreSeedCheckCompleted: 'Treasury restore seed check completed.',
+      couldNotCheckRestoreSeed: 'Could not check treasury restore seed.',
+      checkSeedBeforeImporting:
+        'Check a treasury seed phrase before importing.',
+      importedCheckedSeed: 'Imported checked treasury seed into local storage.',
+      couldNotImportSeed: 'Could not import treasury seed.',
+      restoreToolCleared: 'Treasury restore tool cleared.',
+    },
+  },
 };
 
 export default en;
