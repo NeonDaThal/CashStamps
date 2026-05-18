@@ -1028,6 +1028,36 @@ Development safety mode remains active. Real BCH transaction broadcasting is sti
 
 The main Phase 5 APK milestone is now complete. The remaining work before printer integration is optional polish, cleanup, and deciding when/how to replace development guardrails with production-safe merchant controls.
 
+#### Rebuilding and installing a new debug APK
+
+To create a fresh APK after making app changes:
+
+```powershell
+git status
+
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$env:Path = "$env:JAVA_HOME\bin;$env:LOCALAPPDATA\Android\Sdk\platform-tools;$env:Path"
+
+npx quasar build -m capacitor -T android
+
+cd src-capacitor\android
+.\gradlew.bat assembleDebug
+cd ..\..
+
+dir src-capacitor\android\app\build\outputs\apk\debug
+
+The debug APK is created here:
+
+src-capacitor\android\app\build\outputs\apk\debug\app-debug.apk
+
+To install/update it on the physical Pixel 9a:
+
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb devices
+& $adb -s 57231JEBF08113 install -r src-capacitor\android\app\build\outputs\apk\debug\app-debug.apk
+
+If the phone serial changes, replace 57231JEBF08113 with the serial shown by adb devices.
+
 ### Phase 6 — Add native printer bridge
 
 #### Goal
@@ -1147,3 +1177,4 @@ The critical rule is to stay disciplined:
 - do not rewrite too early
 - do not support every printer too early
 - prove the complete end-to-end voucher flow first
+```
