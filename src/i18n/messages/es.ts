@@ -483,6 +483,48 @@ const es = {
     uriCopied: 'URI de pago de tesorería copiado.',
     copyFailed: 'No se pudo copiar al portapapeles.',
   },
+  layout: {
+    brand: {
+      title: 'Vales de Bitcoin Cash',
+      subtitle: 'App de comercio',
+    },
+    drawer: {
+      subtitle: 'App de vales para comercios',
+    },
+    navigation: {
+      openMenu: 'Abrir menú de navegación',
+      closeMenu: 'Cerrar menú de navegación',
+    },
+    status: {
+      treasury: 'Tesorería',
+      printerPending: 'Impresora pendiente',
+      devMode: 'Modo dev',
+    },
+    sections: {
+      main: 'Principal',
+      merchantSetup: 'Configuración del comercio',
+      help: 'Ayuda',
+      advanced: 'Avanzado',
+    },
+    items: {
+      home: 'Inicio',
+      sellVoucher: 'Vender vale',
+      voucherHistory: 'Historial de vales',
+      treasuryWallet: 'Billetera de tesorería',
+      printerSetup: 'Configurar impresora',
+      appSettings: 'Ajustes de la app',
+      howToSellVoucher: 'Cómo vender un vale',
+      howCustomersRedeem: 'Cómo redimen los clientes',
+      faq: 'Preguntas frecuentes',
+      support: 'Soporte',
+      communities: 'Comunidades',
+      socialMedia: 'Redes sociales',
+      developerTools: 'Herramientas de desarrollo',
+    },
+    common: {
+      comingSoon: 'Próximamente',
+    },
+  },
 };
 
 export default es;

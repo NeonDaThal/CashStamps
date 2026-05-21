@@ -8,7 +8,7 @@
           round
           icon="menu"
           class="menu-button"
-          aria-label="Open navigation menu"
+          :aria-label="t('layout.navigation.openMenu')"
           @click="isDrawerOpen = !isDrawerOpen"
         />
 
@@ -16,8 +16,8 @@
           <div class="brand-mark">BCH</div>
 
           <div class="brand-copy">
-            <div class="brand-title">Bitcoin Cash Vouchers</div>
-            <div class="brand-subtitle">Merchant app</div>
+            <div class="brand-title">{{ t('layout.brand.title') }}</div>
+            <div class="brand-subtitle">{{ t('layout.brand.subtitle') }}</div>
           </div>
         </div>
 
@@ -65,7 +65,7 @@
             round
             icon="close"
             class="drawer-close-button"
-            aria-label="Close navigation menu"
+            :aria-label="t('layout.navigation.closeMenu')"
             @click="closeDrawer"
           />
         </div>
@@ -74,52 +74,68 @@
           <div class="drawer-brand-mark">BCH</div>
 
           <div class="drawer-heading-copy">
-            <div class="drawer-title">Bitcoin Cash Vouchers</div>
-            <div class="drawer-subtitle">Merchant voucher app</div>
+            <div class="drawer-title">{{ t('layout.brand.title') }}</div>
+            <div class="drawer-subtitle">
+              {{ t('layout.drawer.subtitle') }}
+            </div>
           </div>
         </div>
 
         <div class="drawer-status-row">
-          <q-badge class="status-chip status-green">Treasury</q-badge>
-          <q-badge class="status-chip status-grey">Printer pending</q-badge>
-          <q-badge class="status-chip status-dark">Dev mode</q-badge>
+          <q-badge class="status-chip status-green">
+            {{ t('layout.status.treasury') }}
+          </q-badge>
+          <q-badge class="status-chip status-grey">
+            {{ t('layout.status.printerPending') }}
+          </q-badge>
+          <q-badge class="status-chip status-dark">
+            {{ t('layout.status.devMode') }}
+          </q-badge>
         </div>
 
         <q-separator class="q-my-md" />
 
         <q-list class="drawer-list">
-          <q-item-label header>Main</q-item-label>
+          <q-item-label header>{{ t('layout.sections.main') }}</q-item-label>
 
           <q-item clickable exact to="/" @click="closeDrawer">
             <q-item-section avatar>
               <q-icon name="home" />
             </q-item-section>
-            <q-item-section>Home</q-item-section>
+            <q-item-section>{{ t('layout.items.home') }}</q-item-section>
           </q-item>
 
           <q-item clickable to="/sell-voucher" @click="closeDrawer">
             <q-item-section avatar>
               <q-icon name="point_of_sale" />
             </q-item-section>
-            <q-item-section>Sell Voucher</q-item-section>
+            <q-item-section>
+              {{ t('layout.items.sellVoucher') }}
+            </q-item-section>
           </q-item>
 
           <q-item clickable to="/voucher-history" @click="closeDrawer">
             <q-item-section avatar>
               <q-icon name="receipt_long" />
             </q-item-section>
-            <q-item-section>Voucher History</q-item-section>
+            <q-item-section>
+              {{ t('layout.items.voucherHistory') }}
+            </q-item-section>
           </q-item>
 
           <q-separator spaced />
 
-          <q-item-label header>Merchant Setup</q-item-label>
+          <q-item-label header>
+            {{ t('layout.sections.merchantSetup') }}
+          </q-item-label>
 
           <q-item clickable to="/treasury-settings" @click="closeDrawer">
             <q-item-section avatar>
               <q-icon name="account_balance_wallet" />
             </q-item-section>
-            <q-item-section>Treasury Wallet</q-item-section>
+            <q-item-section>
+              {{ t('layout.items.treasuryWallet') }}
+            </q-item-section>
           </q-item>
 
           <q-item disable class="placeholder-item">
@@ -127,8 +143,10 @@
               <q-icon name="print" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>Printer Setup</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>{{ t('layout.items.printerSetup') }}</q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
@@ -137,22 +155,28 @@
               <q-icon name="settings" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>App Settings</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>{{ t('layout.items.appSettings') }}</q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
           <q-separator spaced />
 
-          <q-item-label header>Help</q-item-label>
+          <q-item-label header>{{ t('layout.sections.help') }}</q-item-label>
 
           <q-item disable class="placeholder-item">
             <q-item-section avatar>
               <q-icon name="school" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>How to Sell a Voucher</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>
+                {{ t('layout.items.howToSellVoucher') }}
+              </q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
@@ -161,8 +185,12 @@
               <q-icon name="qr_code_scanner" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>How Customers Redeem</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>
+                {{ t('layout.items.howCustomersRedeem') }}
+              </q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
@@ -171,8 +199,10 @@
               <q-icon name="help_outline" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>FAQ</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>{{ t('layout.items.faq') }}</q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
@@ -181,8 +211,10 @@
               <q-icon name="support_agent" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>Support</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>{{ t('layout.items.support') }}</q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
@@ -191,8 +223,10 @@
               <q-icon name="groups" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>Communities</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>{{ t('layout.items.communities') }}</q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
@@ -201,22 +235,30 @@
               <q-icon name="share" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>Social Media</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>{{ t('layout.items.socialMedia') }}</q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
 
           <q-separator spaced />
 
-          <q-item-label header>Advanced</q-item-label>
+          <q-item-label header>
+            {{ t('layout.sections.advanced') }}
+          </q-item-label>
 
           <q-item disable class="placeholder-item">
             <q-item-section avatar>
               <q-icon name="developer_mode" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>Developer Tools</q-item-label>
-              <q-item-label caption>Coming soon</q-item-label>
+              <q-item-label>
+                {{ t('layout.items.developerTools') }}
+              </q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
             </q-item-section>
           </q-item>
         </q-list>

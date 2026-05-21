@@ -458,6 +458,48 @@ const en = {
     uriCopied: 'Treasury payment URI copied.',
     copyFailed: 'Could not copy to clipboard.',
   },
+  layout: {
+    brand: {
+      title: 'Bitcoin Cash Vouchers',
+      subtitle: 'Merchant app',
+    },
+    drawer: {
+      subtitle: 'Merchant voucher app',
+    },
+    navigation: {
+      openMenu: 'Open navigation menu',
+      closeMenu: 'Close navigation menu',
+    },
+    status: {
+      treasury: 'Treasury',
+      printerPending: 'Printer pending',
+      devMode: 'Dev mode',
+    },
+    sections: {
+      main: 'Main',
+      merchantSetup: 'Merchant Setup',
+      help: 'Help',
+      advanced: 'Advanced',
+    },
+    items: {
+      home: 'Home',
+      sellVoucher: 'Sell Voucher',
+      voucherHistory: 'Voucher History',
+      treasuryWallet: 'Treasury Wallet',
+      printerSetup: 'Printer Setup',
+      appSettings: 'App Settings',
+      howToSellVoucher: 'How to Sell a Voucher',
+      howCustomersRedeem: 'How Customers Redeem',
+      faq: 'FAQ',
+      support: 'Support',
+      communities: 'Communities',
+      socialMedia: 'Social Media',
+      developerTools: 'Developer Tools',
+    },
+    common: {
+      comingSoon: 'Coming soon',
+    },
+  },
 };
 
 export default en;
