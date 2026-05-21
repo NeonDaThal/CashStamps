@@ -525,6 +525,22 @@ const es = {
       comingSoon: 'Próximamente',
     },
   },
+  receiptPreview: {
+    privateKeyWarning:
+      'Solo vista previa de desarrollo. Este recibo contiene un QR de clave privada barrible. Cualquier persona que lo escanee o copie puede barrer los fondos del vale.',
+    loading: 'Construyendo vista previa del recibo...',
+    receiptSubtitle: 'Recibo de vale BCH barrible',
+    voucherValueLoaded: 'Valor cargado en el vale',
+    scanToSweep: 'Escanear para barrer',
+    qrAlt: 'Código QR de vale BCH barrible',
+    reference: 'Referencia',
+    issued: 'Emitido',
+    customerPaid: 'El cliente pagó',
+    voucherAddress: 'Dirección del vale',
+    keepSafeUntilRedeemed: 'Guardar de forma segura hasta redimir',
+    couldNotBuildPreview:
+      'No se pudo construir la vista previa del recibo del vale.',
+  },
 };
 
 export default es;

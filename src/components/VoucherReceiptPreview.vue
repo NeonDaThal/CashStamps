@@ -9,14 +9,15 @@
         <q-icon name="warning" />
       </template>
 
-      Development preview only. This receipt contains a sweepable private key
-      QR. Anyone who scans or copies it can sweep the voucher funds.
+      {{ t('receiptPreview.privateKeyWarning') }}
     </q-banner>
 
     <q-card flat bordered class="voucher-receipt-preview-card">
       <q-card-section v-if="isLoading" class="loading-state">
         <q-spinner size="32px" color="primary" />
-        <div class="q-mt-sm text-grey-7">Building receipt preview...</div>
+        <div class="q-mt-sm text-grey-7">
+          {{ t('receiptPreview.loading') }}
+        </div>
       </q-card-section>
 
       <q-card-section v-else-if="errorMessage">
@@ -34,13 +35,17 @@
           <div class="receipt-header">
             <div class="receipt-brand">Bitcoin Cash</div>
             <div class="receipt-title">{{ receiptData.title }}</div>
-            <div class="receipt-subtitle">Sweepable BCH voucher receipt</div>
+            <div class="receipt-subtitle">
+              {{ t('receiptPreview.receiptSubtitle') }}
+            </div>
           </div>
 
           <div class="receipt-divider"></div>
 
           <div class="receipt-value">
-            <div class="receipt-value-label">Voucher value loaded</div>
+            <div class="receipt-value-label">
+              {{ t('receiptPreview.voucherValueLoaded') }}
+            </div>
             <div class="receipt-value-main">
               {{ receiptData.loadedFiatLabel }}
             </div>
@@ -52,13 +57,15 @@
           <div class="receipt-divider"></div>
 
           <div class="receipt-qr-section">
-            <div class="qr-label">Scan to sweep</div>
+            <div class="qr-label">
+              {{ t('receiptPreview.scanToSweep') }}
+            </div>
 
             <div class="receipt-qr-wrap">
               <img
                 v-if="qrCodeDataUrl"
                 :src="qrCodeDataUrl"
-                alt="Sweepable BCH voucher QR code"
+                :alt="t('receiptPreview.qrAlt')"
                 class="receipt-qr"
               />
             </div>
@@ -75,22 +82,24 @@
           <div class="receipt-divider"></div>
 
           <div class="receipt-row">
-            <span>Reference</span>
+            <span>{{ t('receiptPreview.reference') }}</span>
             <strong>{{ receiptData.serial }}</strong>
           </div>
 
           <div class="receipt-row">
-            <span>Issued</span>
+            <span>{{ t('receiptPreview.issued') }}</span>
             <strong>{{ receiptData.issuedAtLabel }}</strong>
           </div>
 
           <div class="receipt-row">
-            <span>Customer paid</span>
+            <span>{{ t('receiptPreview.customerPaid') }}</span>
             <strong>{{ receiptData.customerPaidLabel }}</strong>
           </div>
 
           <div class="receipt-block">
-            <div class="receipt-label">Voucher address</div>
+            <div class="receipt-label">
+              {{ t('receiptPreview.voucherAddress') }}
+            </div>
             <div class="receipt-address">
               {{ receiptData.address }}
             </div>
@@ -102,7 +111,9 @@
             {{ receiptData.supportNote }}
           </p>
 
-          <div class="receipt-footer">Keep safe until redeemed</div>
+          <div class="receipt-footer">
+            {{ t('receiptPreview.keepSafeUntilRedeemed') }}
+          </div>
         </div>
       </q-card-section>
     </q-card>
@@ -111,6 +122,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import QRCode from 'qrcode/lib/browser';
 
 import type { VoucherRecord } from 'src/types/voucher';
@@ -128,6 +140,8 @@ const props = withDefaults(
     showPrivateKeyWarning: true,
   }
 );
+
+const { t } = useI18n({ useScope: 'global' });
 
 const receiptData = ref<VoucherReceiptData | null>(null);
 const qrCodeDataUrl = ref('');
@@ -159,7 +173,7 @@ async function buildReceiptPreview(): Promise<void> {
     errorMessage.value =
       error instanceof Error
         ? error.message
-        : 'Could not build voucher receipt preview.';
+        : t('receiptPreview.couldNotBuildPreview');
   } finally {
     isLoading.value = false;
   }

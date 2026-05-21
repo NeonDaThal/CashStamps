@@ -500,6 +500,21 @@ const en = {
       comingSoon: 'Coming soon',
     },
   },
+  receiptPreview: {
+    privateKeyWarning:
+      'Development preview only. This receipt contains a sweepable private key QR. Anyone who scans or copies it can sweep the voucher funds.',
+    loading: 'Building receipt preview...',
+    receiptSubtitle: 'Sweepable BCH voucher receipt',
+    voucherValueLoaded: 'Voucher value loaded',
+    scanToSweep: 'Scan to sweep',
+    qrAlt: 'Sweepable BCH voucher QR code',
+    reference: 'Reference',
+    issued: 'Issued',
+    customerPaid: 'Customer paid',
+    voucherAddress: 'Voucher address',
+    keepSafeUntilRedeemed: 'Keep safe until redeemed',
+    couldNotBuildPreview: 'Could not build voucher receipt preview.',
+  },
 };
 
 export default en;
