@@ -439,6 +439,25 @@ const en = {
       restoreToolCleared: 'Treasury restore tool cleared.',
     },
   },
+  treasuryTopUpQr: {
+    title: 'Treasury Top-Up QR',
+    subtitle:
+      'Scan this QR code from another BCH wallet to top up the merchant treasury wallet.',
+    receiveOnlyNotice:
+      'Receive-only QR. This lets the merchant add BCH to the treasury wallet. It does not spend or broadcast anything from this app.',
+    qrAlt: 'Treasury top-up QR code',
+    qrUnavailable: 'QR code unavailable.',
+    treasuryAddress: 'Treasury address',
+    paymentUri: 'BCH payment URI',
+    qrGenerated: 'QR generated',
+    copyAddress: 'Copy Address',
+    copyPaymentUri: 'Copy Payment URI',
+    uriLabel: 'BCH Voucher Treasury',
+    uriMessage: 'Top up merchant treasury wallet',
+    addressCopied: 'Treasury address copied.',
+    uriCopied: 'Treasury payment URI copied.',
+    copyFailed: 'Could not copy to clipboard.',
+  },
 };
 
 export default en;

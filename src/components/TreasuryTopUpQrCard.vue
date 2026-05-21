@@ -1,10 +1,11 @@
 <template>
   <q-card v-if="treasuryAddress" flat bordered class="q-mb-md">
     <q-card-section>
-      <div class="text-h5 q-mb-xs">Treasury Top-Up QR</div>
+      <div class="text-h5 q-mb-xs">
+        {{ t('treasuryTopUpQr.title') }}
+      </div>
       <p class="text-grey-7 q-mb-none">
-        Scan this QR code from another BCH wallet to top up the merchant
-        treasury wallet.
+        {{ t('treasuryTopUpQr.subtitle') }}
       </p>
     </q-card-section>
 
@@ -16,8 +17,7 @@
           <q-icon name="qr_code" />
         </template>
 
-        Receive-only QR. This lets the merchant add BCH to the treasury wallet.
-        It does not spend or broadcast anything from this app.
+        {{ t('treasuryTopUpQr.receiveOnlyNotice') }}
       </q-banner>
 
       <div class="row items-start q-col-gutter-md">
@@ -29,12 +29,14 @@
               <q-img
                 v-else-if="qrDataUrl"
                 :src="qrDataUrl"
-                alt="Treasury top-up QR code"
+                :alt="t('treasuryTopUpQr.qrAlt')"
                 style="width: 220px; height: 220px"
                 fit="contain"
               />
 
-              <div v-else class="text-negative">QR code unavailable.</div>
+              <div v-else class="text-negative">
+                {{ t('treasuryTopUpQr.qrUnavailable') }}
+              </div>
             </q-card-section>
           </q-card>
         </div>
@@ -43,7 +45,9 @@
           <q-list bordered separator>
             <q-item>
               <q-item-section>
-                <q-item-label caption>Treasury address</q-item-label>
+                <q-item-label caption>
+                  {{ t('treasuryTopUpQr.treasuryAddress') }}
+                </q-item-label>
                 <q-item-label class="text-break">
                   {{ topUpUri.address }}
                 </q-item-label>
@@ -52,7 +56,9 @@
 
             <q-item>
               <q-item-section>
-                <q-item-label caption>BCH payment URI</q-item-label>
+                <q-item-label caption>
+                  {{ t('treasuryTopUpQr.paymentUri') }}
+                </q-item-label>
                 <q-item-label class="text-break">
                   {{ topUpUri.uri }}
                 </q-item-label>
@@ -61,7 +67,9 @@
 
             <q-item>
               <q-item-section>
-                <q-item-label caption>QR generated</q-item-label>
+                <q-item-label caption>
+                  {{ t('treasuryTopUpQr.qrGenerated') }}
+                </q-item-label>
                 <q-item-label>
                   {{ formatDateTime(topUpUri.createdAt) }}
                 </q-item-label>
@@ -74,7 +82,7 @@
               <q-btn
                 color="primary"
                 outline
-                label="Copy Address"
+                :label="t('treasuryTopUpQr.copyAddress')"
                 @click="handleCopyAddress"
               />
             </div>
@@ -83,7 +91,7 @@
               <q-btn
                 color="primary"
                 outline
-                label="Copy Payment URI"
+                :label="t('treasuryTopUpQr.copyPaymentUri')"
                 @click="handleCopyUri"
               />
             </div>
@@ -102,6 +110,7 @@
 import QRCode from 'qrcode/lib/browser';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 
 import { createTreasuryTopUpUri } from 'src/services/treasury-topup-uri';
 
@@ -110,6 +119,7 @@ const props = defineProps<{
 }>();
 
 const $q = useQuasar();
+const { t } = useI18n({ useScope: 'global' });
 
 const qrDataUrl = ref('');
 const isGeneratingQr = ref(false);
@@ -117,8 +127,6 @@ const isGeneratingQr = ref(false);
 const topUpUri = computed(() =>
   createTreasuryTopUpUri({
     address: props.treasuryAddress,
-    label: 'BCH Voucher Treasury',
-    message: 'Top up merchant treasury wallet',
   })
 );
 
@@ -161,17 +169,20 @@ async function copyToClipboard(
 
     $q.notify({
       type: 'negative',
-      message: 'Could not copy to clipboard.',
+      message: t('treasuryTopUpQr.copyFailed'),
     });
   }
 }
 
 function handleCopyAddress(): void {
-  void copyToClipboard(topUpUri.value.address, 'Treasury address copied.');
+  void copyToClipboard(
+    topUpUri.value.address,
+    t('treasuryTopUpQr.addressCopied')
+  );
 }
 
 function handleCopyUri(): void {
-  void copyToClipboard(topUpUri.value.uri, 'Treasury payment URI copied.');
+  void copyToClipboard(topUpUri.value.uri, t('treasuryTopUpQr.uriCopied'));
 }
 
 function formatDateTime(value: string): string {

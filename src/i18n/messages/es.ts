@@ -464,6 +464,25 @@ const es = {
       restoreToolCleared: 'Herramienta de restauración de tesorería limpiada.',
     },
   },
+  treasuryTopUpQr: {
+    title: 'QR de recarga de tesorería',
+    subtitle:
+      'Escanea este código QR desde otra billetera BCH para recargar la billetera de tesorería del comercio.',
+    receiveOnlyNotice:
+      'QR solo para recibir. Esto permite que el comercio añada BCH a la billetera de tesorería. No gasta ni transmite nada desde esta app.',
+    qrAlt: 'Código QR de recarga de tesorería',
+    qrUnavailable: 'Código QR no disponible.',
+    treasuryAddress: 'Dirección de tesorería',
+    paymentUri: 'URI de pago BCH',
+    qrGenerated: 'QR generado',
+    copyAddress: 'Copiar dirección',
+    copyPaymentUri: 'Copiar URI de pago',
+    uriLabel: 'Tesorería de vales BCH',
+    uriMessage: 'Recargar billetera de tesorería del comercio',
+    addressCopied: 'Dirección de tesorería copiada.',
+    uriCopied: 'URI de pago de tesorería copiado.',
+    copyFailed: 'No se pudo copiar al portapapeles.',
+  },
 };
 
 export default es;
