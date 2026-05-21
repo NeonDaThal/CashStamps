@@ -504,6 +504,7 @@ const en = {
     privateKeyWarning:
       'Development preview only. This receipt contains a sweepable private key QR. Anyone who scans or copies it can sweep the voucher funds.',
     loading: 'Building receipt preview...',
+    receiptTitle: 'BCH Voucher',
     receiptSubtitle: 'Sweepable BCH voucher receipt',
     voucherValueLoaded: 'Voucher value loaded',
     scanToSweep: 'Scan to sweep',
@@ -513,7 +514,22 @@ const en = {
     customerPaid: 'Customer paid',
     voucherAddress: 'Voucher address',
     keepSafeUntilRedeemed: 'Keep safe until redeemed',
+    redemptionInstruction:
+      'Scan this QR code with a Bitcoin Cash wallet that supports private key sweeping.',
+    cashWarning:
+      'Treat this receipt like cash. Anyone with this QR code can sweep the funds.',
+    supportNote:
+      'Keep this receipt safe until the BCH has been swept into your own wallet.',
     couldNotBuildPreview: 'Could not build voucher receipt preview.',
+    errors: {
+      invalidDerivationIndex: 'Voucher does not have a valid derivation index.',
+      missingSerial: 'Voucher does not have a serial/reference number.',
+      missingFiatCurrency: 'Voucher does not have a fiat currency.',
+      invalidBchAmount: 'Voucher does not have a valid BCH amount loaded.',
+      missingAddress: 'Voucher does not have a BCH address.',
+      addressMismatch:
+        'Voucher address does not match the exported voucher key address.',
+    },
   },
 };
 

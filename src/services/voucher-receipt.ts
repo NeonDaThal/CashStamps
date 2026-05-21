@@ -41,11 +41,21 @@ export interface VoucherReceiptData {
   isDevelopmentPrivateKeyPreview: true;
 }
 
+export interface VoucherReceiptErrorMessages {
+  invalidDerivationIndex: string;
+  missingSerial: string;
+  missingFiatCurrency: string;
+  invalidBchAmount: string;
+  missingAddress: string;
+  addressMismatch: string;
+}
+
 export interface BuildVoucherReceiptDataOptions {
   title?: string;
   redemptionInstruction?: string;
   cashWarning?: string;
   supportNote?: string;
+  errors?: Partial<VoucherReceiptErrorMessages>;
 }
 
 const DEFAULT_RECEIPT_TITLE = 'BCH Voucher';
@@ -58,6 +68,25 @@ const DEFAULT_CASH_WARNING =
 
 const DEFAULT_SUPPORT_NOTE =
   'Keep this receipt safe until the BCH has been swept into your own wallet.';
+
+const DEFAULT_ERROR_MESSAGES: VoucherReceiptErrorMessages = {
+  invalidDerivationIndex: 'Voucher does not have a valid derivation index.',
+  missingSerial: 'Voucher does not have a serial/reference number.',
+  missingFiatCurrency: 'Voucher does not have a fiat currency.',
+  invalidBchAmount: 'Voucher does not have a valid BCH amount loaded.',
+  missingAddress: 'Voucher does not have a BCH address.',
+  addressMismatch:
+    'Voucher address does not match the exported voucher key address.',
+};
+
+function getErrorMessages(
+  options: BuildVoucherReceiptDataOptions
+): VoucherReceiptErrorMessages {
+  return {
+    ...DEFAULT_ERROR_MESSAGES,
+    ...options.errors,
+  };
+}
 
 function formatFiatAmount(amountMinor: number, currency: string): string {
   return new Intl.NumberFormat('en-GB', {
@@ -89,24 +118,27 @@ function getReceiptIssuedAt(voucher: VoucherRecord): string {
   );
 }
 
-function assertUsableVoucherForReceipt(voucher: VoucherRecord): void {
+function assertUsableVoucherForReceipt(
+  voucher: VoucherRecord,
+  errorMessages: VoucherReceiptErrorMessages
+): void {
   if (
     !Number.isInteger(voucher.derivationIndex) ||
     voucher.derivationIndex < 0
   ) {
-    throw new Error('Voucher does not have a valid derivation index.');
+    throw new Error(errorMessages.invalidDerivationIndex);
   }
 
   if (!voucher.serial) {
-    throw new Error('Voucher does not have a serial/reference number.');
+    throw new Error(errorMessages.missingSerial);
   }
 
   if (!voucher.fiatCurrency) {
-    throw new Error('Voucher does not have a fiat currency.');
+    throw new Error(errorMessages.missingFiatCurrency);
   }
 
   if (!Number.isFinite(voucher.finalBchSats) || voucher.finalBchSats <= 0) {
-    throw new Error('Voucher does not have a valid BCH amount loaded.');
+    throw new Error(errorMessages.invalidBchAmount);
   }
 }
 
@@ -114,14 +146,16 @@ export async function buildVoucherReceiptData(
   voucher: VoucherRecord,
   options: BuildVoucherReceiptDataOptions = {}
 ): Promise<VoucherReceiptData> {
-  assertUsableVoucherForReceipt(voucher);
+  const errorMessages = getErrorMessages(options);
+
+  assertUsableVoucherForReceipt(voucher, errorMessages);
 
   const wifExport = await exportVoucherKeyAtIndex(voucher.derivationIndex);
 
   const voucherAddress = voucher.address || wifExport.address;
 
   if (!voucherAddress) {
-    throw new Error('Voucher does not have a BCH address.');
+    throw new Error(errorMessages.missingAddress);
   }
 
   if (
@@ -129,9 +163,7 @@ export async function buildVoucherReceiptData(
     wifExport.address &&
     voucher.address !== wifExport.address
   ) {
-    throw new Error(
-      'Voucher address does not match the exported voucher key address.'
-    );
+    throw new Error(errorMessages.addressMismatch);
   }
 
   const issuedAt = getReceiptIssuedAt(voucher);

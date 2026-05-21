@@ -141,7 +141,7 @@ const props = withDefaults(
   }
 );
 
-const { t } = useI18n({ useScope: 'global' });
+const { locale, t } = useI18n({ useScope: 'global' });
 
 const receiptData = ref<VoucherReceiptData | null>(null);
 const qrCodeDataUrl = ref('');
@@ -155,7 +155,22 @@ async function buildReceiptPreview(): Promise<void> {
   qrCodeDataUrl.value = '';
 
   try {
-    const builtReceiptData = await buildVoucherReceiptData(props.voucher);
+    const builtReceiptData = await buildVoucherReceiptData(props.voucher, {
+      title: t('receiptPreview.receiptTitle'),
+      redemptionInstruction: t('receiptPreview.redemptionInstruction'),
+      cashWarning: t('receiptPreview.cashWarning'),
+      supportNote: t('receiptPreview.supportNote'),
+      errors: {
+        invalidDerivationIndex: t(
+          'receiptPreview.errors.invalidDerivationIndex'
+        ),
+        missingSerial: t('receiptPreview.errors.missingSerial'),
+        missingFiatCurrency: t('receiptPreview.errors.missingFiatCurrency'),
+        invalidBchAmount: t('receiptPreview.errors.invalidBchAmount'),
+        missingAddress: t('receiptPreview.errors.missingAddress'),
+        addressMismatch: t('receiptPreview.errors.addressMismatch'),
+      },
+    });
 
     const builtQrCodeDataUrl = await QRCode.toDataURL(
       builtReceiptData.qrPayload,
@@ -180,7 +195,7 @@ async function buildReceiptPreview(): Promise<void> {
 }
 
 watch(
-  () => props.voucher,
+  [() => props.voucher, () => locale.value],
   () => {
     void buildReceiptPreview();
   },

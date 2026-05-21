@@ -529,6 +529,7 @@ const es = {
     privateKeyWarning:
       'Solo vista previa de desarrollo. Este recibo contiene un QR de clave privada barrible. Cualquier persona que lo escanee o copie puede barrer los fondos del vale.',
     loading: 'Construyendo vista previa del recibo...',
+    receiptTitle: 'Vale BCH',
     receiptSubtitle: 'Recibo de vale BCH barrible',
     voucherValueLoaded: 'Valor cargado en el vale',
     scanToSweep: 'Escanear para barrer',
@@ -538,8 +539,24 @@ const es = {
     customerPaid: 'El cliente pagó',
     voucherAddress: 'Dirección del vale',
     keepSafeUntilRedeemed: 'Guardar de forma segura hasta redimir',
+    redemptionInstruction:
+      'Escanea este código QR con una billetera de Bitcoin Cash compatible con barrido de claves privadas.',
+    cashWarning:
+      'Trata este recibo como dinero en efectivo. Cualquier persona con este código QR puede barrer los fondos.',
+    supportNote:
+      'Guarda este recibo de forma segura hasta que el BCH haya sido barrido a tu propia billetera.',
     couldNotBuildPreview:
       'No se pudo construir la vista previa del recibo del vale.',
+    errors: {
+      invalidDerivationIndex:
+        'El vale no tiene un índice de derivación válido.',
+      missingSerial: 'El vale no tiene número de serie/referencia.',
+      missingFiatCurrency: 'El vale no tiene una moneda fiat.',
+      invalidBchAmount: 'El vale no tiene un importe BCH cargado válido.',
+      missingAddress: 'El vale no tiene una dirección BCH.',
+      addressMismatch:
+        'La dirección del vale no coincide con la dirección de la clave de vale exportada.',
+    },
   },
 };
 
