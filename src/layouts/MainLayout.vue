@@ -34,13 +34,17 @@
           <q-tooltip>{{ t('language.label') }}</q-tooltip>
 
           <q-menu auto-close>
-            <q-list style="min-width: 140px">
+            <q-list style="min-width: 150px">
               <q-item clickable @click="setLocale('en')">
                 <q-item-section>{{ t('language.english') }}</q-item-section>
               </q-item>
 
               <q-item clickable @click="setLocale('es')">
                 <q-item-section>{{ t('language.spanish') }}</q-item-section>
+              </q-item>
+
+              <q-item clickable @click="setLocale('de')">
+                <q-item-section>{{ t('language.german') }}</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -296,6 +300,10 @@ const localeShortLabel = computed((): string => {
 
   if (localeMain === 'es') {
     return 'ES';
+  }
+
+  if (localeMain === 'de') {
+    return 'DE';
   }
 
   return 'EN';
