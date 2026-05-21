@@ -22,6 +22,7 @@ const es = {
     english: 'English',
     spanish: 'Español',
     german: 'Deutsch',
+    portuguese: 'Português',
   },
 
   home: {

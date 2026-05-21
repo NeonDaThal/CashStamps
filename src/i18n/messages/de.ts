@@ -22,6 +22,7 @@ const de = {
     english: 'English',
     spanish: 'Español',
     german: 'Deutsch',
+    portuguese: 'Português',
   },
 
   home: {

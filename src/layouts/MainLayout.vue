@@ -46,6 +46,10 @@
               <q-item clickable @click="setLocale('de')">
                 <q-item-section>{{ t('language.german') }}</q-item-section>
               </q-item>
+
+              <q-item clickable @click="setLocale('pt')">
+                <q-item-section>{{ t('language.portuguese') }}</q-item-section>
+              </q-item>
             </q-list>
           </q-menu>
         </q-btn>
@@ -304,6 +308,10 @@ const localeShortLabel = computed((): string => {
 
   if (localeMain === 'de') {
     return 'DE';
+  }
+
+  if (localeMain === 'pt') {
+    return 'PT';
   }
 
   return 'EN';
