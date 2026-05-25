@@ -75,10 +75,10 @@ const en = {
 
   sellPage: {
     hero: {
-      eyebrow: 'Merchant checkout',
+      eyebrow: 'New Voucher',
       title: 'Sell BCH Voucher',
       intro:
-        "Enter the customer's cash amount, review the BCH value, issue the voucher, and present the receipt QR to the customer.",
+        'Enter the cash amount the customer is paying. The app will lock a BCH quote and show a review screen before issuing the voucher. You then present the QR code to the customer.',
     },
     treasury: {
       title: 'Treasury Wallet',
@@ -95,7 +95,7 @@ const en = {
     sale: {
       eyebrow: 'New voucher',
       title: 'Enter sale amount',
-      copy: 'Add the cash amount the customer is paying. The app will lock a BCH quote and show a review screen before issuing the voucher.',
+      copy: 'Enter the cash amount the customer is paying. The app will lock a BCH quote and show a review screen before issuing the voucher. You then present the QR code to the customer.',
     },
     issued: {
       title: 'Voucher issued',

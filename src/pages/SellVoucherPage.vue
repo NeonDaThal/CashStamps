@@ -2,129 +2,56 @@
   <q-page padding class="sell-page">
     <div class="sell-container">
       <section class="sell-hero">
-        <div>
-          <p class="eyebrow">{{ t('sellPage.hero.eyebrow') }}</p>
-          <h1>{{ t('sellPage.hero.title') }}</h1>
-          <p class="intro">
-            {{ t('sellPage.hero.intro') }}
-          </p>
+        <div class="section-heading hero-heading">
+          <div>
+            <p class="eyebrow">{{ t('sellPage.hero.eyebrow') }}</p>
+            <h1>{{ t('sellPage.hero.title') }}</h1>
+          </div>
+
+          <div class="hero-action-icons">
+            <q-btn
+              flat
+              dense
+              round
+              icon="account_balance_wallet"
+              class="hero-icon-button"
+              :aria-label="t('sellPage.treasury.title')"
+              @click="isTreasuryDialogOpen = true"
+            >
+              <q-badge
+                floating
+                rounded
+                :class="
+                  treasuryWallet.isSetup
+                    ? 'quick-action-status-ready'
+                    : 'quick-action-status-muted'
+                "
+              />
+            </q-btn>
+
+            <q-btn
+              flat
+              dense
+              round
+              icon="receipt_long"
+              class="hero-icon-button"
+              :aria-label="t('home.voucherHistory')"
+              to="/voucher-history"
+            />
+          </div>
         </div>
 
-        <q-btn
-          class="history-button"
-          :label="t('home.voucherHistory')"
-          icon="receipt_long"
-          to="/voucher-history"
-          outline
-          no-caps
-        />
-      </section>
+        <p class="intro">
+          {{ t('sellPage.hero.intro') }}
+        </p>
 
-      <q-card flat bordered class="status-card">
-        <q-card-section>
-          <div class="row items-start q-col-gutter-md">
-            <div class="col">
-              <div class="status-heading-row">
-                <div class="status-icon">
-                  <q-icon name="account_balance_wallet" />
-                </div>
-
-                <div>
-                  <div class="text-h6">
-                    {{ t('sellPage.treasury.title') }}
-                  </div>
-                  <p class="text-grey-7 q-mb-none">
-                    {{ t('sellPage.treasury.subtitle') }}
-                  </p>
-                </div>
-              </div>
-
-              <div v-if="treasuryWallet.isSetup" class="q-mt-md">
-                <q-badge class="success-badge q-mb-sm">
-                  {{ t('sellPage.treasury.ready') }}
-                </q-badge>
-
-                <div class="text-body2 text-break q-mb-xs">
-                  <strong>{{ t('sellPage.treasury.address') }}:</strong>
-                  {{ treasuryWallet.address }}
-                </div>
-
-                <div v-if="treasuryBalance" class="text-body2 q-mb-xs">
-                  <strong>{{ t('sellPage.treasury.balance') }}:</strong>
-                  {{ formatBchSats(treasuryBalance.balanceSats) }}
-                </div>
-
-                <div v-if="treasuryBalance" class="text-caption text-grey-7">
-                  {{ t('sellPage.treasury.lastChecked') }}:
-                  {{ formatDateTime(treasuryBalance.checkedAt) }}
-                </div>
-
-                <div v-else class="text-body2 text-grey-7">
-                  {{ t('sellPage.treasury.balanceNotChecked') }}
-                </div>
-              </div>
-
-              <div v-else class="q-mt-md">
-                <q-badge color="grey-7" class="q-mb-sm">
-                  {{ t('sellPage.treasury.notSetUp') }}
-                </q-badge>
-
-                <div class="text-body2 text-grey-7">
-                  {{ t('sellPage.treasury.setUpBeforeUse') }}
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 col-sm-auto column q-gutter-sm">
-              <q-btn
-                class="secondary-button"
-                :label="t('sellPage.treasury.title')"
-                icon="settings"
-                to="/treasury-settings"
-                outline
-                no-caps
-              />
-
-              <q-btn
-                v-if="treasuryWallet.isSetup"
-                class="secondary-button"
-                :label="t('sellPage.treasury.refreshBalance')"
-                icon="refresh"
-                :loading="isCheckingTreasuryBalance"
-                outline
-                no-caps
-                @click="handleRefreshTreasuryBalance"
-              />
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <q-card flat bordered class="sale-card">
-        <q-card-section>
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">{{ t('sellPage.sale.eyebrow') }}</p>
-              <h2>{{ t('sellPage.sale.title') }}</h2>
-            </div>
-
-            <q-icon name="point_of_sale" />
-          </div>
-
-          <p class="section-copy">
-            {{ t('sellPage.sale.copy') }}
-          </p>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-section>
+        <div class="hero-form-wrap">
           <VoucherSaleForm
             :is-submitting="isSubmitting"
             @review-voucher="handleReviewVoucher"
           />
-        </q-card-section>
-      </q-card>
+        </div>
+      </section>
 
       <q-card v-if="lastIssuedVoucher" flat bordered class="issued-card">
         <q-card-section>
@@ -303,6 +230,120 @@
         {{ t('sellPage.safetyNotice') }}
       </q-banner>
 
+      <q-dialog v-model="isTreasuryDialogOpen">
+        <q-card class="treasury-dialog-card">
+          <q-card-section class="row items-center justify-between">
+            <div class="treasury-dialog-title-row">
+              <div class="status-icon">
+                <q-icon name="account_balance_wallet" />
+              </div>
+
+              <div>
+                <div class="text-h6">
+                  {{ t('sellPage.treasury.title') }}
+                </div>
+                <p class="text-grey-7 q-mb-none">
+                  {{ t('sellPage.treasury.subtitle') }}
+                </p>
+              </div>
+            </div>
+
+            <q-btn v-close-popup dense flat round icon="close" />
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <div v-if="treasuryWallet.isSetup">
+              <q-badge class="success-badge q-mb-md">
+                {{ t('sellPage.treasury.ready') }}
+              </q-badge>
+
+              <q-list bordered separator class="dialog-info-list">
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption>
+                      {{ t('sellPage.treasury.address') }}
+                    </q-item-label>
+                    <q-item-label class="text-break">
+                      {{ treasuryWallet.address }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item v-if="treasuryBalance">
+                  <q-item-section>
+                    <q-item-label caption>
+                      {{ t('sellPage.treasury.balance') }}
+                    </q-item-label>
+                    <q-item-label>
+                      {{ formatBchSats(treasuryBalance.balanceSats) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item v-if="treasuryBalance">
+                  <q-item-section>
+                    <q-item-label caption>
+                      {{ t('sellPage.treasury.lastChecked') }}
+                    </q-item-label>
+                    <q-item-label>
+                      {{ formatDateTime(treasuryBalance.checkedAt) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item v-else>
+                  <q-item-section>
+                    <q-item-label caption>
+                      {{ t('sellPage.treasury.balance') }}
+                    </q-item-label>
+                    <q-item-label>
+                      {{ t('sellPage.treasury.balanceNotChecked') }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+
+            <div v-else>
+              <q-badge color="grey-7" class="q-mb-md">
+                {{ t('sellPage.treasury.notSetUp') }}
+              </q-badge>
+
+              <p class="text-grey-7 q-mb-none">
+                {{ t('sellPage.treasury.setUpBeforeUse') }}
+              </p>
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions align="right" class="treasury-dialog-actions">
+            <q-btn
+              class="secondary-button"
+              :label="t('sellPage.treasury.title')"
+              icon="settings"
+              to="/treasury-settings"
+              outline
+              no-caps
+              v-close-popup
+            />
+
+            <q-btn
+              v-if="treasuryWallet.isSetup"
+              class="primary-button"
+              :label="t('sellPage.treasury.refreshBalance')"
+              icon="refresh"
+              :loading="isCheckingTreasuryBalance"
+              no-caps
+              unelevated
+              @click="handleRefreshTreasuryBalance"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
       <SaleConfirmDialog
         v-if="pendingPricing"
         v-model="isConfirmDialogOpen"
@@ -410,6 +451,7 @@ const errorMessage = ref('');
 const isConfirmDialogOpen = ref(false);
 const isProgressDialogOpen = ref(false);
 const isReceiptPreviewDialogOpen = ref(false);
+const isTreasuryDialogOpen = ref(false);
 
 const pendingFiatAmountMinor = ref(0);
 const pendingFiatCurrency = ref('GBP');
@@ -819,8 +861,6 @@ onMounted(() => {
 }
 
 .sell-hero,
-.status-card,
-.sale-card,
 .issued-card {
   background: #ffffff;
   border: 1px solid #dddddd;
@@ -829,11 +869,36 @@ onMounted(() => {
 }
 
 .sell-hero {
-  align-items: flex-start;
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
   padding: 24px;
+}
+
+.hero-heading {
+  justify-content: space-between;
+}
+
+.hero-action-icons {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.hero-icon-button {
+  background: #f0f0f0;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  color: #111111;
+  height: 42px;
+  overflow: hidden;
+  width: 42px;
+}
+
+.hero-icon-button :deep(.q-focus-helper) {
+  border-radius: inherit;
+}
+
+.hero-form-wrap {
+  margin-top: 20px;
 }
 
 .eyebrow {
@@ -845,50 +910,52 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-h1,
-h2 {
+h1 {
   color: #111111;
+  font-size: clamp(32px, 8vw, 48px);
+  font-weight: 900;
+  letter-spacing: -1.2px;
   line-height: 1.08;
   margin: 0;
 }
 
-h1 {
-  font-size: clamp(32px, 8vw, 48px);
-  font-weight: 900;
-  letter-spacing: -1.2px;
-}
-
-h2 {
-  font-size: 26px;
-  font-weight: 850;
-}
-
-.intro,
-.section-copy {
+.intro {
   color: #444444;
   font-size: 16px;
   line-height: 1.45;
   margin: 12px 0 0;
+  max-width: 660px;
 }
 
-.history-button,
-.secondary-button {
-  border-color: #222222;
-  border-radius: 14px;
-  color: #111111;
-  font-weight: 800;
+.quick-action-status-ready,
+.quick-action-status-muted {
+  height: 10px;
+  min-height: 10px;
+  min-width: 10px;
+  padding: 0;
+  right: 6px;
+  top: 6px;
+  width: 10px;
+}
+
+.quick-action-status-ready {
+  background: #00ce1b;
+}
+
+.quick-action-status-muted {
+  background: #8a8a8a;
 }
 
 .status-heading-row,
 .section-heading,
-.issued-heading {
+.issued-heading,
+.treasury-dialog-title-row {
   align-items: flex-start;
   display: flex;
   gap: 14px;
 }
 
 .status-icon,
-.section-heading > .q-icon,
 .issued-heading > .q-icon {
   align-items: center;
   border-radius: 16px;
@@ -900,8 +967,7 @@ h2 {
   width: 46px;
 }
 
-.status-icon,
-.section-heading > .q-icon {
+.status-icon {
   background: #f0f0f0;
   color: #00a816;
 }
@@ -917,8 +983,6 @@ h2 {
   font-weight: 800;
 }
 
-.sale-card :deep(.q-card__section),
-.status-card :deep(.q-card__section),
 .issued-card :deep(.q-card__section) {
   padding: 22px;
 }
@@ -926,7 +990,14 @@ h2 {
 .primary-button {
   background: #00ce1b;
   border-radius: 14px;
-  color: #000000;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.secondary-button {
+  border-color: #222222;
+  border-radius: 14px;
+  color: #111111;
   font-weight: 800;
 }
 
@@ -936,13 +1007,45 @@ h2 {
   overflow: hidden;
 }
 
+.treasury-dialog-card {
+  border-radius: 24px;
+  max-width: 95vw;
+  width: 560px;
+}
+
+.treasury-dialog-card :deep(.q-card__section) {
+  padding: 22px;
+}
+
+.dialog-info-list {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.treasury-dialog-actions {
+  gap: 10px;
+  padding: 14px 22px 18px;
+}
+
 @media (max-width: 640px) {
   .sell-hero {
-    flex-direction: column;
     padding: 22px;
   }
 
-  .history-button {
+  .hero-heading {
+    align-items: flex-start;
+  }
+
+  .hero-action-icons {
+    padding-top: 2px;
+  }
+
+  .treasury-dialog-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .treasury-dialog-actions .q-btn {
     width: 100%;
   }
 }

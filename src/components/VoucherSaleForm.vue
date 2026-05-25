@@ -3,6 +3,7 @@
     <q-input
       v-model.number="fiatAmount"
       type="number"
+      inputmode="decimal"
       min="1"
       step="1"
       :label="t('sellForm.customerCashAmount')"
@@ -24,7 +25,9 @@
             </div>
           </div>
 
-          <q-icon name="currency_bitcoin" />
+          <div class="pricing-logo-wrap" aria-hidden="true">
+            <img :src="bchLogoUrl" alt="" class="pricing-logo" />
+          </div>
         </div>
 
         <div class="preview-grid">
@@ -97,15 +100,6 @@
         unelevated
         no-caps
       />
-
-      <q-btn
-        class="secondary-button"
-        :label="t('sellForm.viewHistory')"
-        icon="receipt_long"
-        to="/voucher-history"
-        outline
-        no-caps
-      />
     </div>
   </q-form>
 </template>
@@ -114,6 +108,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import bchLogoUrl from 'src/assets/bch-logo.png';
 import {
   calculateFakeVoucherPricing,
   formatBasisPointsAsPercent,
@@ -163,6 +158,16 @@ function handleSubmit(): void {
   border-radius: 16px;
 }
 
+.amount-input :deep(input[type='number']) {
+  -moz-appearance: textfield;
+}
+
+.amount-input :deep(input[type='number']::-webkit-inner-spin-button),
+.amount-input :deep(input[type='number']::-webkit-outer-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .pricing-card {
   background: #f7f8f7;
   border-color: #dddddd;
@@ -181,17 +186,25 @@ function handleSubmit(): void {
   margin-bottom: 16px;
 }
 
-.pricing-header .q-icon {
+.pricing-logo-wrap {
   align-items: center;
   background: #00ce1b;
-  border-radius: 14px;
-  color: #000000;
+  border-radius: 50%;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
   display: flex;
   flex: 0 0 42px;
-  font-size: 24px;
   height: 42px;
   justify-content: center;
+  overflow: hidden;
   width: 42px;
+}
+
+.pricing-logo {
+  border-radius: 50%;
+  display: block;
+  height: 82%;
+  object-fit: contain;
+  width: 82%;
 }
 
 .preview-grid {
@@ -230,26 +243,21 @@ function handleSubmit(): void {
 
 .action-row {
   display: flex;
-  gap: 10px;
   justify-content: flex-end;
-}
-
-.primary-button,
-.secondary-button {
-  border-radius: 14px;
-  font-weight: 800;
-  min-height: 46px;
-  padding: 0 18px;
 }
 
 .primary-button {
   background: #00ce1b;
-  color: #000000;
+  border-radius: 14px;
+  color: #ffffff;
+  font-weight: 850;
+  min-height: 48px;
+  overflow: hidden;
+  padding: 0 22px;
 }
 
-.secondary-button {
-  border-color: #222222;
-  color: #111111;
+.primary-button :deep(.q-focus-helper) {
+  border-radius: inherit;
 }
 
 @media (max-width: 640px) {
@@ -261,8 +269,7 @@ function handleSubmit(): void {
     flex-direction: column;
   }
 
-  .primary-button,
-  .secondary-button {
+  .primary-button {
     width: 100%;
   }
 }
