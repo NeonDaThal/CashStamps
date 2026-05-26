@@ -146,15 +146,12 @@
             </q-item-section>
           </q-item>
 
-          <q-item disable class="placeholder-item">
+          <q-item clickable to="/printer-settings" @click="closeDrawer">
             <q-item-section avatar>
               <q-icon name="print" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>{{ t('layout.items.printerSetup') }}</q-item-label>
-              <q-item-label caption>
-                {{ t('layout.common.comingSoon') }}
-              </q-item-label>
+              {{ t('layout.items.printerSetup') }}
             </q-item-section>
           </q-item>
 

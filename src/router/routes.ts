@@ -17,6 +17,10 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/TreasurySettingsPage.vue'),
       },
       {
+        path: 'printer-settings',
+        component: () => import('pages/PrinterSettingsPage.vue'),
+      },
+      {
         path: 'voucher-history',
         component: () => import('pages/VoucherHistoryPage.vue'),
       },
