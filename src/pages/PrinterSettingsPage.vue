@@ -154,7 +154,7 @@
           <div class="section-title">Test printing</div>
           <div class="section-copy">
             These prints are harmless. They do not use voucher records, private
-            keys, WIFs, or receipt data.
+            keys, WIFs, or live receipt data.
           </div>
         </q-card-section>
 
@@ -181,6 +181,15 @@
               :loading="isPrintingQr"
               @click="handlePrintQrTest"
             />
+
+            <q-btn
+              color="dark"
+              icon="receipt_long"
+              label="Print voucher receipt test"
+              :disable="!isBridgeAvailable"
+              :loading="isPrintingVoucherReceipt"
+              @click="handlePrintVoucherReceiptTest"
+            />
           </div>
 
           <q-banner rounded class="warning-banner">
@@ -188,8 +197,8 @@
               <q-icon name="security" />
             </template>
 
-            Voucher/WIF printing is deliberately not connected yet. This page
-            only proves Android Bluetooth ESC/POS printing.
+            Voucher/WIF printing is deliberately not connected yet. The voucher
+            receipt test uses fake receipt data and a harmless QR payload.
           </q-banner>
         </q-card-section>
       </q-card>
@@ -208,6 +217,7 @@ import {
   isAndroidPrinterBridgeAvailable,
   printBluetoothQrTest,
   printBluetoothTextTest,
+  printBluetoothVoucherReceiptTest,
   type AndroidPrinterDevice,
 } from 'src/services/android-printer';
 
@@ -224,6 +234,7 @@ const hasCheckedDevices = ref(false);
 const isCheckingDevices = ref(false);
 const isPrintingText = ref(false);
 const isPrintingQr = ref(false);
+const isPrintingVoucherReceipt = ref(false);
 
 const isBridgeAvailable = computed(() => isAndroidPrinterBridgeAvailable());
 const platformLabel = computed(() => Capacitor.getPlatform());
@@ -331,6 +342,34 @@ async function handlePrintQrTest(): Promise<void> {
     });
   } finally {
     isPrintingQr.value = false;
+  }
+}
+
+async function handlePrintVoucherReceiptTest(): Promise<void> {
+  isPrintingVoucherReceipt.value = true;
+
+  try {
+    const result = await printBluetoothVoucherReceiptTest({
+      name: printerName.value,
+      address: printerAddress.value,
+    });
+
+    $q.notify({
+      type: 'positive',
+      message: result.message || 'Voucher receipt test sent to printer.',
+    });
+  } catch (error) {
+    console.error(error);
+
+    $q.notify({
+      type: 'negative',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Voucher receipt test print failed.',
+    });
+  } finally {
+    isPrintingVoucherReceipt.value = false;
   }
 }
 </script>

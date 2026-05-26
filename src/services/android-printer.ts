@@ -29,6 +29,11 @@ interface BluetoothEscPosPrinterPlugin {
     address?: string;
     qrPayload?: string;
   }): Promise<AndroidPrinterResult>;
+
+  printVoucherReceiptTest(options: {
+    name?: string;
+    address?: string;
+  }): Promise<AndroidPrinterResult>;
 }
 
 export const DEFAULT_JK_5803P_PRINTER = {
@@ -36,8 +41,9 @@ export const DEFAULT_JK_5803P_PRINTER = {
   address: '60:6E:41:45:8C:14',
 } as const;
 
-const BluetoothEscPosPrinter =
-  registerPlugin<BluetoothEscPosPrinterPlugin>('BluetoothEscPosPrinter');
+const BluetoothEscPosPrinter = registerPlugin<BluetoothEscPosPrinterPlugin>(
+  'BluetoothEscPosPrinter'
+);
 
 export function isAndroidPrinterBridgeAvailable(): boolean {
   return Capacitor.getPlatform() === 'android';
@@ -60,7 +66,9 @@ export async function printBluetoothTextTest(options?: {
   text?: string;
 }): Promise<AndroidPrinterResult> {
   if (!isAndroidPrinterBridgeAvailable()) {
-    throw new Error('Android Bluetooth printer bridge is only available in the Android app.');
+    throw new Error(
+      'Android Bluetooth printer bridge is only available in the Android app.'
+    );
   }
 
   return BluetoothEscPosPrinter.printTestPage({
@@ -76,12 +84,30 @@ export async function printBluetoothQrTest(options?: {
   qrPayload?: string;
 }): Promise<AndroidPrinterResult> {
   if (!isAndroidPrinterBridgeAvailable()) {
-    throw new Error('Android Bluetooth printer bridge is only available in the Android app.');
+    throw new Error(
+      'Android Bluetooth printer bridge is only available in the Android app.'
+    );
   }
 
   return BluetoothEscPosPrinter.printQrTest({
     name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
     address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
     qrPayload: options?.qrPayload ?? 'BCH Voucher Printer QR Test',
+  });
+}
+
+export async function printBluetoothVoucherReceiptTest(options?: {
+  name?: string;
+  address?: string;
+}): Promise<AndroidPrinterResult> {
+  if (!isAndroidPrinterBridgeAvailable()) {
+    throw new Error(
+      'Android Bluetooth printer bridge is only available in the Android app.'
+    );
+  }
+
+  return BluetoothEscPosPrinter.printVoucherReceiptTest({
+    name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
+    address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
   });
 }

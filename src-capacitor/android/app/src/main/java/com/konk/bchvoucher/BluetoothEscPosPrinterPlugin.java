@@ -48,7 +48,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
     @PluginMethod
     public void getPairedDevices(PluginCall call) {
-        if (!ensureBluetoothConnectPermission(call, "getPairedDevicesPermissionCallback")) {
+        if (!ensureBluetoothPrinterPermission(call, "getPairedDevicesPermissionCallback")) {
             return;
         }
 
@@ -57,7 +57,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
     @PermissionCallback
     private void getPairedDevicesPermissionCallback(PluginCall call) {
-        if (!hasBluetoothConnectPermission()) {
+        if (!hasBluetoothPrinterPermission()) {
             call.reject("Bluetooth permission was not granted.");
             return;
         }
@@ -67,7 +67,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
     @PluginMethod
     public void printTestPage(PluginCall call) {
-        if (!ensureBluetoothConnectPermission(call, "printTestPagePermissionCallback")) {
+        if (!ensureBluetoothPrinterPermission(call, "printTestPagePermissionCallback")) {
             return;
         }
 
@@ -76,7 +76,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
     @PermissionCallback
     private void printTestPagePermissionCallback(PluginCall call) {
-        if (!hasBluetoothConnectPermission()) {
+        if (!hasBluetoothPrinterPermission()) {
             call.reject("Bluetooth permission was not granted.");
             return;
         }
@@ -86,7 +86,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
     @PluginMethod
     public void printQrTest(PluginCall call) {
-        if (!ensureBluetoothConnectPermission(call, "printQrTestPermissionCallback")) {
+        if (!ensureBluetoothPrinterPermission(call, "printQrTestPermissionCallback")) {
             return;
         }
 
@@ -95,12 +95,31 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
     @PermissionCallback
     private void printQrTestPermissionCallback(PluginCall call) {
-        if (!hasBluetoothConnectPermission()) {
+        if (!hasBluetoothPrinterPermission()) {
             call.reject("Bluetooth permission was not granted.");
             return;
         }
 
         doPrintQrTest(call);
+    }
+
+    @PluginMethod
+    public void printVoucherReceiptTest(PluginCall call) {
+        if (!ensureBluetoothPrinterPermission(call, "printVoucherReceiptTestPermissionCallback")) {
+            return;
+        }
+
+        doPrintVoucherReceiptTest(call);
+    }
+
+    @PermissionCallback
+    private void printVoucherReceiptTestPermissionCallback(PluginCall call) {
+        if (!hasBluetoothPrinterPermission()) {
+            call.reject("Bluetooth permission was not granted.");
+            return;
+        }
+
+        doPrintVoucherReceiptTest(call);
     }
 
     private void doGetPairedDevices(PluginCall call) {
@@ -192,7 +211,30 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         }).start();
     }
 
-    private boolean ensureBluetoothConnectPermission(
+    private void doPrintVoucherReceiptTest(PluginCall call) {
+        final String address = normalisePrinterAddress(
+            call.getString("address", DEFAULT_PRINTER_ADDRESS)
+        );
+        final String printerName = call.getString("name", DEFAULT_PRINTER_NAME);
+
+        new Thread(() -> {
+            try {
+                byte[] bytes = buildVoucherReceiptTestBytes();
+                sendBytesToPrinter(address, bytes);
+
+                JSObject result = new JSObject();
+                result.put("success", true);
+                result.put("printerName", printerName);
+                result.put("address", address);
+                result.put("message", "Voucher receipt test sent to printer.");
+                call.resolve(result);
+            } catch (Exception error) {
+                call.reject("Voucher receipt test print failed: " + error.getMessage());
+            }
+        }).start();
+    }
+
+    private boolean ensureBluetoothPrinterPermission(
         PluginCall call,
         String callbackName
     ) {
@@ -208,7 +250,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         return false;
     }
 
-    private boolean hasBluetoothConnectPermission() {
+    private boolean hasBluetoothPrinterPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return true;
         }
@@ -298,11 +340,66 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         writeBold(output, false);
         writeFeedLines(output, 1);
 
-        writeQrCode(output, qrPayload);
+        writeQrCode(output, qrPayload, 6);
         writeFeedLines(output, 1);
 
         writeTextLine(output, "QR payload is test-only.");
         writeTextLine(output, "No voucher key printed.");
+        writeFeedLines(output, 3);
+
+        return output.toByteArray();
+    }
+
+    private byte[] buildVoucherReceiptTestBytes() throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        String testAddress =
+            "bitcoincash:qptestvoucheraddress000000000000000000000000000";
+        String testQrPayload =
+            "BCH_VOUCHER_TEST_ONLY_REFERENCE_TEST-0001";
+
+        writeInitialize(output);
+
+        writeAlignCenter(output);
+        writeBold(output, true);
+        writeTextLine(output, "BITCOIN CASH");
+        writeTextLine(output, "BCH VOUCHER");
+        writeBold(output, false);
+        writeTextLine(output, "TEST RECEIPT - NOT REAL");
+        writeDivider(output);
+
+        writeTextLine(output, "VALUE LOADED");
+        writeBold(output, true);
+        writeTextLine(output, "GBP 10.00");
+        writeBold(output, false);
+        writeTextLine(output, "0.01234567 BCH");
+        writeDivider(output);
+
+        writeTextLine(output, "SCAN TO TEST QR");
+        writeFeedLines(output, 1);
+        writeQrCode(output, testQrPayload, 5);
+        writeFeedLines(output, 1);
+        writeWrappedText(output, "This QR is test-only. It does not contain a voucher key.", 32);
+        writeDivider(output);
+
+        writeAlignLeft(output);
+        writeKeyValueLine(output, "Reference", "TEST-0001");
+        writeKeyValueLine(output, "Issued", "TEST MODE");
+        writeKeyValueLine(output, "Customer Paid", "GBP 11.00");
+        writeKeyValueLine(output, "Loaded", "GBP 10.00");
+        writeKeyValueLine(output, "Printer", DEFAULT_PRINTER_NAME);
+
+        writeFeedLines(output, 1);
+        writeTextLine(output, "Voucher Address:");
+        writeWrappedText(output, testAddress, 32);
+        writeDivider(output);
+
+        writeAlignCenter(output);
+        writeBold(output, true);
+        writeWrappedText(output, "WARNING: TREAT A REAL VOUCHER LIKE CASH.", 32);
+        writeBold(output, false);
+        writeFeedLines(output, 1);
+        writeWrappedText(output, "Keep the receipt safe until the voucher is redeemed.", 32);
         writeFeedLines(output, 3);
 
         return output.toByteArray();
@@ -337,14 +434,68 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         output.write(0x0A);
     }
 
+    private void writeWrappedText(
+        ByteArrayOutputStream output,
+        String text,
+        int maxChars
+    ) throws IOException {
+        if (text == null || text.length() == 0) {
+            writeTextLine(output, "");
+            return;
+        }
+
+        String remaining = text.trim();
+
+        while (remaining.length() > maxChars) {
+            int splitIndex = remaining.lastIndexOf(' ', maxChars);
+
+            if (splitIndex <= 0) {
+                splitIndex = maxChars;
+            }
+
+            writeTextLine(output, remaining.substring(0, splitIndex).trim());
+            remaining = remaining.substring(splitIndex).trim();
+        }
+
+        if (remaining.length() > 0) {
+            writeTextLine(output, remaining);
+        }
+    }
+
+    private void writeKeyValueLine(
+        ByteArrayOutputStream output,
+        String label,
+        String value
+    ) throws IOException {
+        String prefix = label + ": ";
+        int maxChars = 32;
+
+        if ((prefix + value).length() <= maxChars) {
+            writeTextLine(output, prefix + value);
+            return;
+        }
+
+        writeTextLine(output, prefix);
+        writeWrappedText(output, value, maxChars);
+    }
+
+    private void writeDivider(ByteArrayOutputStream output) throws IOException {
+        writeFeedLines(output, 1);
+        writeTextLine(output, "--------------------------------");
+        writeFeedLines(output, 1);
+    }
+
     private void writeFeedLines(ByteArrayOutputStream output, int lines) {
         for (int index = 0; index < lines; index += 1) {
             output.write(0x0A);
         }
     }
 
-    private void writeQrCode(ByteArrayOutputStream output, String payload)
-        throws IOException {
+    private void writeQrCode(
+        ByteArrayOutputStream output,
+        String payload,
+        int moduleSize
+    ) throws IOException {
         byte[] data = payload.getBytes(Charset.forName("US-ASCII"));
 
         // QR model 2.
@@ -352,9 +503,9 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
             0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00
         });
 
-        // QR module size. 6 is deliberately large for an easy first test.
+        // QR module size.
         output.write(new byte[] {
-            0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06
+            0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, (byte) moduleSize
         });
 
         // QR error correction: M.
