@@ -4,8 +4,8 @@
       v-model.number="fiatAmount"
       type="number"
       inputmode="decimal"
-      min="1"
-      step="1"
+      min="0.01"
+      step="0.01"
       :label="t('sellForm.customerCashAmount')"
       prefix="£"
       outlined

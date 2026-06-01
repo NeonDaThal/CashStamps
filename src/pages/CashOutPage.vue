@@ -48,14 +48,14 @@
 
         <q-form
           class="cash-out-form q-mt-lg"
-          @submit.prevent="handlePrepareCashOut"
+          @submit.prevent="handleReviewCashOut"
         >
           <q-input
             v-model="cashAmountInput"
             outlined
             inputmode="decimal"
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             label="Cash amount to pay out"
             prefix="£"
@@ -63,166 +63,95 @@
             class="amount-input"
           />
 
-          <q-banner class="bg-orange-1 text-orange-10 q-mt-md" rounded>
+          <q-card flat bordered class="pricing-card">
+            <q-card-section>
+              <div class="pricing-header">
+                <div>
+                  <div class="text-subtitle1 text-weight-bold">
+                    Cash-out Preview
+                  </div>
+                  <div class="text-caption text-grey-7">
+                    Final BCH amount is locked after review.
+                  </div>
+                </div>
+
+                <div class="pricing-logo-wrap" aria-hidden="true">
+                  <img :src="bchLogoUrl" alt="" class="pricing-logo" />
+                </div>
+              </div>
+
+              <div class="preview-grid">
+                <div class="preview-item highlight">
+                  <div class="preview-label">Customer receives cash</div>
+                  <div class="preview-value">
+                    {{
+                      formatFiatAmount(
+                        previewPricing.fiatAmountMinor,
+                        previewPricing.fiatCurrency
+                      )
+                    }}
+                  </div>
+                </div>
+
+                <div class="preview-item">
+                  <div class="preview-label">Service fee / spread</div>
+                  <div class="preview-value">
+                    {{
+                      formatPercent(previewPricing.totalServiceFeeBasisPoints)
+                    }}
+                    —
+                    {{
+                      formatFiatAmount(
+                        previewPricing.totalServiceFeeAmountMinor,
+                        previewPricing.fiatCurrency
+                      )
+                    }}
+                  </div>
+                </div>
+
+                <div class="preview-item">
+                  <div class="preview-label">Customer sends value</div>
+                  <div class="preview-value">
+                    {{
+                      formatFiatAmount(
+                        previewPricing.customerSendsFiatEquivalentMinor,
+                        previewPricing.fiatCurrency
+                      )
+                    }}
+                  </div>
+                </div>
+
+                <div class="preview-item">
+                  <div class="preview-label">Quote source</div>
+                  <div class="preview-value">Locked after review</div>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+
+          <q-banner class="bg-grey-2 text-grey-9" rounded>
             <template #avatar>
-              <q-icon name="warning" />
+              <q-icon name="info" />
             </template>
 
-            Do not give cash to the customer at this stage. Cash is only paid
-            after BCH has been detected.
+            The customer will scan a BCH payment QR. The cash-out will only be
+            completed after BCH is detected in the Treasury Wallet.
           </q-banner>
 
-          <div class="form-actions q-mt-lg">
+          <div class="form-actions">
             <q-btn
               class="primary-button"
               type="submit"
-              label="Lock cash-out quote"
-              icon="lock"
+              label="Review Cash-out"
+              icon="fact_check"
               no-caps
               unelevated
               :loading="isSubmitting"
-              :disable="!canPrepareCashOut"
+              :disable="!canReviewCashOut"
             />
           </div>
         </q-form>
       </section>
-
-      <q-card v-if="lastPreparedCashOut" flat bordered class="prepared-card">
-        <q-card-section>
-          <div class="prepared-heading">
-            <q-icon name="pending_actions" />
-
-            <div>
-              <div class="text-h6">Cash-out prepared</div>
-              <p class="q-mb-none">
-                This is a Step 2 test record. Payment QR and automatic BCH
-                detection will be added next.
-              </p>
-            </div>
-          </div>
-
-          <q-list dense class="q-mt-md">
-            <q-item>
-              <q-item-section>
-                <q-item-label caption>Reference</q-item-label>
-                <q-item-label class="text-weight-bold">
-                  {{ lastPreparedCashOut.serial }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <q-item>
-              <q-item-section>
-                <q-item-label caption>Cash customer receives</q-item-label>
-                <q-item-label>
-                  {{
-                    formatFiatAmount(
-                      lastPreparedCashOut.fiatAmountMinor,
-                      lastPreparedCashOut.fiatCurrency
-                    )
-                  }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <q-item>
-              <q-item-section>
-                <q-item-label caption>BCH customer must send</q-item-label>
-                <q-item-label>
-                  {{ formatBchAmount(lastPreparedCashOut.bchSatsRequired) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <q-item>
-              <q-item-section>
-                <q-item-label caption
-                  >Fiat equivalent customer sends</q-item-label
-                >
-                <q-item-label>
-                  {{
-                    formatFiatAmount(
-                      lastPreparedCashOut.customerSendsFiatEquivalentMinor,
-                      lastPreparedCashOut.fiatCurrency
-                    )
-                  }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <q-item>
-              <q-item-section>
-                <q-item-label caption>Locked exchange rate</q-item-label>
-                <q-item-label>
-                  {{
-                    formatRate(
-                      lastPreparedCashOut.quote.marketRate,
-                      lastPreparedCashOut.fiatCurrency
-                    )
-                  }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <q-item>
-              <q-item-section>
-                <q-item-label caption>Total service fee / spread</q-item-label>
-                <q-item-label>
-                  {{
-                    formatFiatAmount(
-                      lastPreparedCashOut.fee.totalServiceFeeAmountMinor,
-                      lastPreparedCashOut.fiatCurrency
-                    )
-                  }}
-                  ({{
-                    formatPercent(
-                      lastPreparedCashOut.fee.totalServiceFeeBasisPoints
-                    )
-                  }})
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <q-item>
-              <q-item-section>
-                <q-item-label caption>Treasury receiving address</q-item-label>
-                <q-item-label class="text-break">
-                  {{ lastPreparedCashOut.treasuryReceivingAddress }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <q-item>
-              <q-item-section>
-                <q-item-label caption>Status</q-item-label>
-                <q-item-label>
-                  {{ lastPreparedCashOut.status }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-actions align="right">
-          <q-btn
-            flat
-            color="primary"
-            label="View history"
-            to="/voucher-history"
-            no-caps
-          />
-
-          <q-btn
-            class="primary-button"
-            label="Prepare another"
-            no-caps
-            unelevated
-            @click="handleResetPreparedCashOut"
-          />
-        </q-card-actions>
-      </q-card>
 
       <q-banner v-if="successMessage" class="bg-green-1 text-green-9" rounded>
         {{ successMessage }}
@@ -247,6 +176,14 @@
 
         Customer BCH must be detected before the merchant gives out cash.
       </q-banner>
+
+      <CashOutConfirmDialog
+        v-if="pendingCashOut"
+        v-model="isConfirmDialogOpen"
+        :cash-out="pendingCashOut"
+        :is-payment-detected="false"
+        @print-receipt="handlePrintReceiptPlaceholder"
+      />
     </div>
   </q-page>
 </template>
@@ -254,31 +191,41 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 
+import bchLogoUrl from 'src/assets/bch-logo.png';
+import CashOutConfirmDialog from 'src/components/CashOutConfirmDialog.vue';
 import type { CashOutRecord } from 'src/types/cash-out';
-import {
-  calculateCashOutPricingFromLockedQuote,
-  formatCashOutBasisPointsAsPercent,
-  formatCashOutBchSats,
-  formatCashOutMarketRate,
-  formatCashOutMinorFiatAmount,
-} from 'src/services/cash-out-pricing';
+import { calculateCashOutPricingFromLockedQuote } from 'src/services/cash-out-pricing';
 import { addCashOutRecord } from 'src/services/cash-out-store';
 import {
   PricingService,
   PricingUnavailableError,
 } from 'src/services/pricing-service';
+import { createTreasuryTopUpUri } from 'src/services/treasury-topup-uri';
 import { getTreasuryWalletPublicInfo } from 'src/services/treasury-wallet';
+import {
+  BUFFER_RESERVE_BASIS_POINTS,
+  MERCHANT_RETAINED_BASIS_POINTS,
+  PLATFORM_FEE_BASIS_POINTS,
+  TOTAL_SERVICE_FEE_BASIS_POINTS,
+} from 'src/services/platform-fee-config';
+import {
+  formatCashOutBasisPointsAsPercent,
+  formatCashOutMinorFiatAmount,
+} from 'src/services/cash-out-pricing';
 import type { TreasuryWalletPublicInfo } from 'src/types/treasury';
+
+const SATS_PER_BCH = 100_000_000;
 
 const pricingService = new PricingService();
 
-const cashAmountInput = ref('');
+const cashAmountInput = ref('100');
 const isSubmitting = ref(false);
 const successMessage = ref('');
 const warningMessage = ref('');
 const errorMessage = ref('');
 
-const lastPreparedCashOut = ref<CashOutRecord | null>(null);
+const isConfirmDialogOpen = ref(false);
+const pendingCashOut = ref<CashOutRecord | null>(null);
 
 const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   address: '',
@@ -287,15 +234,51 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   isSetup: false,
 });
 
-const canPrepareCashOut = computed(() => {
+const canReviewCashOut = computed(() => {
   const amountMinor = parseCashAmountInputToMinor(cashAmountInput.value);
   return amountMinor > 0 && !isSubmitting.value;
+});
+
+const previewPricing = computed(() => {
+  const fiatAmountMinor = parseCashAmountInputToMinor(cashAmountInput.value);
+  const platformFeeAmountMinor = calculateFeeAmountMinor(
+    fiatAmountMinor,
+    PLATFORM_FEE_BASIS_POINTS
+  );
+  const merchantRetainedAmountMinor = calculateFeeAmountMinor(
+    fiatAmountMinor,
+    MERCHANT_RETAINED_BASIS_POINTS
+  );
+  const bufferReserveAmountMinor = calculateFeeAmountMinor(
+    fiatAmountMinor,
+    BUFFER_RESERVE_BASIS_POINTS
+  );
+  const totalServiceFeeAmountMinor =
+    platformFeeAmountMinor +
+    merchantRetainedAmountMinor +
+    bufferReserveAmountMinor;
+
+  return {
+    fiatCurrency: 'GBP',
+    fiatAmountMinor,
+    totalServiceFeeBasisPoints: TOTAL_SERVICE_FEE_BASIS_POINTS,
+    totalServiceFeeAmountMinor,
+    customerSendsFiatEquivalentMinor:
+      fiatAmountMinor + totalServiceFeeAmountMinor,
+  };
 });
 
 function clearMessages(): void {
   successMessage.value = '';
   warningMessage.value = '';
   errorMessage.value = '';
+}
+
+function calculateFeeAmountMinor(
+  amountMinor: number,
+  basisPoints: number
+): number {
+  return Math.round((amountMinor * basisPoints) / 10_000);
 }
 
 function parseCashAmountInputToMinor(value: string): number {
@@ -329,10 +312,13 @@ function generateId(): string {
 function generateSerial(): string {
   const now = new Date();
   const datePart = now.toISOString().slice(0, 10).replaceAll('-', '');
-
   const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
 
   return `CO-${datePart}-${randomPart}`;
+}
+
+function satsToBchAmount(sats: number): number {
+  return Number((sats / SATS_PER_BCH).toFixed(8));
 }
 
 async function loadTreasuryWallet(): Promise<void> {
@@ -344,9 +330,10 @@ async function loadTreasuryWallet(): Promise<void> {
   }
 }
 
-async function handlePrepareCashOut(): Promise<void> {
+async function handleReviewCashOut(): Promise<void> {
   clearMessages();
-  lastPreparedCashOut.value = null;
+  pendingCashOut.value = null;
+  isConfirmDialogOpen.value = false;
 
   const fiatAmountMinor = parseCashAmountInputToMinor(cashAmountInput.value);
 
@@ -373,10 +360,18 @@ async function handlePrepareCashOut(): Promise<void> {
     );
 
     const now = new Date().toISOString();
+    const serial = generateSerial();
+
+    const paymentUri = createTreasuryTopUpUri({
+      address: treasuryWallet.value.address,
+      amountBch: satsToBchAmount(pricing.bchSatsRequired),
+      label: 'BCH Cash-out',
+      message: serial,
+    });
 
     const cashOutRecord: CashOutRecord = {
       id: generateId(),
-      serial: generateSerial(),
+      serial,
 
       createdAt: now,
       updatedAt: now,
@@ -403,20 +398,19 @@ async function handlePrepareCashOut(): Promise<void> {
       fee: pricing.fee,
 
       treasuryReceivingAddress: treasuryWallet.value.address,
+      paymentUri: paymentUri.uri,
 
       status: 'awaiting_payment',
     };
 
     await addCashOutRecord(cashOutRecord);
 
-    lastPreparedCashOut.value = cashOutRecord;
+    pendingCashOut.value = cashOutRecord;
+    isConfirmDialogOpen.value = true;
 
     if (lockedQuote.isFallbackQuote) {
       warningMessage.value =
         'Fallback quote used. Check the rate carefully before continuing.';
-    } else {
-      successMessage.value =
-        'Cash-out quote locked and test record saved. Payment QR/detection comes next.';
     }
   } catch (error) {
     console.error(error);
@@ -431,22 +425,13 @@ async function handlePrepareCashOut(): Promise<void> {
   }
 }
 
-function handleResetPreparedCashOut(): void {
-  clearMessages();
-  lastPreparedCashOut.value = null;
-  cashAmountInput.value = '';
+function handlePrintReceiptPlaceholder(): void {
+  warningMessage.value =
+    'Receipt printing will be connected after payment detection is added.';
 }
 
 function formatFiatAmount(amountMinor: number, currency: string): string {
   return formatCashOutMinorFiatAmount(amountMinor, currency);
-}
-
-function formatBchAmount(sats: number): string {
-  return formatCashOutBchSats(sats);
-}
-
-function formatRate(marketRate: number, currency: string): string {
-  return formatCashOutMarketRate(marketRate, currency);
 }
 
 function formatPercent(basisPoints: number): string {
@@ -479,15 +464,11 @@ onMounted(() => {
   width: 100%;
 }
 
-.cash-out-hero,
-.prepared-card {
+.cash-out-hero {
   background: #ffffff;
   border: 1px solid #dddddd;
   border-radius: 24px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
-}
-
-.cash-out-hero {
   padding: 24px;
 }
 
@@ -545,10 +526,94 @@ h1 {
 .cash-out-form {
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
 .amount-input :deep(.q-field__control) {
   border-radius: 16px;
+}
+
+.amount-input :deep(input[type='number']) {
+  -moz-appearance: textfield;
+}
+
+.amount-input :deep(input[type='number']::-webkit-inner-spin-button),
+.amount-input :deep(input[type='number']::-webkit-outer-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pricing-card {
+  background: #f7f8f7;
+  border-color: #dddddd;
+  border-radius: 20px;
+}
+
+.pricing-card :deep(.q-card__section) {
+  padding: 18px;
+}
+
+.pricing-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.pricing-logo-wrap {
+  align-items: center;
+  background: #00ce1b;
+  border-radius: 50%;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex: 0 0 42px;
+  height: 42px;
+  justify-content: center;
+  overflow: hidden;
+  width: 42px;
+}
+
+.pricing-logo {
+  border-radius: 50%;
+  display: block;
+  height: 82%;
+  object-fit: contain;
+  width: 82%;
+}
+
+.preview-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.preview-item {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.preview-item.highlight {
+  border-color: rgba(0, 206, 27, 0.55);
+  box-shadow: 0 0 0 3px rgba(0, 206, 27, 0.12);
+}
+
+.preview-label {
+  color: #666666;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.preview-value {
+  color: #111111;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .form-actions {
@@ -575,28 +640,10 @@ h1 {
   background: #8a8a8a;
 }
 
-.section-heading,
-.prepared-heading {
+.section-heading {
   align-items: flex-start;
   display: flex;
   gap: 14px;
-}
-
-.prepared-heading > .q-icon {
-  align-items: center;
-  background: #00ce1b;
-  border-radius: 16px;
-  color: #000000;
-  display: flex;
-  flex: 0 0 46px;
-  font-size: 26px;
-  height: 46px;
-  justify-content: center;
-  width: 46px;
-}
-
-.prepared-card :deep(.q-card__section) {
-  padding: 22px;
 }
 
 .primary-button {
@@ -604,6 +651,13 @@ h1 {
   border-radius: 14px;
   color: #ffffff;
   font-weight: 800;
+  min-height: 48px;
+  overflow: hidden;
+  padding: 0 22px;
+}
+
+.primary-button :deep(.q-focus-helper) {
+  border-radius: inherit;
 }
 
 @media (max-width: 640px) {
@@ -617,6 +671,10 @@ h1 {
 
   .hero-action-icons {
     padding-top: 2px;
+  }
+
+  .preview-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-actions {
