@@ -13,6 +13,10 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/SellVoucherPage.vue'),
       },
       {
+        path: 'cash-out',
+        component: () => import('pages/CashOutPage.vue'),
+      },
+      {
         path: 'treasury-settings',
         component: () => import('pages/TreasurySettingsPage.vue'),
       },

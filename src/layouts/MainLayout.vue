@@ -122,6 +122,13 @@
             </q-item-section>
           </q-item>
 
+          <q-item clickable to="/cash-out" @click="closeDrawer">
+            <q-item-section avatar>
+              <q-icon name="currency_exchange" />
+            </q-item-section>
+            <q-item-section>Cash-out</q-item-section>
+          </q-item>
+
           <q-item clickable to="/voucher-history" @click="closeDrawer">
             <q-item-section avatar>
               <q-icon name="receipt_long" />

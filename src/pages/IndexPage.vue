@@ -31,6 +31,15 @@
 
           <q-btn
             class="secondary-action"
+            label="Cash-out BCH"
+            icon="currency_exchange"
+            to="/cash-out"
+            unelevated
+            no-caps
+          />
+
+          <q-btn
+            class="secondary-action"
             :label="t('home.voucherHistory')"
             icon="receipt_long"
             to="/voucher-history"
