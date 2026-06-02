@@ -606,7 +606,7 @@ const pt = {
 
   layout: {
     brand: {
-      title: 'Vales de Bitcoin Cash',
+      title: 'Recargas BCH',
       subtitle: 'App do comerciante',
     },
     drawer: {
@@ -629,13 +629,13 @@ const pt = {
     },
     items: {
       home: 'Início',
-      sellVoucher: 'Vender vale',
-      cashOut: 'Levantar dinheiro',
+      sellVoucher: 'Vender recarga',
+      cashOut: 'Retirar',
       voucherHistory: 'Histórico de vales',
       treasuryWallet: 'Carteira de tesouraria',
       printerSetup: 'Configurar impressora',
       appSettings: 'Definições da app',
-      howToSellVoucher: 'Como vender um vale',
+      howToSellVoucher: 'Como vender uma recarga',
       howCustomersRedeem: 'Como os clientes resgatam',
       faq: 'Perguntas frequentes',
       support: 'Suporte',
