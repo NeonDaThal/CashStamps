@@ -12,13 +12,17 @@
 
         <div>
           <div class="text-h5 text-weight-bold">
-            {{ isPaymentDetected ? 'BCH received' : 'Review cash-out payment' }}
+            {{
+              isPaymentDetected
+                ? t('cashOutConfirm.header.receivedTitle')
+                : t('cashOutConfirm.header.reviewTitle')
+            }}
           </div>
           <p class="text-grey-7 q-mb-none">
             {{
               isPaymentDetected
-                ? 'The customer payment has been detected in the merchant treasury.'
-                : 'Ask the customer to scan the QR code and send the required BCH.'
+                ? t('cashOutConfirm.header.receivedSubtitle')
+                : t('cashOutConfirm.header.reviewSubtitle')
             }}
           </p>
         </div>
@@ -46,16 +50,19 @@
             </template>
 
             <span v-if="cashOut.quote.isFallbackQuote">
-              Fallback price quote used. Check the rate carefully before
-              continuing.
+              {{ t('cashOutConfirm.quoteStatus.fallback') }}
             </span>
 
-            <span v-else>Live price quote locked successfully.</span>
+            <span v-else>
+              {{ t('cashOutConfirm.quoteStatus.liveLocked') }}
+            </span>
           </q-banner>
 
           <section class="summary-grid">
             <div class="summary-tile highlight">
-              <div class="summary-label">Cash customer receives</div>
+              <div class="summary-label">
+                {{ t('cashOutConfirm.summary.cashCustomerReceives') }}
+              </div>
               <div class="summary-value">
                 {{
                   formatFiatAmount(
@@ -67,14 +74,18 @@
             </div>
 
             <div class="summary-tile">
-              <div class="summary-label">Customer sends</div>
+              <div class="summary-label">
+                {{ t('cashOutConfirm.summary.customerSends') }}
+              </div>
               <div class="summary-value">
                 {{ formatBchAmount(cashOut.bchSatsRequired) }}
               </div>
             </div>
 
             <div class="summary-tile">
-              <div class="summary-label">Fiat equivalent sent</div>
+              <div class="summary-label">
+                {{ t('cashOutConfirm.summary.fiatEquivalentSent') }}
+              </div>
               <div class="summary-value">
                 {{
                   formatFiatAmount(
@@ -86,7 +97,9 @@
             </div>
 
             <div class="summary-tile">
-              <div class="summary-label">Service fee / spread</div>
+              <div class="summary-label">
+                {{ t('cashOutConfirm.summary.serviceFeeSpread') }}
+              </div>
               <div class="summary-value">
                 {{
                   formatFiatAmount(
@@ -104,11 +117,11 @@
             <q-card-section>
               <div class="payment-heading">
                 <div>
-                  <div class="text-h6">Customer payment QR</div>
+                  <div class="text-h6">
+                    {{ t('cashOutConfirm.paymentQr.title') }}
+                  </div>
                   <p class="text-grey-7 q-mb-none">
-                    Ask the customer to scan this QR code with their BCH wallet.
-                    Wait for the BCH payment to arrive in your Treasury Wallet
-                    before giving their cash.
+                    {{ t('cashOutConfirm.paymentQr.subtitle') }}
                   </p>
                 </div>
               </div>
@@ -124,13 +137,13 @@
                   <q-img
                     v-else-if="qrDataUrl"
                     :src="qrDataUrl"
-                    alt="Cash-out BCH payment QR"
+                    :alt="t('cashOutConfirm.paymentQr.qrAlt')"
                     class="qr-image"
                     fit="contain"
                   />
 
                   <div v-else class="text-negative text-center">
-                    QR unavailable
+                    {{ t('cashOutConfirm.paymentQr.qrUnavailable') }}
                   </div>
                 </div>
 
@@ -138,7 +151,9 @@
                   <q-list bordered separator class="details-list">
                     <q-item>
                       <q-item-section>
-                        <q-item-label caption>Amount to send</q-item-label>
+                        <q-item-label caption>
+                          {{ t('cashOutConfirm.paymentDetails.amountToSend') }}
+                        </q-item-label>
                         <q-item-label class="text-weight-bold">
                           {{ formatBchAmount(cashOut.bchSatsRequired) }}
                         </q-item-label>
@@ -148,7 +163,11 @@
                     <q-item>
                       <q-item-section>
                         <q-item-label caption>
-                          Treasury receiving address
+                          {{
+                            t(
+                              'cashOutConfirm.paymentDetails.treasuryReceivingAddress'
+                            )
+                          }}
                         </q-item-label>
                         <q-item-label class="text-break">
                           {{ cashOut.treasuryReceivingAddress }}
@@ -158,7 +177,9 @@
 
                     <q-item>
                       <q-item-section>
-                        <q-item-label caption>Payment URI</q-item-label>
+                        <q-item-label caption>
+                          {{ t('cashOutConfirm.paymentDetails.paymentUri') }}
+                        </q-item-label>
                         <q-item-label class="text-break">
                           {{ paymentUri }}
                         </q-item-label>
@@ -170,7 +191,7 @@
                     <q-btn
                       color="primary"
                       outline
-                      label="Copy address"
+                      :label="t('cashOutConfirm.actions.copyAddress')"
                       no-caps
                       @click="handleCopyAddress"
                     />
@@ -178,7 +199,7 @@
                     <q-btn
                       color="primary"
                       outline
-                      label="Copy payment URI"
+                      :label="t('cashOutConfirm.actions.copyPaymentUri')"
                       no-caps
                       @click="handleCopyUri"
                     />
@@ -191,12 +212,12 @@
           <q-card flat bordered class="details-card q-mt-md">
             <q-card-section>
               <div class="details-row">
-                <span>Reference</span>
+                <span>{{ t('cashOutConfirm.details.reference') }}</span>
                 <strong>{{ cashOut.serial }}</strong>
               </div>
 
               <div class="details-row">
-                <span>Market rate</span>
+                <span>{{ t('cashOutConfirm.details.marketRate') }}</span>
                 <strong>
                   {{
                     formatRate(cashOut.quote.marketRate, cashOut.fiatCurrency)
@@ -205,7 +226,7 @@
               </div>
 
               <div class="details-row">
-                <span>Quote source</span>
+                <span>{{ t('cashOutConfirm.details.quoteSource') }}</span>
                 <strong>
                   {{ quoteSourceLabel }}
                   <q-badge
@@ -213,27 +234,27 @@
                     color="orange"
                     class="q-ml-sm"
                   >
-                    fallback
+                    {{ t('cashOutConfirm.details.fallbackBadge') }}
                   </q-badge>
                 </strong>
               </div>
 
               <div class="details-row">
-                <span>Quote time</span>
+                <span>{{ t('cashOutConfirm.details.quoteTime') }}</span>
                 <strong>
                   {{ formatDateTime(cashOut.quote.marketRateTimestamp) }}
                 </strong>
               </div>
 
               <div v-if="cashOut.quote.quoteExpiresAt" class="details-row">
-                <span>Quote expires</span>
+                <span>{{ t('cashOutConfirm.details.quoteExpires') }}</span>
                 <strong>
                   {{ formatDateTime(cashOut.quote.quoteExpiresAt) }}
                 </strong>
               </div>
 
               <div class="details-row">
-                <span>Status</span>
+                <span>{{ t('cashOutConfirm.details.status') }}</span>
                 <strong>{{ cashOut.status }}</strong>
               </div>
             </q-card-section>
@@ -255,10 +276,10 @@
               <q-icon name="check_circle" />
             </div>
 
-            <h2>BCH received</h2>
+            <h2>{{ t('cashOutConfirm.success.title') }}</h2>
 
             <p>
-              Now give the customer
+              {{ t('cashOutConfirm.success.nowGiveCustomer') }}
               <strong>
                 {{
                   formatFiatAmount(
@@ -267,19 +288,19 @@
                   )
                 }}
               </strong>
-              cash.
+              {{ t('cashOutConfirm.success.cash') }}.
             </p>
           </div>
 
           <q-card flat bordered class="details-card q-mt-md">
             <q-card-section>
               <div class="details-row">
-                <span>Reference</span>
+                <span>{{ t('cashOutConfirm.details.reference') }}</span>
                 <strong>{{ cashOut.serial }}</strong>
               </div>
 
               <div class="details-row">
-                <span>BCH received</span>
+                <span>{{ t('cashOutConfirm.details.bchReceived') }}</span>
                 <strong>
                   {{
                     formatBchAmount(
@@ -290,12 +311,12 @@
               </div>
 
               <div v-if="cashOut.receivedTxid" class="details-row">
-                <span>Transaction ID</span>
+                <span>{{ t('cashOutConfirm.details.transactionId') }}</span>
                 <strong class="text-break">{{ cashOut.receivedTxid }}</strong>
               </div>
 
               <div v-if="cashOut.detectedAt" class="details-row">
-                <span>Detected</span>
+                <span>{{ t('cashOutConfirm.details.detected') }}</span>
                 <strong>{{ formatDateTime(cashOut.detectedAt) }}</strong>
               </div>
             </q-card-section>
@@ -308,7 +329,11 @@
       <q-card-actions align="right" class="dialog-actions">
         <q-btn
           flat
-          :label="isPaymentDetected ? 'Close' : 'Close review'"
+          :label="
+            isPaymentDetected
+              ? t('common.close')
+              : t('cashOutConfirm.actions.closeReview')
+          "
           color="grey-8"
           :disable="isPreparingReceipt"
           no-caps
@@ -318,7 +343,7 @@
         <q-btn
           v-if="isPaymentDetected"
           class="primary-button"
-          label="Print Receipt"
+          :label="t('cashOutConfirm.actions.printReceipt')"
           icon="print"
           :loading="isPreparingReceipt"
           unelevated
@@ -338,6 +363,7 @@
 import QRCode from 'qrcode/lib/browser';
 import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 
 import type { CashOutRecord } from 'src/types/cash-out';
 import {
@@ -369,6 +395,7 @@ const emit = defineEmits<{
 }>();
 
 const $q = useQuasar();
+const { locale, t } = useI18n({ useScope: 'global' });
 
 const qrDataUrl = ref('');
 const isGeneratingQr = ref(false);
@@ -381,19 +408,19 @@ const paymentUri = computed(() => {
   return createTreasuryTopUpUri({
     address: props.cashOut.treasuryReceivingAddress,
     amountBch: satsToBchAmount(props.cashOut.bchSatsRequired),
-    label: 'BCH Cash-out',
+    label: t('cashOutConfirm.paymentUri.label'),
     message: props.cashOut.serial,
   }).uri;
 });
 
 const quoteSourceLabel = computed(() => {
   const labels: Record<CashOutRecord['quote']['source'], string> = {
-    fake_phase_2_quote: 'Development quote',
+    fake_phase_2_quote: t('cashOutConfirm.quoteSources.developmentQuote'),
     coingecko: 'CoinGecko',
-    cached: 'Cached quote',
+    cached: t('cashOutConfirm.quoteSources.cachedQuote'),
     general_protocols_oracle: 'General Protocols Oracle',
-    manual: 'Manual quote',
-    unknown: 'Unknown',
+    manual: t('cashOutConfirm.quoteSources.manualQuote'),
+    unknown: t('cashOutConfirm.quoteSources.unknown'),
   };
 
   return labels[props.cashOut.quote.source];
@@ -442,7 +469,7 @@ async function copyToClipboard(
 
     $q.notify({
       type: 'negative',
-      message: 'Copy failed.',
+      message: t('cashOutConfirm.messages.copyFailed'),
     });
   }
 }
@@ -450,12 +477,15 @@ async function copyToClipboard(
 function handleCopyAddress(): void {
   void copyToClipboard(
     props.cashOut.treasuryReceivingAddress,
-    'Treasury address copied.'
+    t('cashOutConfirm.messages.treasuryAddressCopied')
   );
 }
 
 function handleCopyUri(): void {
-  void copyToClipboard(paymentUri.value, 'Payment URI copied.');
+  void copyToClipboard(
+    paymentUri.value,
+    t('cashOutConfirm.messages.paymentUriCopied')
+  );
 }
 
 function formatFiatAmount(amountMinor: number, currency: string): string {
@@ -482,7 +512,7 @@ function formatDateTime(value: string): string {
 }
 
 watch(
-  [() => props.modelValue, () => paymentUri.value],
+  [() => props.modelValue, () => paymentUri.value, () => locale.value],
   () => {
     if (props.modelValue) {
       void generateQrCode();

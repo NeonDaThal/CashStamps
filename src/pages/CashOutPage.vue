@@ -4,8 +4,8 @@
       <section class="cash-out-hero">
         <div class="section-heading hero-heading">
           <div>
-            <p class="eyebrow">Cash-out BCH</p>
-            <h1>Cash-out BCH</h1>
+            <p class="eyebrow">{{ t('cashOutPage.hero.eyebrow') }}</p>
+            <h1>{{ t('cashOutPage.hero.title') }}</h1>
           </div>
 
           <div class="hero-action-icons">
@@ -15,7 +15,7 @@
               round
               icon="account_balance_wallet"
               class="hero-icon-button"
-              aria-label="Treasury wallet"
+              :aria-label="t('cashOutPage.actions.treasuryWallet')"
               to="/treasury-settings"
             >
               <q-badge
@@ -35,15 +35,14 @@
               round
               icon="receipt_long"
               class="hero-icon-button"
-              aria-label="Voucher history"
+              :aria-label="t('cashOutPage.actions.voucherHistory')"
               to="/voucher-history"
             />
           </div>
         </div>
 
         <p class="intro">
-          Enter the cash amount the customer wants to receive. The app will
-          calculate how much BCH they must send to the merchant treasury.
+          {{ t('cashOutPage.hero.intro') }}
         </p>
 
         <q-form
@@ -57,7 +56,7 @@
             type="number"
             min="0.01"
             step="0.01"
-            label="Cash amount to pay out"
+            :label="t('cashOutPage.form.cashAmountLabel')"
             prefix="£"
             :disable="isSubmitting"
             class="amount-input"
@@ -68,10 +67,10 @@
               <div class="pricing-header">
                 <div>
                   <div class="text-subtitle1 text-weight-bold">
-                    Cash-out Preview
+                    {{ t('cashOutPage.preview.title') }}
                   </div>
                   <div class="text-caption text-grey-7">
-                    Final BCH amount is locked after review.
+                    {{ t('cashOutPage.preview.subtitle') }}
                   </div>
                 </div>
 
@@ -82,7 +81,9 @@
 
               <div class="preview-grid">
                 <div class="preview-item highlight">
-                  <div class="preview-label">Customer receives cash</div>
+                  <div class="preview-label">
+                    {{ t('cashOutPage.preview.customerReceivesCash') }}
+                  </div>
                   <div class="preview-value">
                     {{
                       formatFiatAmount(
@@ -94,7 +95,9 @@
                 </div>
 
                 <div class="preview-item">
-                  <div class="preview-label">Service fee / spread</div>
+                  <div class="preview-label">
+                    {{ t('cashOutPage.preview.serviceFeeSpread') }}
+                  </div>
                   <div class="preview-value">
                     {{
                       formatPercent(previewPricing.totalServiceFeeBasisPoints)
@@ -110,7 +113,9 @@
                 </div>
 
                 <div class="preview-item">
-                  <div class="preview-label">Customer sends value</div>
+                  <div class="preview-label">
+                    {{ t('cashOutPage.preview.customerSendsValue') }}
+                  </div>
                   <div class="preview-value">
                     {{
                       formatFiatAmount(
@@ -122,8 +127,12 @@
                 </div>
 
                 <div class="preview-item">
-                  <div class="preview-label">Quote source</div>
-                  <div class="preview-value">Locked after review</div>
+                  <div class="preview-label">
+                    {{ t('cashOutPage.preview.quoteSource') }}
+                  </div>
+                  <div class="preview-value">
+                    {{ t('cashOutPage.preview.lockedAfterReview') }}
+                  </div>
                 </div>
               </div>
             </q-card-section>
@@ -134,15 +143,14 @@
               <q-icon name="info" />
             </template>
 
-            The customer will scan a BCH payment QR. The cash-out will only be
-            completed after BCH is detected in the Treasury Wallet.
+            {{ t('cashOutPage.form.paymentQrNotice') }}
           </q-banner>
 
           <div class="form-actions">
             <q-btn
               class="primary-button"
               type="submit"
-              label="Review Cash-out"
+              :label="t('cashOutPage.actions.reviewCashOut')"
               icon="fact_check"
               no-caps
               unelevated
@@ -174,7 +182,7 @@
           <q-icon name="shield" />
         </template>
 
-        Customer BCH must be detected before the merchant gives out cash.
+        {{ t('cashOutPage.safetyNotice') }}
       </q-banner>
 
       <CashOutConfirmDialog
@@ -190,6 +198,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import CashOutConfirmDialog from 'src/components/CashOutConfirmDialog.vue';
@@ -217,6 +226,8 @@ import type { TreasuryWalletPublicInfo } from 'src/types/treasury';
 const SATS_PER_BCH = 100_000_000;
 
 const pricingService = new PricingService();
+
+const { t } = useI18n({ useScope: 'global' });
 
 const cashAmountInput = ref('100');
 const isSubmitting = ref(false);
@@ -326,7 +337,7 @@ async function loadTreasuryWallet(): Promise<void> {
     treasuryWallet.value = await getTreasuryWalletPublicInfo();
   } catch (error) {
     console.error(error);
-    errorMessage.value = 'Could not load treasury wallet.';
+    errorMessage.value = t('cashOutPage.messages.couldNotLoadTreasuryWallet');
   }
 }
 
@@ -338,7 +349,7 @@ async function handleReviewCashOut(): Promise<void> {
   const fiatAmountMinor = parseCashAmountInputToMinor(cashAmountInput.value);
 
   if (!Number.isFinite(fiatAmountMinor) || fiatAmountMinor <= 0) {
-    errorMessage.value = 'Enter a valid cash amount.';
+    errorMessage.value = t('cashOutPage.messages.enterValidCashAmount');
     return;
   }
 
@@ -348,8 +359,7 @@ async function handleReviewCashOut(): Promise<void> {
     await loadTreasuryWallet();
 
     if (!treasuryWallet.value.isSetup || !treasuryWallet.value.address) {
-      errorMessage.value =
-        'Set up the merchant treasury wallet before preparing a cash-out.';
+      errorMessage.value = t('cashOutPage.messages.setUpTreasuryFirst');
       return;
     }
 
@@ -365,7 +375,7 @@ async function handleReviewCashOut(): Promise<void> {
     const paymentUri = createTreasuryTopUpUri({
       address: treasuryWallet.value.address,
       amountBch: satsToBchAmount(pricing.bchSatsRequired),
-      label: 'BCH Cash-out',
+      label: t('cashOutPage.paymentUri.label'),
       message: serial,
     });
 
@@ -409,16 +419,15 @@ async function handleReviewCashOut(): Promise<void> {
     isConfirmDialogOpen.value = true;
 
     if (lockedQuote.isFallbackQuote) {
-      warningMessage.value =
-        'Fallback quote used. Check the rate carefully before continuing.';
+      warningMessage.value = t('cashOutPage.messages.fallbackQuoteWarning');
     }
   } catch (error) {
     console.error(error);
 
     if (error instanceof PricingUnavailableError) {
-      errorMessage.value = error.message;
+      errorMessage.value = t('cashOutPage.messages.pricingUnavailable');
     } else {
-      errorMessage.value = 'Could not prepare cash-out.';
+      errorMessage.value = t('cashOutPage.messages.couldNotPrepareCashOut');
     }
   } finally {
     isSubmitting.value = false;
@@ -426,8 +435,7 @@ async function handleReviewCashOut(): Promise<void> {
 }
 
 function handlePrintReceiptPlaceholder(): void {
-  warningMessage.value =
-    'Receipt printing will be connected after payment detection is added.';
+  warningMessage.value = t('cashOutPage.messages.receiptPrintingPending');
 }
 
 function formatFiatAmount(amountMinor: number, currency: string): string {

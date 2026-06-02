@@ -33,6 +33,7 @@ const es = {
     actionTitle: '¿Qué quieres hacer?',
     actionSubtitle: 'Elige la siguiente acción del comercio.',
     sellVoucher: 'Vender nuevo vale',
+    cashOutBch: 'Vender BCH por efectivo',
     voucherHistory: 'Historial de vales',
     treasuryWallet: 'Billetera de tesorería',
     receiptPreview: 'Vista previa del recibo',
@@ -171,6 +172,123 @@ const es = {
       noVoucherAddress:
         'No hay una dirección de vale disponible. Revisa el vale de nuevo.',
       couldNotIssueVoucher: 'No se pudo emitir el vale.',
+    },
+  },
+  cashOutPage: {
+    hero: {
+      eyebrow: 'Vender BCH por efectivo',
+      title: 'Vender BCH por efectivo',
+      intro:
+        'Introduce el importe en efectivo que el cliente quiere recibir. La app calculará cuánto BCH debe enviar a la tesorería del comercio.',
+    },
+    actions: {
+      treasuryWallet: 'Billetera de tesorería',
+      voucherHistory: 'Historial de vales',
+      reviewCashOut: 'Revisar retirada',
+    },
+    form: {
+      cashAmountLabel: 'Importe en efectivo a pagar',
+      paymentQrNotice:
+        'El cliente escaneará un QR de pago BCH. La retirada solo se completará después de detectar BCH en la billetera de tesorería.',
+    },
+    preview: {
+      title: 'Vista previa de retirada',
+      subtitle: 'El importe final en BCH se bloquea después de la revisión.',
+      customerReceivesCash: 'El cliente recibe efectivo',
+      serviceFeeSpread: 'Comisión de servicio / margen',
+      customerSendsValue: 'Valor que envía el cliente',
+      quoteSource: 'Fuente de cotización',
+      lockedAfterReview: 'Bloqueado después de revisar',
+    },
+    paymentUri: {
+      label: 'Retirada BCH',
+    },
+    safetyNotice:
+      'El BCH del cliente debe detectarse antes de que el comercio entregue efectivo.',
+    messages: {
+      couldNotLoadTreasuryWallet:
+        'No se pudo cargar la billetera de tesorería.',
+      enterValidCashAmount: 'Introduce un importe en efectivo válido.',
+      setUpTreasuryFirst:
+        'Configura la billetera de tesorería del comercio antes de preparar una retirada.',
+      fallbackQuoteWarning:
+        'Se usó una cotización de respaldo. Comprueba cuidadosamente el tipo de cambio antes de continuar.',
+      pricingUnavailable:
+        'Los precios no están disponibles actualmente. Comprueba tu conexión e inténtalo de nuevo.',
+      couldNotPrepareCashOut: 'No se pudo preparar la retirada.',
+      receiptPrintingPending:
+        'La impresión del recibo se conectará después de añadir la detección de pago.',
+    },
+  },
+
+  cashOutConfirm: {
+    header: {
+      reviewTitle: 'Revisar pago de retirada',
+      receivedTitle: 'BCH recibido',
+      reviewSubtitle:
+        'Pide al cliente que escanee el código QR y envíe el BCH requerido.',
+      receivedSubtitle:
+        'El pago del cliente ha sido detectado en la tesorería del comercio.',
+    },
+    quoteStatus: {
+      fallback:
+        'Se usó una cotización de respaldo. Comprueba cuidadosamente el tipo de cambio antes de continuar.',
+      liveLocked: 'Cotización de precio en vivo bloqueada correctamente.',
+    },
+    summary: {
+      cashCustomerReceives: 'Efectivo que recibe el cliente',
+      customerSends: 'El cliente envía',
+      fiatEquivalentSent: 'Equivalente fiat enviado',
+      serviceFeeSpread: 'Comisión de servicio / margen',
+    },
+    paymentQr: {
+      title: 'QR de pago del cliente',
+      subtitle:
+        'Pide al cliente que escanee este código QR con su billetera BCH. Espera a que el pago BCH llegue a tu billetera de tesorería antes de entregar el efectivo.',
+      qrAlt: 'QR de pago BCH para retirada',
+      qrUnavailable: 'QR no disponible',
+    },
+    paymentDetails: {
+      amountToSend: 'Importe a enviar',
+      treasuryReceivingAddress: 'Dirección receptora de tesorería',
+      paymentUri: 'URI de pago',
+    },
+    paymentUri: {
+      label: 'Retirada BCH',
+    },
+    details: {
+      reference: 'Referencia',
+      marketRate: 'Tipo de cambio de mercado',
+      quoteSource: 'Fuente de cotización',
+      fallbackBadge: 'respaldo',
+      quoteTime: 'Hora de cotización',
+      quoteExpires: 'La cotización vence',
+      status: 'Estado',
+      bchReceived: 'BCH recibido',
+      transactionId: 'ID de transacción',
+      detected: 'Detectado',
+    },
+    success: {
+      title: 'BCH recibido',
+      nowGiveCustomer: 'Ahora entrega al cliente',
+      cash: 'en efectivo',
+    },
+    actions: {
+      copyAddress: 'Copiar dirección',
+      copyPaymentUri: 'Copiar URI de pago',
+      closeReview: 'Cerrar revisión',
+      printReceipt: 'Imprimir recibo',
+    },
+    messages: {
+      treasuryAddressCopied: 'Dirección de tesorería copiada.',
+      paymentUriCopied: 'URI de pago copiado.',
+      copyFailed: 'Error al copiar.',
+    },
+    quoteSources: {
+      developmentQuote: 'Cotización de desarrollo',
+      cachedQuote: 'Cotización en caché',
+      manualQuote: 'Cotización manual',
+      unknown: 'Desconocida',
     },
   },
   saleConfirm: {
@@ -511,6 +629,7 @@ const es = {
     items: {
       home: 'Inicio',
       sellVoucher: 'Vender vale',
+      cashOut: 'Retirar efectivo',
       voucherHistory: 'Historial de vales',
       treasuryWallet: 'Billetera de tesorería',
       printerSetup: 'Configurar impresora',

@@ -33,6 +33,7 @@ const de = {
     actionTitle: 'Was möchtest du tun?',
     actionSubtitle: 'Wähle die nächste Händleraktion.',
     sellVoucher: 'Neuen Voucher verkaufen',
+    cashOutBch: 'BCH gegen Bargeld auszahlen',
     voucherHistory: 'Voucher-Verlauf',
     treasuryWallet: 'Treasury-Wallet',
     receiptPreview: 'Belegvorschau',
@@ -172,6 +173,124 @@ const de = {
       noVoucherAddress:
         'Es ist keine Voucher-Adresse verfügbar. Bitte prüfe den Voucher erneut.',
       couldNotIssueVoucher: 'Voucher konnte nicht ausgestellt werden.',
+    },
+  },
+  cashOutPage: {
+    hero: {
+      eyebrow: 'BCH auszahlen',
+      title: 'BCH auszahlen',
+      intro:
+        'Gib den Bargeldbetrag ein, den der Kunde erhalten möchte. Die App berechnet, wie viel BCH er an die Treasury des Händlers senden muss.',
+    },
+    actions: {
+      treasuryWallet: 'Treasury-Wallet',
+      voucherHistory: 'Gutschein-Verlauf',
+      reviewCashOut: 'Auszahlung prüfen',
+    },
+    form: {
+      cashAmountLabel: 'Auszuzahlender Bargeldbetrag',
+      paymentQrNotice:
+        'Der Kunde scannt einen BCH-Zahlungs-QR. Die Auszahlung wird erst abgeschlossen, nachdem BCH in der Treasury-Wallet erkannt wurde.',
+    },
+    preview: {
+      title: 'Auszahlungsvorschau',
+      subtitle:
+        'Der endgültige BCH-Betrag wird nach der Prüfung festgeschrieben.',
+      customerReceivesCash: 'Kunde erhält Bargeld',
+      serviceFeeSpread: 'Servicegebühr / Marge',
+      customerSendsValue: 'Wert, den der Kunde sendet',
+      quoteSource: 'Kursquelle',
+      lockedAfterReview: 'Nach Prüfung festgeschrieben',
+    },
+    paymentUri: {
+      label: 'BCH-Auszahlung',
+    },
+    safetyNotice:
+      'Das BCH des Kunden muss erkannt werden, bevor der Händler Bargeld auszahlt.',
+    messages: {
+      couldNotLoadTreasuryWallet:
+        'Treasury-Wallet konnte nicht geladen werden.',
+      enterValidCashAmount: 'Gib einen gültigen Bargeldbetrag ein.',
+      setUpTreasuryFirst:
+        'Richte die Treasury-Wallet des Händlers ein, bevor eine Auszahlung vorbereitet wird.',
+      fallbackQuoteWarning:
+        'Fallback-Kurs verwendet. Prüfe den Kurs sorgfältig, bevor du fortfährst.',
+      pricingUnavailable:
+        'Preise sind derzeit nicht verfügbar. Prüfe deine Verbindung und versuche es erneut.',
+      couldNotPrepareCashOut: 'Auszahlung konnte nicht vorbereitet werden.',
+      receiptPrintingPending:
+        'Der Belegdruck wird verbunden, nachdem die Zahlungserkennung hinzugefügt wurde.',
+    },
+  },
+
+  cashOutConfirm: {
+    header: {
+      reviewTitle: 'Auszahlungszahlung prüfen',
+      receivedTitle: 'BCH empfangen',
+      reviewSubtitle:
+        'Bitte den Kunden, den QR-Code zu scannen und das erforderliche BCH zu senden.',
+      receivedSubtitle:
+        'Die Kundenzahlung wurde in der Händler-Treasury erkannt.',
+    },
+    quoteStatus: {
+      fallback:
+        'Fallback-Kurs verwendet. Prüfe den Kurs sorgfältig, bevor du fortfährst.',
+      liveLocked: 'Live-Kurs erfolgreich festgeschrieben.',
+    },
+    summary: {
+      cashCustomerReceives: 'Bargeld, das der Kunde erhält',
+      customerSends: 'Kunde sendet',
+      fiatEquivalentSent: 'Gesendeter Fiat-Gegenwert',
+      serviceFeeSpread: 'Servicegebühr / Marge',
+    },
+    paymentQr: {
+      title: 'Zahlungs-QR des Kunden',
+      subtitle:
+        'Bitte den Kunden, diesen QR-Code mit seiner BCH-Wallet zu scannen. Warte, bis die BCH-Zahlung in deiner Treasury-Wallet eingegangen ist, bevor du Bargeld auszahlst.',
+      qrAlt: 'BCH-Zahlungs-QR für Auszahlung',
+      qrUnavailable: 'QR nicht verfügbar',
+    },
+    paymentDetails: {
+      amountToSend: 'Zu sendender Betrag',
+      treasuryReceivingAddress: 'Empfangsadresse der Treasury',
+      paymentUri: 'Zahlungs-URI',
+    },
+    paymentUri: {
+      label: 'BCH-Auszahlung',
+    },
+    details: {
+      reference: 'Referenz',
+      marketRate: 'Marktkurs',
+      quoteSource: 'Kursquelle',
+      fallbackBadge: 'Fallback',
+      quoteTime: 'Kurszeitpunkt',
+      quoteExpires: 'Kurs läuft ab',
+      status: 'Status',
+      bchReceived: 'BCH empfangen',
+      transactionId: 'Transaktions-ID',
+      detected: 'Erkannt',
+    },
+    success: {
+      title: 'BCH empfangen',
+      nowGiveCustomer: 'Zahle dem Kunden jetzt',
+      cash: 'bar aus',
+    },
+    actions: {
+      copyAddress: 'Adresse kopieren',
+      copyPaymentUri: 'Zahlungs-URI kopieren',
+      closeReview: 'Prüfung schließen',
+      printReceipt: 'Beleg drucken',
+    },
+    messages: {
+      treasuryAddressCopied: 'Treasury-Adresse kopiert.',
+      paymentUriCopied: 'Zahlungs-URI kopiert.',
+      copyFailed: 'Kopieren fehlgeschlagen.',
+    },
+    quoteSources: {
+      developmentQuote: 'Entwicklungskurs',
+      cachedQuote: 'Zwischengespeicherter Kurs',
+      manualQuote: 'Manueller Kurs',
+      unknown: 'Unbekannt',
     },
   },
 
@@ -514,6 +633,7 @@ const de = {
     items: {
       home: 'Startseite',
       sellVoucher: 'Voucher verkaufen',
+      cashOut: 'BCH auszahlen',
       voucherHistory: 'Voucher-Verlauf',
       treasuryWallet: 'Treasury-Wallet',
       printerSetup: 'Drucker einrichten',

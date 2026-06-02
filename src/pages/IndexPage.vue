@@ -31,7 +31,7 @@
 
           <q-btn
             class="secondary-action"
-            label="Cash-out BCH"
+            :label="t('home.cashOutBch')"
             icon="currency_exchange"
             to="/cash-out"
             unelevated

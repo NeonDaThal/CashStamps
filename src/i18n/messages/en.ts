@@ -33,6 +33,7 @@ const en = {
     actionTitle: 'What would you like to do?',
     actionSubtitle: 'Choose the next merchant action.',
     sellVoucher: 'Sell New Voucher',
+    cashOutBch: 'Cash-out BCH',
     voucherHistory: 'Voucher History',
     treasuryWallet: 'Treasury Wallet',
     receiptPreview: 'Receipt Preview',
@@ -166,6 +167,122 @@ const en = {
       noVoucherAddress:
         'No voucher address is available. Please review the voucher again.',
       couldNotIssueVoucher: 'Could not issue voucher.',
+    },
+  },
+  cashOutPage: {
+    hero: {
+      eyebrow: 'Cash-out BCH',
+      title: 'Cash-out BCH',
+      intro:
+        'Enter the cash amount the customer wants to receive. The app will calculate how much BCH they must send to the merchant treasury.',
+    },
+    actions: {
+      treasuryWallet: 'Treasury wallet',
+      voucherHistory: 'Voucher history',
+      reviewCashOut: 'Review Cash-out',
+    },
+    form: {
+      cashAmountLabel: 'Cash amount to pay out',
+      paymentQrNotice:
+        'The customer will scan a BCH payment QR. The cash-out will only be completed after BCH is detected in the Treasury Wallet.',
+    },
+    preview: {
+      title: 'Cash-out Preview',
+      subtitle: 'Final BCH amount is locked after review.',
+      customerReceivesCash: 'Customer receives cash',
+      serviceFeeSpread: 'Service fee / spread',
+      customerSendsValue: 'Customer sends value',
+      quoteSource: 'Quote source',
+      lockedAfterReview: 'Locked after review',
+    },
+    paymentUri: {
+      label: 'BCH Cash-out',
+    },
+    safetyNotice:
+      'Customer BCH must be detected before the merchant gives out cash.',
+    messages: {
+      couldNotLoadTreasuryWallet: 'Could not load treasury wallet.',
+      enterValidCashAmount: 'Enter a valid cash amount.',
+      setUpTreasuryFirst:
+        'Set up the merchant treasury wallet before preparing a cash-out.',
+      fallbackQuoteWarning:
+        'Fallback quote used. Check the rate carefully before continuing.',
+      pricingUnavailable:
+        'Pricing is currently unavailable. Check your connection and try again.',
+      couldNotPrepareCashOut: 'Could not prepare cash-out.',
+      receiptPrintingPending:
+        'Receipt printing will be connected after payment detection is added.',
+    },
+  },
+
+  cashOutConfirm: {
+    header: {
+      reviewTitle: 'Review cash-out payment',
+      receivedTitle: 'BCH received',
+      reviewSubtitle:
+        'Ask the customer to scan the QR code and send the required BCH.',
+      receivedSubtitle:
+        'The customer payment has been detected in the merchant treasury.',
+    },
+    quoteStatus: {
+      fallback:
+        'Fallback price quote used. Check the rate carefully before continuing.',
+      liveLocked: 'Live price quote locked successfully.',
+    },
+    summary: {
+      cashCustomerReceives: 'Cash customer receives',
+      customerSends: 'Customer sends',
+      fiatEquivalentSent: 'Fiat equivalent sent',
+      serviceFeeSpread: 'Service fee / spread',
+    },
+    paymentQr: {
+      title: 'Customer payment QR',
+      subtitle:
+        'Ask the customer to scan this QR code with their BCH wallet. Wait for the BCH payment to arrive in your Treasury Wallet before giving their cash.',
+      qrAlt: 'Cash-out BCH payment QR',
+      qrUnavailable: 'QR unavailable',
+    },
+    paymentDetails: {
+      amountToSend: 'Amount to send',
+      treasuryReceivingAddress: 'Treasury receiving address',
+      paymentUri: 'Payment URI',
+    },
+    paymentUri: {
+      label: 'BCH Cash-out',
+    },
+    details: {
+      reference: 'Reference',
+      marketRate: 'Market rate',
+      quoteSource: 'Quote source',
+      fallbackBadge: 'fallback',
+      quoteTime: 'Quote time',
+      quoteExpires: 'Quote expires',
+      status: 'Status',
+      bchReceived: 'BCH received',
+      transactionId: 'Transaction ID',
+      detected: 'Detected',
+    },
+    success: {
+      title: 'BCH received',
+      nowGiveCustomer: 'Now give the customer',
+      cash: 'cash',
+    },
+    actions: {
+      copyAddress: 'Copy address',
+      copyPaymentUri: 'Copy payment URI',
+      closeReview: 'Close review',
+      printReceipt: 'Print Receipt',
+    },
+    messages: {
+      treasuryAddressCopied: 'Treasury address copied.',
+      paymentUriCopied: 'Payment URI copied.',
+      copyFailed: 'Copy failed.',
+    },
+    quoteSources: {
+      developmentQuote: 'Development quote',
+      cachedQuote: 'Cached quote',
+      manualQuote: 'Manual quote',
+      unknown: 'Unknown',
     },
   },
   saleConfirm: {
@@ -486,6 +603,7 @@ const en = {
     items: {
       home: 'Home',
       sellVoucher: 'Sell Voucher',
+      cashOut: 'Cash-out',
       voucherHistory: 'Voucher History',
       treasuryWallet: 'Treasury Wallet',
       printerSetup: 'Printer Setup',

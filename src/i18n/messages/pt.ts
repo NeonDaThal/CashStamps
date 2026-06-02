@@ -33,6 +33,7 @@ const pt = {
     actionTitle: 'O que pretende fazer?',
     actionSubtitle: 'Escolha a próxima ação do comerciante.',
     sellVoucher: 'Vender novo vale',
+    cashOutBch: 'Vender BCH por dinheiro',
     voucherHistory: 'Histórico de vales',
     treasuryWallet: 'Carteira de tesouraria',
     receiptPreview: 'Pré-visualização do recibo',
@@ -169,6 +170,123 @@ const pt = {
       noVoucherAddress:
         'Não existe um endereço de vale disponível. Reveja o vale novamente.',
       couldNotIssueVoucher: 'Não foi possível emitir o vale.',
+    },
+  },
+  cashOutPage: {
+    hero: {
+      eyebrow: 'Levantar BCH',
+      title: 'Levantar BCH',
+      intro:
+        'Introduza o valor em dinheiro que o cliente quer receber. A app calculará quanto BCH deve enviar para a tesouraria do comerciante.',
+    },
+    actions: {
+      treasuryWallet: 'Carteira de tesouraria',
+      voucherHistory: 'Histórico de vales',
+      reviewCashOut: 'Rever levantamento',
+    },
+    form: {
+      cashAmountLabel: 'Valor em dinheiro a pagar',
+      paymentQrNotice:
+        'O cliente irá digitalizar um QR de pagamento BCH. O levantamento só será concluído depois de BCH ser detetado na carteira de tesouraria.',
+    },
+    preview: {
+      title: 'Pré-visualização do levantamento',
+      subtitle: 'O valor final em BCH é bloqueado após a revisão.',
+      customerReceivesCash: 'Cliente recebe dinheiro',
+      serviceFeeSpread: 'Taxa de serviço / margem',
+      customerSendsValue: 'Valor que o cliente envia',
+      quoteSource: 'Fonte da cotação',
+      lockedAfterReview: 'Bloqueado após a revisão',
+    },
+    paymentUri: {
+      label: 'Levantamento BCH',
+    },
+    safetyNotice:
+      'O BCH do cliente deve ser detetado antes de o comerciante entregar dinheiro.',
+    messages: {
+      couldNotLoadTreasuryWallet:
+        'Não foi possível carregar a carteira de tesouraria.',
+      enterValidCashAmount: 'Introduza um valor em dinheiro válido.',
+      setUpTreasuryFirst:
+        'Configure a carteira de tesouraria do comerciante antes de preparar um levantamento.',
+      fallbackQuoteWarning:
+        'Cotação de reserva usada. Verifique a taxa cuidadosamente antes de continuar.',
+      pricingUnavailable:
+        'Os preços estão indisponíveis neste momento. Verifique a ligação e tente novamente.',
+      couldNotPrepareCashOut: 'Não foi possível preparar o levantamento.',
+      receiptPrintingPending:
+        'A impressão do recibo será ligada depois de a deteção de pagamento ser adicionada.',
+    },
+  },
+
+  cashOutConfirm: {
+    header: {
+      reviewTitle: 'Rever pagamento de levantamento',
+      receivedTitle: 'BCH recebido',
+      reviewSubtitle:
+        'Peça ao cliente para digitalizar o código QR e enviar o BCH necessário.',
+      receivedSubtitle:
+        'O pagamento do cliente foi detetado na tesouraria do comerciante.',
+    },
+    quoteStatus: {
+      fallback:
+        'Cotação de reserva usada. Verifique a taxa cuidadosamente antes de continuar.',
+      liveLocked: 'Cotação de preço em tempo real bloqueada com sucesso.',
+    },
+    summary: {
+      cashCustomerReceives: 'Dinheiro que o cliente recebe',
+      customerSends: 'Cliente envia',
+      fiatEquivalentSent: 'Equivalente fiat enviado',
+      serviceFeeSpread: 'Taxa de serviço / margem',
+    },
+    paymentQr: {
+      title: 'QR de pagamento do cliente',
+      subtitle:
+        'Peça ao cliente para digitalizar este código QR com a sua carteira BCH. Aguarde até o pagamento BCH chegar à carteira de tesouraria antes de entregar o dinheiro.',
+      qrAlt: 'QR de pagamento BCH para levantamento',
+      qrUnavailable: 'QR indisponível',
+    },
+    paymentDetails: {
+      amountToSend: 'Valor a enviar',
+      treasuryReceivingAddress: 'Endereço de receção da tesouraria',
+      paymentUri: 'URI de pagamento',
+    },
+    paymentUri: {
+      label: 'Levantamento BCH',
+    },
+    details: {
+      reference: 'Referência',
+      marketRate: 'Taxa de mercado',
+      quoteSource: 'Fonte da cotação',
+      fallbackBadge: 'reserva',
+      quoteTime: 'Hora da cotação',
+      quoteExpires: 'Cotação expira',
+      status: 'Estado',
+      bchReceived: 'BCH recebido',
+      transactionId: 'ID da transação',
+      detected: 'Detetado',
+    },
+    success: {
+      title: 'BCH recebido',
+      nowGiveCustomer: 'Agora entregue ao cliente',
+      cash: 'em dinheiro',
+    },
+    actions: {
+      copyAddress: 'Copiar endereço',
+      copyPaymentUri: 'Copiar URI de pagamento',
+      closeReview: 'Fechar revisão',
+      printReceipt: 'Imprimir recibo',
+    },
+    messages: {
+      treasuryAddressCopied: 'Endereço da tesouraria copiado.',
+      paymentUriCopied: 'URI de pagamento copiado.',
+      copyFailed: 'Falha ao copiar.',
+    },
+    quoteSources: {
+      developmentQuote: 'Cotação de desenvolvimento',
+      cachedQuote: 'Cotação em cache',
+      manualQuote: 'Cotação manual',
+      unknown: 'Desconhecida',
     },
   },
 
@@ -512,6 +630,7 @@ const pt = {
     items: {
       home: 'Início',
       sellVoucher: 'Vender vale',
+      cashOut: 'Levantar dinheiro',
       voucherHistory: 'Histórico de vales',
       treasuryWallet: 'Carteira de tesouraria',
       printerSetup: 'Configurar impressora',
