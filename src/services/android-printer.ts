@@ -1,5 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
+import type { VoucherReceiptData } from 'src/services/voucher-receipt';
+
 export interface AndroidPrinterDevice {
   name: string;
   address: string;
@@ -33,6 +35,22 @@ interface BluetoothEscPosPrinterPlugin {
   printVoucherReceiptTest(options: {
     name?: string;
     address?: string;
+  }): Promise<AndroidPrinterResult>;
+
+  printVoucherReceipt(options: {
+    name?: string;
+    address?: string;
+    title: string;
+    serial: string;
+    issuedAtLabel: string;
+    customerPaidLabel: string;
+    loadedFiatLabel: string;
+    bchAmountLabel: string;
+    voucherAddress: string;
+    qrPayload: string;
+    redemptionInstruction: string;
+    cashWarning: string;
+    supportNote: string;
   }): Promise<AndroidPrinterResult>;
 }
 
@@ -109,5 +127,39 @@ export async function printBluetoothVoucherReceiptTest(options?: {
   return BluetoothEscPosPrinter.printVoucherReceiptTest({
     name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
     address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
+  });
+}
+
+export async function printBluetoothVoucherReceipt(
+  receiptData: VoucherReceiptData,
+  options?: {
+    name?: string;
+    address?: string;
+  }
+): Promise<AndroidPrinterResult> {
+  if (!isAndroidPrinterBridgeAvailable()) {
+    throw new Error(
+      'Android Bluetooth printer bridge is only available in the Android app.'
+    );
+  }
+
+  if (!receiptData.qrPayload) {
+    throw new Error('Voucher receipt QR payload is missing.');
+  }
+
+  return BluetoothEscPosPrinter.printVoucherReceipt({
+    name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
+    address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
+    title: receiptData.title,
+    serial: receiptData.serial,
+    issuedAtLabel: receiptData.issuedAtLabel,
+    customerPaidLabel: receiptData.customerPaidLabel,
+    loadedFiatLabel: receiptData.loadedFiatLabel,
+    bchAmountLabel: receiptData.bchAmountLabel,
+    voucherAddress: receiptData.address,
+    qrPayload: receiptData.qrPayload,
+    redemptionInstruction: receiptData.redemptionInstruction,
+    cashWarning: receiptData.cashWarning,
+    supportNote: receiptData.supportNote,
   });
 }

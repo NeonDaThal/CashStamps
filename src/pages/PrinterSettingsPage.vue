@@ -185,10 +185,19 @@
             <q-btn
               color="dark"
               icon="receipt_long"
-              label="Print voucher receipt test"
+              label="Print native receipt test"
               :disable="!isBridgeAvailable"
               :loading="isPrintingVoucherReceipt"
               @click="handlePrintVoucherReceiptTest"
+            />
+
+            <q-btn
+              color="positive"
+              icon="dynamic_feed"
+              label="Print app-side receipt test"
+              :disable="!isBridgeAvailable"
+              :loading="isPrintingAppSideReceipt"
+              @click="handlePrintAppSideReceiptTest"
             />
           </div>
 
@@ -197,8 +206,10 @@
               <q-icon name="security" />
             </template>
 
-            Voucher/WIF printing is deliberately not connected yet. The voucher
-            receipt test uses fake receipt data and a harmless QR payload.
+            Voucher/WIF printing is deliberately not connected to real vouchers
+            yet. The app-side receipt test uses fake receipt data and a harmless
+            QR payload, but follows the same field shape as the real receipt
+            builder.
           </q-banner>
         </q-card-section>
       </q-card>
@@ -217,9 +228,11 @@ import {
   isAndroidPrinterBridgeAvailable,
   printBluetoothQrTest,
   printBluetoothTextTest,
+  printBluetoothVoucherReceipt,
   printBluetoothVoucherReceiptTest,
   type AndroidPrinterDevice,
 } from 'src/services/android-printer';
+import type { VoucherReceiptData } from 'src/services/voucher-receipt';
 
 const $q = useQuasar();
 
@@ -235,6 +248,7 @@ const isCheckingDevices = ref(false);
 const isPrintingText = ref(false);
 const isPrintingQr = ref(false);
 const isPrintingVoucherReceipt = ref(false);
+const isPrintingAppSideReceipt = ref(false);
 
 const isBridgeAvailable = computed(() => isAndroidPrinterBridgeAvailable());
 const platformLabel = computed(() => Capacitor.getPlatform());
@@ -254,6 +268,46 @@ function selectDevice(device: AndroidPrinterDevice): void {
     type: 'positive',
     message: `Selected ${device.name || device.address}`,
   });
+}
+
+function buildFakeAppSideReceiptData(): VoucherReceiptData {
+  const issuedAt = new Date().toISOString();
+  const nowLabel = new Date(issuedAt).toLocaleString('en-GB', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
+  const testAddress =
+    'bitcoincash:qptestappsidereceiptaddress000000000000000000000';
+  const testQrPayload = 'BCH_VOUCHER_APP_SIDE_TEST_ONLY_APP-TEST-0001';
+
+  return {
+    title: 'BCH Voucher',
+    serial: 'APP-TEST-0001',
+    issuedAt,
+    issuedAtLabel: nowLabel,
+    fiatCurrency: 'GBP',
+    customerPaidMinor: 1100,
+    loadedFiatMinor: 1000,
+    customerPaidLabel: 'GBP 11.00',
+    loadedFiatLabel: 'GBP 10.00',
+    bchSats: 1234567,
+    bchAmountLabel: '0.01234567 BCH',
+    address: testAddress,
+    derivationIndex: 0,
+    qrPayload: testQrPayload,
+    wifExport: {
+      wif: testQrPayload,
+      address: testAddress,
+      derivationIndex: 0,
+      createdAt: issuedAt,
+    },
+    isDevelopmentPrivateKeyPreview: true,
+    redemptionInstruction:
+      'Scan this QR with a BCH wallet to redeem the voucher.',
+    cashWarning:
+      'Treat this voucher like cash. Anyone with the QR can redeem it.',
+    supportNote: 'Keep this receipt safe until the voucher is redeemed.',
+  };
 }
 
 async function handleCheckPairedDevices(): Promise<void> {
@@ -370,6 +424,37 @@ async function handlePrintVoucherReceiptTest(): Promise<void> {
     });
   } finally {
     isPrintingVoucherReceipt.value = false;
+  }
+}
+
+async function handlePrintAppSideReceiptTest(): Promise<void> {
+  isPrintingAppSideReceipt.value = true;
+
+  try {
+    const result = await printBluetoothVoucherReceipt(
+      buildFakeAppSideReceiptData(),
+      {
+        name: printerName.value,
+        address: printerAddress.value,
+      }
+    );
+
+    $q.notify({
+      type: 'positive',
+      message: result.message || 'App-side receipt test sent to printer.',
+    });
+  } catch (error) {
+    console.error(error);
+
+    $q.notify({
+      type: 'negative',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'App-side receipt test print failed.',
+    });
+  } finally {
+    isPrintingAppSideReceipt.value = false;
   }
 }
 </script>

@@ -122,6 +122,25 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         doPrintVoucherReceiptTest(call);
     }
 
+    @PluginMethod
+    public void printVoucherReceipt(PluginCall call) {
+        if (!ensureBluetoothPrinterPermission(call, "printVoucherReceiptPermissionCallback")) {
+            return;
+        }
+
+        doPrintVoucherReceipt(call);
+    }
+
+    @PermissionCallback
+    private void printVoucherReceiptPermissionCallback(PluginCall call) {
+        if (!hasBluetoothPrinterPermission()) {
+            call.reject("Bluetooth permission was not granted.");
+            return;
+        }
+
+        doPrintVoucherReceipt(call);
+    }
+
     private void doGetPairedDevices(PluginCall call) {
         try {
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
@@ -230,6 +249,59 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
                 call.resolve(result);
             } catch (Exception error) {
                 call.reject("Voucher receipt test print failed: " + error.getMessage());
+            }
+        }).start();
+    }
+
+    private void doPrintVoucherReceipt(PluginCall call) {
+        final String printerAddress = normalisePrinterAddress(
+            call.getString("address", DEFAULT_PRINTER_ADDRESS)
+        );
+        final String printerName = call.getString("name", DEFAULT_PRINTER_NAME);
+
+        final String title = safeString(call.getString("title", "BCH Voucher"));
+        final String serial = safeString(call.getString("serial", "UNKNOWN"));
+        final String issuedAtLabel = safeString(call.getString("issuedAtLabel", ""));
+        final String customerPaidLabel = safeString(call.getString("customerPaidLabel", ""));
+        final String loadedFiatLabel = safeString(call.getString("loadedFiatLabel", ""));
+        final String bchAmountLabel = safeString(call.getString("bchAmountLabel", ""));
+        final String voucherAddress = safeString(call.getString("voucherAddress", ""));
+        final String qrPayload = safeString(call.getString("qrPayload", ""));
+        final String redemptionInstruction = safeString(call.getString("redemptionInstruction", ""));
+        final String cashWarning = safeString(call.getString("cashWarning", ""));
+        final String supportNote = safeString(call.getString("supportNote", ""));
+
+        if (!hasText(qrPayload)) {
+            call.reject("Voucher receipt QR payload is missing.");
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                byte[] bytes = buildVoucherReceiptBytes(
+                    title,
+                    serial,
+                    issuedAtLabel,
+                    customerPaidLabel,
+                    loadedFiatLabel,
+                    bchAmountLabel,
+                    voucherAddress,
+                    qrPayload,
+                    redemptionInstruction,
+                    cashWarning,
+                    supportNote
+                );
+
+                sendBytesToPrinter(printerAddress, bytes);
+
+                JSObject result = new JSObject();
+                result.put("success", true);
+                result.put("printerName", printerName);
+                result.put("address", printerAddress);
+                result.put("message", "Voucher receipt sent to printer.");
+                call.resolve(result);
+            } catch (Exception error) {
+                call.reject("Voucher receipt print failed: " + error.getMessage());
             }
         }).start();
     }
@@ -351,56 +423,108 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     }
 
     private byte[] buildVoucherReceiptTestBytes() throws IOException {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        return buildVoucherReceiptBytes(
+            "BCH Voucher",
+            "TEST-0001",
+            "TEST MODE",
+            "GBP 11.00",
+            "GBP 10.00",
+            "0.01234567 BCH",
+            "bitcoincash:qptestvoucheraddress000000000000000000000000000",
+            "BCH_VOUCHER_TEST_ONLY_REFERENCE_TEST-0001",
+            "This QR is test-only. It does not contain a voucher key.",
+            "WARNING: TREAT A REAL VOUCHER LIKE CASH.",
+            "Keep the receipt safe until the voucher is redeemed."
+        );
+    }
 
-        String testAddress =
-            "bitcoincash:qptestvoucheraddress000000000000000000000000000";
-        String testQrPayload =
-            "BCH_VOUCHER_TEST_ONLY_REFERENCE_TEST-0001";
+    private byte[] buildVoucherReceiptBytes(
+        String title,
+        String serial,
+        String issuedAtLabel,
+        String customerPaidLabel,
+        String loadedFiatLabel,
+        String bchAmountLabel,
+        String voucherAddress,
+        String qrPayload,
+        String redemptionInstruction,
+        String cashWarning,
+        String supportNote
+    ) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
 
         writeInitialize(output);
 
         writeAlignCenter(output);
         writeBold(output, true);
         writeTextLine(output, "BITCOIN CASH");
-        writeTextLine(output, "BCH VOUCHER");
+        writeTextLine(output, title.toUpperCase());
         writeBold(output, false);
-        writeTextLine(output, "TEST RECEIPT - NOT REAL");
+
+        if (serial.startsWith("TEST")) {
+            writeTextLine(output, "TEST RECEIPT - NOT REAL");
+        }
+
         writeDivider(output);
 
         writeTextLine(output, "VALUE LOADED");
         writeBold(output, true);
-        writeTextLine(output, "GBP 10.00");
+        writeTextLine(output, loadedFiatLabel);
         writeBold(output, false);
-        writeTextLine(output, "0.01234567 BCH");
+
+        if (hasText(bchAmountLabel)) {
+            writeTextLine(output, bchAmountLabel);
+        }
+
         writeDivider(output);
 
-        writeTextLine(output, "SCAN TO TEST QR");
+        writeTextLine(output, "SCAN TO REDEEM");
         writeFeedLines(output, 1);
-        writeQrCode(output, testQrPayload, 5);
+        writeQrCode(output, qrPayload, 6);
         writeFeedLines(output, 1);
-        writeWrappedText(output, "This QR is test-only. It does not contain a voucher key.", 32);
+
+        if (hasText(redemptionInstruction)) {
+            writeWrappedText(output, redemptionInstruction, 32);
+        }
+
         writeDivider(output);
 
         writeAlignLeft(output);
-        writeKeyValueLine(output, "Reference", "TEST-0001");
-        writeKeyValueLine(output, "Issued", "TEST MODE");
-        writeKeyValueLine(output, "Customer Paid", "GBP 11.00");
-        writeKeyValueLine(output, "Loaded", "GBP 10.00");
-        writeKeyValueLine(output, "Printer", DEFAULT_PRINTER_NAME);
+        writeKeyValueLine(output, "Reference", serial);
 
-        writeFeedLines(output, 1);
-        writeTextLine(output, "Voucher Address:");
-        writeWrappedText(output, testAddress, 32);
-        writeDivider(output);
+        if (hasText(issuedAtLabel)) {
+            writeKeyValueLine(output, "Issued", issuedAtLabel);
+        }
 
-        writeAlignCenter(output);
-        writeBold(output, true);
-        writeWrappedText(output, "WARNING: TREAT A REAL VOUCHER LIKE CASH.", 32);
-        writeBold(output, false);
-        writeFeedLines(output, 1);
-        writeWrappedText(output, "Keep the receipt safe until the voucher is redeemed.", 32);
-        writeFeedLines(output, 3);
+        if (hasText(customerPaidLabel)) {
+            writeKeyValueLine(output, "Customer Paid", customerPaidLabel);
+        }
+
+        if (hasText(loadedFiatLabel)) {
+            writeKeyValueLine(output, "Loaded", loadedFiatLabel);
+        }
+
+        if (hasText(voucherAddress)) {
+            writeFeedLines(output, 1);
+            writeTextLine(output, "Voucher Address:");
+            writeWrappedText(output, voucherAddress, 32);
+        }
+
+        if (hasText(cashWarning)) {
+            writeDivider(output);
+            writeAlignCenter(output);
+            writeBold(output, true);
+            writeWrappedText(output, cashWarning, 32);
+            writeBold(output, false);
+        }
+
+        if (hasText(supportNote)) {
+            writeFeedLines(output, 1);
+            writeAlignCenter(output);
+            writeWrappedText(output, supportNote, 32);
+        }
+
+        writeFeedLines(output, 4);
 
         return output.toByteArray();
     }
@@ -540,6 +664,18 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         }
 
         return address.trim().replace("-", ":").toUpperCase();
+    }
+
+    private String safeString(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.trim();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && value.trim().length() > 0;
     }
 
     private String safeDeviceName(BluetoothDevice device) {
