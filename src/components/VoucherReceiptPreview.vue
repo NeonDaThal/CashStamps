@@ -12,6 +12,44 @@
       {{ t('receiptPreview.privateKeyWarning') }}
     </q-banner>
 
+    <q-banner v-if="receiptData" class="print-warning q-mb-md" rounded>
+      <template #avatar>
+        <q-icon name="print" />
+      </template>
+
+      <div class="print-warning-content">
+        <div class="print-warning-title">Physical voucher printing</div>
+        <div class="print-warning-copy">
+          This prints the real voucher receipt QR from the current receipt data.
+          Only print when you are ready to hand the receipt to the customer.
+        </div>
+
+        <q-btn
+          class="print-receipt-button q-mt-sm"
+          icon="print"
+          :label="
+            isPrintingReceipt ? 'Printing receipt...' : 'Print real receipt'
+          "
+          unelevated
+          no-caps
+          :disable="!isPrinterBridgeAvailable || isLoading || isPrintingReceipt"
+          :loading="isPrintingReceipt"
+          @click="handlePrintReceipt"
+        />
+
+        <div v-if="printStatusMessage" class="print-status-message q-mt-xs">
+          {{ printStatusMessage }}
+        </div>
+
+        <div
+          v-if="!isPrinterBridgeAvailable"
+          class="print-warning-small q-mt-xs"
+        >
+          Printing is only available inside the Android APK.
+        </div>
+      </div>
+    </q-banner>
+
     <q-card flat bordered class="voucher-receipt-preview-card">
       <q-card-section v-if="isLoading" class="loading-state">
         <q-spinner size="32px" color="primary" />
@@ -121,7 +159,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import QRCode from 'qrcode/lib/browser';
 
@@ -130,6 +169,10 @@ import {
   buildVoucherReceiptData,
   type VoucherReceiptData,
 } from 'src/services/voucher-receipt';
+import {
+  isAndroidPrinterBridgeAvailable,
+  printBluetoothVoucherReceipt,
+} from 'src/services/android-printer';
 
 const props = withDefaults(
   defineProps<{
@@ -141,12 +184,19 @@ const props = withDefaults(
   }
 );
 
+const $q = useQuasar();
 const { locale, t } = useI18n({ useScope: 'global' });
 
 const receiptData = ref<VoucherReceiptData | null>(null);
 const qrCodeDataUrl = ref('');
 const isLoading = ref(false);
+const isPrintingReceipt = ref(false);
+const printStatusMessage = ref('');
 const errorMessage = ref('');
+
+const isPrinterBridgeAvailable = computed(() =>
+  isAndroidPrinterBridgeAvailable()
+);
 
 async function buildReceiptPreview(): Promise<void> {
   isLoading.value = true;
@@ -194,6 +244,46 @@ async function buildReceiptPreview(): Promise<void> {
   }
 }
 
+async function handlePrintReceipt(): Promise<void> {
+  if (!receiptData.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Receipt data is not ready yet.',
+    });
+    return;
+  }
+
+  isPrintingReceipt.value = true;
+  printStatusMessage.value = 'Connecting to printer and sending receipt...';
+
+  try {
+    const result = await printBluetoothVoucherReceipt(receiptData.value);
+
+    printStatusMessage.value = 'Receipt sent to printer.';
+
+    $q.notify({
+      type: 'positive',
+      message: result.message || 'Voucher receipt sent to printer.',
+    });
+  } catch (error) {
+    console.error(error);
+
+    const fallbackMessage =
+      'Could not connect to printer. Check the printer is switched on, nearby, and not connected to another app.';
+
+    const message = error instanceof Error ? error.message : fallbackMessage;
+
+    printStatusMessage.value = message;
+
+    $q.notify({
+      type: 'negative',
+      message,
+    });
+  } finally {
+    isPrintingReceipt.value = false;
+  }
+}
+
 watch(
   [() => props.voucher, () => locale.value],
   () => {
@@ -211,9 +301,37 @@ watch(
   width: 100%;
 }
 
-.private-key-warning {
+.private-key-warning,
+.print-warning {
   background: #fff4df;
   color: #8a4b00;
+}
+
+.print-warning-content {
+  width: 100%;
+}
+
+.print-warning-title {
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.print-warning-copy,
+.print-warning-small,
+.print-status-message {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.print-status-message {
+  font-weight: 800;
+}
+
+.print-receipt-button {
+  background: #00ce1b;
+  border-radius: 14px;
+  color: #000000;
+  font-weight: 850;
 }
 
 .voucher-receipt-preview-card {

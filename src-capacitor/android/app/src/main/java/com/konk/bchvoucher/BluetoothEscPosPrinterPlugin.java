@@ -46,6 +46,10 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     private static final UUID SPP_UUID = UUID.fromString(SPP_UUID_STRING);
     private static final Charset PRINTER_TEXT_CHARSET = Charset.forName("GBK");
 
+    private static final int MAX_PRINT_ATTEMPTS = 3;
+    private static final long PRINT_RETRY_DELAY_MS = 650L;
+    private static final long POST_FLUSH_SETTLE_DELAY_MS = 180L;
+
     @PluginMethod
     public void getPairedDevices(PluginCall call) {
         if (!ensureBluetoothPrinterPermission(call, "getPairedDevicesPermissionCallback")) {
@@ -331,44 +335,85 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     }
 
     private void sendBytesToPrinter(String address, byte[] bytes) throws IOException {
-        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+    IOException lastError = null;
 
-        if (adapter == null) {
-            throw new IOException("Bluetooth is not available on this device.");
-        }
-
-        if (!adapter.isEnabled()) {
-            throw new IOException("Bluetooth is turned off.");
-        }
-
-        BluetoothDevice device = adapter.getRemoteDevice(address);
-        BluetoothSocket socket = null;
-
-        adapter.cancelDiscovery();
-
+    for (int attempt = 1; attempt <= MAX_PRINT_ATTEMPTS; attempt += 1) {
         try {
-            socket = createBluetoothSocket(device);
-            socket.connect();
+            sendBytesToPrinterOnce(address, bytes);
+            return;
+        } catch (SecurityException error) {
+            throw new IOException(
+                "Bluetooth permission error. Check Nearby devices permission is allowed.",
+                error
+            );
+        } catch (IOException error) {
+            lastError = error;
 
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(bytes);
-            outputStream.flush();
-
-            try {
-                Thread.sleep(300);
-            } catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
-            }
-        } finally {
-            if (socket != null) {
-                try {
-                    socket.close();
-                } catch (IOException ignored) {
-                    // Ignore close errors after print attempt.
-                }
+            if (attempt < MAX_PRINT_ATTEMPTS) {
+                sleepBeforeRetry();
             }
         }
     }
+
+    String details =
+        lastError != null && lastError.getMessage() != null
+            ? lastError.getMessage()
+            : "Unknown Bluetooth socket error.";
+
+    throw new IOException(
+        "Could not connect to printer. Check the printer is switched on, nearby, and not connected to another app. Last error: "
+            + details,
+        lastError
+    );
+}
+
+private void sendBytesToPrinterOnce(String address, byte[] bytes) throws IOException {
+    BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+
+    if (adapter == null) {
+        throw new IOException("Bluetooth is not available on this device.");
+    }
+
+    if (!adapter.isEnabled()) {
+        throw new IOException("Bluetooth is turned off.");
+    }
+
+    BluetoothDevice device = adapter.getRemoteDevice(address);
+    BluetoothSocket socket = null;
+
+    adapter.cancelDiscovery();
+
+    try {
+        socket = createBluetoothSocket(device);
+        socket.connect();
+
+        OutputStream outputStream = socket.getOutputStream();
+        outputStream.write(bytes);
+        outputStream.flush();
+
+        try {
+            Thread.sleep(POST_FLUSH_SETTLE_DELAY_MS);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+    } finally {
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException ignored) {
+                // Ignore close errors after print attempt.
+            }
+        }
+    }
+}
+
+private void sleepBeforeRetry() {
+    try {
+        Thread.sleep(PRINT_RETRY_DELAY_MS);
+    } catch (InterruptedException ignored) {
+        Thread.currentThread().interrupt();
+    }
+}
 
     private BluetoothSocket createBluetoothSocket(BluetoothDevice device)
         throws IOException {
