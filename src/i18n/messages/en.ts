@@ -605,6 +605,7 @@ const en = {
       sellVoucher: 'Sell Voucher',
       cashOut: 'Cash-out',
       voucherHistory: 'Voucher History',
+      merchantReports: 'Reports',
       treasuryWallet: 'Treasury Wallet',
       printerSetup: 'Printer Setup',
       appSettings: 'App Settings',
@@ -620,6 +621,90 @@ const en = {
       comingSoon: 'Coming soon',
     },
   },
+
+  merchantReportsPage: {
+    hero: {
+      eyebrow: 'Merchant Reports',
+      title: 'Reports',
+      intro:
+        'Track voucher sales, cash-outs, revenue, and growth from this device.',
+    },
+    actions: {
+      viewHistory: 'View History',
+      sellVoucher: 'Sell Voucher',
+      printReport: 'Print Report',
+      exportPdf: 'Export PDF',
+      saveImage: 'Save Image',
+      shareReport: 'Share Report',
+    },
+    range: {
+      title: 'Report Range',
+      subtitle: 'Switch between useful merchant reporting periods.',
+    },
+    ranges: {
+      today: 'Today',
+      week: 'This Week',
+      month: 'This Month',
+      year: 'This Year',
+      allTime: 'All Time',
+    },
+    summary: {
+      comingSoon: 'Soon',
+      totalVouchers: 'Total Vouchers Issued',
+      totalVouchersCaption:
+        'Number of voucher sales completed in the selected period.',
+      grossFiat: 'Gross Fiat Revenue',
+      grossFiatCaption:
+        'Total cash value handled before fee and spread deductions.',
+      netFiat: 'Net Fiat Revenue',
+      netFiatCaption:
+        'Estimated merchant-facing value after tracked fee deductions.',
+      bchLoaded: 'BCH Loaded',
+      bchLoadedCaption:
+        'Total BCH loaded into customer vouchers during this period.',
+      cashOutVolume: 'Cash-outs',
+      cashOutVolumeCaption:
+        'BCH sold back by customers through the cash-out flow.',
+      growth: 'Growth vs Previous Period',
+      growthCaption: 'Comparison against the matching previous report period.',
+    },
+    targets: {
+      title: 'Beat Last Period',
+      subtitle:
+        'Automatic targets will compare this range with the previous matching period.',
+      progressLabel: 'Target Progress',
+      emptyState:
+        'Once report calculations are connected, this card will show whether the merchant is ahead or behind last period.',
+    },
+    breakdowns: {
+      title: 'Breakdowns',
+      subtitle:
+        'Prepared for currency totals, transaction flow, and status breakdowns.',
+      currencyTitle: 'By Currency',
+      currencyText:
+        'Show total vouchers and revenue by fiat currency, such as GBP, EUR, or local currencies later.',
+      flowTitle: 'Cash-in vs Cash-out',
+      flowText:
+        'Compare customer voucher purchases against customer BCH cash-outs.',
+      statusTitle: 'By Status',
+      statusText:
+        'Separate funded, printed, redeemed, completed, cancelled, and failed activity.',
+    },
+    reportActions: {
+      title: 'Report Actions',
+      subtitle:
+        'Prepared for print, PDF export, image save, and sharing features.',
+      comingSoon: 'Report actions will be connected later.',
+    },
+    localFirst: {
+      title: 'Local-first reports.',
+      message:
+        'Reports will be calculated from records stored on this device. No server tracking is added in this step.',
+    },
+    nextStepNotice:
+      'Next step: connect this page to local voucher and cash-out records.',
+  },
+
   receiptPreview: {
     privateKeyWarning:
       'Development preview only. This receipt contains a sweepable private key QR. Anyone who scans or copies it can sweep the voucher funds.',

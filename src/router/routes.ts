@@ -17,6 +17,10 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/CashOutPage.vue'),
       },
       {
+        path: 'merchant-reports',
+        component: () => import('pages/MerchantReportsPage.vue'),
+      },
+      {
         path: 'treasury-settings',
         component: () => import('pages/TreasurySettingsPage.vue'),
       },

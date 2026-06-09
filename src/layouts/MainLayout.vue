@@ -155,6 +155,15 @@
             </q-item-section>
           </q-item>
 
+          <q-item clickable to="/merchant-reports" @click="closeDrawer">
+            <q-item-section avatar>
+              <q-icon name="insert_chart" />
+            </q-item-section>
+            <q-item-section>
+              {{ t('layout.items.merchantReports') }}
+            </q-item-section>
+          </q-item>
+
           <q-item clickable to="/printer-settings" @click="closeDrawer">
             <q-item-section avatar>
               <q-icon name="print" />
