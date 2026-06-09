@@ -636,6 +636,7 @@ const en = {
       exportPdf: 'Export PDF',
       saveImage: 'Save Image',
       shareReport: 'Share Report',
+      refreshReport: 'Refresh Report',
     },
     range: {
       title: 'Report Range',
@@ -648,47 +649,72 @@ const en = {
       year: 'This Year',
       allTime: 'All Time',
     },
+    period: {
+      currentRange: 'Current Range',
+      loading: 'Loading report range...',
+      noRecordsYet: 'No completed voucher records yet',
+    },
     summary: {
-      comingSoon: 'Soon',
+      localData: 'Local',
+      previousPeriod: 'Previous',
       totalVouchers: 'Total Vouchers Issued',
       totalVouchersCaption:
-        'Number of voucher sales completed in the selected period.',
-      grossFiat: 'Gross Fiat Revenue',
+        'Number of completed voucher sales in the selected period.',
+      grossFiat: 'Gross Fiat Value',
       grossFiatCaption:
-        'Total cash value handled before fee and spread deductions.',
-      netFiat: 'Net Fiat Revenue',
-      netFiatCaption:
-        'Estimated merchant-facing value after tracked fee deductions.',
+        'Total customer cash value handled through voucher sales.',
+      netFiat: 'Net Fiat Value',
+      netFiatCaption: 'Estimated value after tracked voucher fee deductions.',
       bchLoaded: 'BCH Loaded',
       bchLoadedCaption:
         'Total BCH loaded into customer vouchers during this period.',
-      cashOutVolume: 'Cash-outs',
-      cashOutVolumeCaption:
-        'BCH sold back by customers through the cash-out flow.',
+      averageVoucherValue: 'Average Voucher Value',
+      averageVoucherValueCaption:
+        'Average fiat value per completed voucher sale.',
       growth: 'Growth vs Previous Period',
-      growthCaption: 'Comparison against the matching previous report period.',
+      growthCaption:
+        'Voucher count compared with the matching previous report period.',
+      noPreviousPeriod: 'No previous period',
+      newActivity: 'New',
     },
     targets: {
       title: 'Beat Last Period',
       subtitle:
-        'Automatic targets will compare this range with the previous matching period.',
+        'Automatic targets compare this range with the previous matching period.',
       progressLabel: 'Target Progress',
-      emptyState:
-        'Once report calculations are connected, this card will show whether the merchant is ahead or behind last period.',
+      noPreviousPeriod: 'No previous period',
+      noPreviousPeriodMessage:
+        'Choose Today, This Week, This Month, or This Year once there is previous activity to compare against.',
+      newActivity: 'New activity',
+      newActivityMessage:
+        'There was no activity in the previous period, so this period has started fresh.',
+      matchedLastPeriod: 'Matched last period',
+      matchedMessage:
+        'This period is currently level with the previous matching period.',
+      aheadBy: '{amount} ahead',
+      aheadMessage:
+        'The merchant is currently ahead of the previous matching period.',
+      leftToBeat: '{amount} left',
+      behindMessage:
+        'This is the amount still needed to beat the previous matching period.',
     },
     breakdowns: {
       title: 'Breakdowns',
       subtitle:
-        'Prepared for currency totals, transaction flow, and status breakdowns.',
+        'View currency totals, voucher flow, and which local records are counted.',
       currencyTitle: 'By Currency',
-      currencyText:
-        'Show total vouchers and revenue by fiat currency, such as GBP, EUR, or local currencies later.',
-      flowTitle: 'Cash-in vs Cash-out',
+      noCurrencyData: 'No completed voucher activity in this range yet.',
+      voucherCount: '{count} vouchers',
+      flowTitle: 'Voucher Flow',
+      vouchersIssued: 'Vouchers issued',
+      bchLoaded: 'BCH loaded',
       flowText:
-        'Compare customer voucher purchases against customer BCH cash-outs.',
-      statusTitle: 'By Status',
+        'Cash-out reporting will be added here after the voucher report view is confirmed.',
+      statusTitle: 'Reportable Records',
+      recordsLoaded: 'Voucher records loaded',
+      reportableVouchers: 'Reportable vouchers',
       statusText:
-        'Separate funded, printed, redeemed, completed, cancelled, and failed activity.',
+        'Reports currently count funded, printed, and redeemed vouchers. Drafts, quote-locked records, errors, and reclaimed records are excluded.',
     },
     reportActions: {
       title: 'Report Actions',
@@ -699,10 +725,14 @@ const en = {
     localFirst: {
       title: 'Local-first reports.',
       message:
-        'Reports will be calculated from records stored on this device. No server tracking is added in this step.',
+        'Reports are calculated from records stored on this device. No server tracking is added in this step.',
     },
-    nextStepNotice:
-      'Next step: connect this page to local voucher and cash-out records.',
+    messages: {
+      loadingReport: 'Loading local report data...',
+      couldNotLoadReport: 'Could not load merchant report data.',
+    },
+    connectedNotice:
+      'Reports are now connected to local voucher records for this device.',
   },
 
   receiptPreview: {
