@@ -24,6 +24,7 @@ const en = {
     german: 'Deutsch',
     portuguese: 'Português',
     cantonese: '中文（香港）',
+    nepali: 'नेपाली',
   },
 
   home: {

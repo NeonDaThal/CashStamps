@@ -24,6 +24,7 @@ const zhHK = {
     german: 'Deutsch',
     portuguese: 'Português',
     cantonese: '廣東話',
+    nepali: 'नेपाली',
   },
 
   home: {

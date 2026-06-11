@@ -54,6 +54,10 @@
               <q-item clickable @click="setLocale('zh-HK')">
                 <q-item-section>{{ t('language.cantonese') }}</q-item-section>
               </q-item>
+
+              <q-item clickable @click="setLocale('ne-NP')">
+                <q-item-section>{{ t('language.nepali') }}</q-item-section>
+              </q-item>
             </q-list>
           </q-menu>
         </q-btn>
@@ -336,6 +340,10 @@ const localeShortLabel = computed((): string => {
 
   if (localeValue === 'zh-HK' || localeMain === 'zh') {
     return 'HK';
+  }
+
+  if (localeValue === 'ne-NP' || localeMain === 'ne') {
+    return 'NP';
   }
 
   return 'EN';
