@@ -26,6 +26,7 @@ const pt = {
     cantonese: '中文（香港）',
     nepali: 'नेपाली',
     swedish: 'Svenska',
+    swahili: 'Kiswahili',
   },
 
   home: {

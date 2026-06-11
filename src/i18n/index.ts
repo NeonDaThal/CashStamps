@@ -5,6 +5,7 @@ import pt from './messages/pt';
 import zhHK from './messages/zh-HK';
 import neNP from './messages/ne-NP';
 import svSE from './messages/sv-SE';
+import sw from './messages/sw';
 
 export const supportedLocales = [
   'en',
@@ -14,6 +15,7 @@ export const supportedLocales = [
   'zh-HK',
   'ne-NP',
   'sv-SE',
+  'sw',
 ] as const;
 
 export type SupportedLocale = (typeof supportedLocales)[number];
@@ -30,6 +32,7 @@ const messages = {
   'zh-HK': zhHK,
   'ne-NP': neNP,
   'sv-SE': svSE,
+  sw,
 };
 
 export default messages;

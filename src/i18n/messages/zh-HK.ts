@@ -26,6 +26,7 @@ const zhHK = {
     cantonese: '廣東話',
     nepali: 'नेपाली',
     swedish: 'Svenska',
+    swahili: 'Kiswahili',
   },
 
   home: {

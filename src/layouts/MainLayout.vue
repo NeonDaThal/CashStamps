@@ -62,6 +62,10 @@
               <q-item clickable @click="setLocale('sv-SE')">
                 <q-item-section>{{ t('language.swedish') }}</q-item-section>
               </q-item>
+
+              <q-item clickable @click="setLocale('sw')">
+                <q-item-section>{{ t('language.swahili') }}</q-item-section>
+              </q-item>
             </q-list>
           </q-menu>
         </q-btn>
@@ -352,6 +356,10 @@ const localeShortLabel = computed((): string => {
 
   if (localeValue === 'sv-SE' || localeMain === 'sv') {
     return 'SE';
+  }
+
+  if (localeValue === 'sw' || localeMain === 'sw') {
+    return 'SW';
   }
 
   return 'EN';
