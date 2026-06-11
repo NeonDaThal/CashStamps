@@ -34,7 +34,7 @@
           <q-tooltip>{{ t('language.label') }}</q-tooltip>
 
           <q-menu auto-close>
-            <q-list style="min-width: 150px">
+            <q-list style="min-width: 160px">
               <q-item clickable @click="setLocale('en')">
                 <q-item-section>{{ t('language.english') }}</q-item-section>
               </q-item>
@@ -49,6 +49,10 @@
 
               <q-item clickable @click="setLocale('pt')">
                 <q-item-section>{{ t('language.portuguese') }}</q-item-section>
+              </q-item>
+
+              <q-item clickable @click="setLocale('zh-HK')">
+                <q-item-section>{{ t('language.cantonese') }}</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -315,7 +319,8 @@ const $q = useQuasar();
 const isDrawerOpen = ref(false);
 
 const localeShortLabel = computed((): string => {
-  const localeMain = locale.value.substring(0, 2);
+  const localeValue = locale.value;
+  const localeMain = localeValue.substring(0, 2);
 
   if (localeMain === 'es') {
     return 'ES';
@@ -327,6 +332,10 @@ const localeShortLabel = computed((): string => {
 
   if (localeMain === 'pt') {
     return 'PT';
+  }
+
+  if (localeValue === 'zh-HK' || localeMain === 'zh') {
+    return 'HK';
   }
 
   return 'EN';

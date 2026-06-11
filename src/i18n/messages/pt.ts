@@ -23,6 +23,7 @@ const pt = {
     spanish: 'Español',
     german: 'Deutsch',
     portuguese: 'Português',
+    cantonese: '中文（香港）',
   },
 
   home: {
