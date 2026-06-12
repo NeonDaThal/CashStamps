@@ -27,7 +27,50 @@
           flat
           dense
           rounded
-          class="locale-button"
+          class="toolbar-pill-button currency-button"
+          :label="selectedCurrencyOption.code"
+          aria-label="Currency"
+        >
+          <q-tooltip>Currency</q-tooltip>
+
+          <q-menu auto-close>
+            <q-list style="min-width: 178px">
+              <q-item
+                v-for="currencyOption in currencyOptions"
+                :key="currencyOption.code"
+                clickable
+                :active="selectedCurrency === currencyOption.code"
+                active-class="currency-option-active"
+                @click="setCurrency(currencyOption.code)"
+              >
+                <q-item-section>
+                  <q-item-label class="currency-option-main">
+                    <span>{{ currencyOption.code }}</span>
+                    <span class="currency-option-symbol">
+                      {{ currencyOption.symbol }}
+                    </span>
+                  </q-item-label>
+                  <q-item-label caption>
+                    {{ currencyOption.name }}
+                  </q-item-label>
+                </q-item-section>
+
+                <q-item-section
+                  v-if="selectedCurrency === currencyOption.code"
+                  side
+                >
+                  <q-icon name="check_circle" color="positive" size="18px" />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+
+        <q-btn
+          flat
+          dense
+          rounded
+          class="toolbar-pill-button locale-button"
           :label="localeShortLabel"
           :aria-label="t('language.label')"
         >
@@ -324,11 +367,69 @@ import { useQuasar } from 'quasar';
 import type { SupportedLocale } from '../i18n';
 import { saveStoredLocale } from '../i18n/locale-storage';
 
+type SupportedCurrency = 'GBP' | 'USD' | 'EUR';
+
+type CurrencyOption = {
+  code: SupportedCurrency;
+  name: string;
+  symbol: string;
+};
+
+const currencyStorageKey = 'bch-voucher-display-currency';
+
+const currencyOptions: CurrencyOption[] = [
+  {
+    code: 'GBP',
+    name: 'British Pound',
+    symbol: '£',
+  },
+  {
+    code: 'USD',
+    name: 'US Dollar',
+    symbol: '$',
+  },
+  {
+    code: 'EUR',
+    name: 'Euro',
+    symbol: '€',
+  },
+];
+
+const defaultCurrency: SupportedCurrency = 'GBP';
+
 const $router = useRouter();
 const { locale, t } = useI18n({ useScope: 'global' });
 const $q = useQuasar();
 
 const isDrawerOpen = ref(false);
+
+function readStoredCurrency(): SupportedCurrency {
+  if (typeof window === 'undefined') {
+    return defaultCurrency;
+  }
+
+  const storedCurrency = window.localStorage.getItem(currencyStorageKey);
+
+  const isSupportedCurrency = currencyOptions.some(
+    (currencyOption) => currencyOption.code === storedCurrency
+  );
+
+  if (isSupportedCurrency) {
+    return storedCurrency as SupportedCurrency;
+  }
+
+  return defaultCurrency;
+}
+
+const selectedCurrency = ref<SupportedCurrency>(readStoredCurrency());
+
+const selectedCurrencyOption = computed((): CurrencyOption => {
+  return (
+    currencyOptions.find(
+      (currencyOption) => currencyOption.code === selectedCurrency.value
+    ) ?? currencyOptions[0]
+  );
+});
 
 const localeShortLabel = computed((): string => {
   const localeValue = locale.value;
@@ -368,6 +469,14 @@ const localeShortLabel = computed((): string => {
 const setLocale = (newLocale: SupportedLocale) => {
   locale.value = newLocale;
   saveStoredLocale(newLocale);
+};
+
+const setCurrency = (newCurrency: SupportedCurrency) => {
+  selectedCurrency.value = newCurrency;
+
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(currencyStorageKey, newCurrency);
+  }
 };
 
 function closeDrawer(): void {
@@ -440,7 +549,7 @@ function closeDrawer(): void {
   line-height: 1.2;
 }
 
-.locale-button {
+.toolbar-pill-button {
   border: 1px solid rgba(255, 255, 255, 0.28);
   color: #ffffff;
   font-weight: 900;
@@ -448,9 +557,45 @@ function closeDrawer(): void {
   overflow: hidden;
 }
 
-.locale-button :deep(.q-focus-helper),
+.currency-button {
+  margin-right: 8px;
+  min-width: 58px;
+}
+
+.locale-button {
+  min-width: 46px;
+}
+
+.toolbar-pill-button :deep(.q-focus-helper),
 .menu-button :deep(.q-focus-helper) {
   border-radius: inherit;
+}
+
+.currency-option-main {
+  align-items: center;
+  display: flex;
+  font-weight: 900;
+  gap: 8px;
+}
+
+.currency-option-symbol {
+  align-items: center;
+  background: rgba(0, 206, 27, 0.14);
+  border-radius: 999px;
+  color: #008f13;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  height: 22px;
+  justify-content: center;
+  min-width: 22px;
+  padding: 0 7px;
+}
+
+.currency-option-active {
+  background: rgba(0, 206, 27, 0.12);
+  color: #111111;
+  font-weight: 850;
 }
 
 .app-drawer {
@@ -592,7 +737,7 @@ function closeDrawer(): void {
 @media (max-width: 430px) {
   .brand-title {
     font-size: 15px;
-    max-width: 180px;
+    max-width: 135px;
   }
 
   .brand-subtitle {
