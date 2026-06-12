@@ -760,6 +760,15 @@ const svSE = {
   },
 
   receiptPreview: {
+    printLabels: {
+      valueLoaded: 'Laddat värde',
+      scanToRedeem: 'Skanna för att lösa in',
+      reference: 'Referens',
+      issued: 'Utfärdad',
+      customerPaid: 'Kunden betalade',
+      loaded: 'Laddat',
+      voucherAddress: 'Värdekodsadress',
+    },
     privateKeyWarning:
       'Endast utvecklingsvisning. Det här kvittot innehåller en QR-kod med en överförbar privat nyckel. Alla som skannar eller kopierar den kan föra över värdekodens medel.',
     loading: 'Bygger kvittovisning...',

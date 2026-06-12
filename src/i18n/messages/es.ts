@@ -651,6 +651,15 @@ const es = {
     },
   },
   receiptPreview: {
+    printLabels: {
+      valueLoaded: 'Valor cargado',
+      scanToRedeem: 'Escanear para canjear',
+      reference: 'Referencia',
+      issued: 'Emitido',
+      customerPaid: 'Cliente pagó',
+      loaded: 'Cargado',
+      voucherAddress: 'Dirección del vale',
+    },
     privateKeyWarning:
       'Solo vista previa de desarrollo. Este recibo contiene un QR de clave privada barrible. Cualquier persona que lo escanee o copie puede barrer los fondos del vale.',
     loading: 'Construyendo vista previa del recibo...',

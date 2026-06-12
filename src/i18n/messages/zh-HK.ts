@@ -702,6 +702,15 @@ const zhHK = {
   },
 
   receiptPreview: {
+    printLabels: {
+      valueLoaded: '已載入價值',
+      scanToRedeem: '掃描以兌換',
+      reference: '參考',
+      issued: '發出時間',
+      customerPaid: '顧客已付款',
+      loaded: '已載入',
+      voucherAddress: '增值券地址',
+    },
     privateKeyWarning:
       '僅供開發預覽。此收據包含可轉入資金的私鑰 QR。任何人掃描或複製它，都可以轉走增值券資金。',
     loading: '正在建立收據預覽...',

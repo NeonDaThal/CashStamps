@@ -740,6 +740,15 @@ const en = {
   },
 
   receiptPreview: {
+    printLabels: {
+      valueLoaded: 'Value loaded',
+      scanToRedeem: 'Scan to Redeem',
+      reference: 'Reference',
+      issued: 'Issued',
+      customerPaid: 'Customer Paid',
+      loaded: 'Loaded',
+      voucherAddress: 'Voucher Address',
+    },
     privateKeyWarning:
       'Development preview only. This receipt contains a sweepable private key QR. Anyone who scans or copies it can sweep the voucher funds.',
     loading: 'Building receipt preview...',
