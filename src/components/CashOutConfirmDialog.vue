@@ -260,13 +260,42 @@
             </q-card-section>
           </q-card>
 
-          <q-banner class="bg-grey-2 text-grey-9 q-mt-md" rounded>
+          <q-banner
+            v-if="paymentDetectionError"
+            class="bg-red-1 text-red-10 q-mt-md"
+            rounded
+          >
             <template #avatar>
-              <q-icon name="info" />
+              <q-icon name="warning" />
             </template>
 
-            Step 4 will connect automatic BCH detection. This screen should not
-            be used for live cash payouts until the detector is active.
+            Payment detector issue: {{ paymentDetectionError }}
+          </q-banner>
+
+          <q-banner
+            v-else
+            :class="
+              isWatchingForPayment
+                ? 'bg-blue-1 text-blue-10'
+                : 'bg-grey-2 text-grey-9'
+            "
+            rounded
+            class="q-mt-md"
+          >
+            <template #avatar>
+              <q-spinner v-if="isWatchingForPayment" color="primary" />
+              <q-icon v-else name="info" />
+            </template>
+
+            <span v-if="isWatchingForPayment">
+              Watching Treasury Wallet for the customer BCH payment. This screen
+              will change automatically when the payment arrives.
+            </span>
+
+            <span v-else>
+              Payment watcher is not active. Close this review and start again
+              before using this cash-out for a live payout.
+            </span>
           </q-banner>
         </template>
 
@@ -381,10 +410,14 @@ const props = withDefaults(
     modelValue: boolean;
     cashOut: CashOutRecord;
     isPaymentDetected?: boolean;
+    isWatchingForPayment?: boolean;
+    paymentDetectionError?: string;
     isPreparingReceipt?: boolean;
   }>(),
   {
     isPaymentDetected: false,
+    isWatchingForPayment: false,
+    paymentDetectionError: '',
     isPreparingReceipt: false,
   }
 );
