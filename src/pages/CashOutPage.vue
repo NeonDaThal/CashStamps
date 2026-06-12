@@ -196,6 +196,36 @@
         @update:model-value="handleConfirmDialogModelUpdate"
         @print-receipt="handlePrintReceiptPlaceholder"
       />
+      <q-dialog v-model="isReceiptPreviewOpen">
+        <q-card class="cash-out-receipt-dialog">
+          <q-card-section class="receipt-dialog-header">
+            <div>
+              <div class="text-h6 text-weight-bold">Cash-out Receipt</div>
+              <div class="text-caption text-grey-7">
+                Customer-safe cash-out receipt preview
+              </div>
+            </div>
+
+            <q-btn
+              flat
+              dense
+              round
+              icon="close"
+              aria-label="Close cash-out receipt preview"
+              @click="isReceiptPreviewOpen = false"
+            />
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <CashOutReceiptPreview
+              v-if="pendingCashOut"
+              :cash-out="pendingCashOut"
+            />
+          </q-card-section>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -206,6 +236,7 @@ import { useI18n } from 'vue-i18n';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import CashOutConfirmDialog from 'src/components/CashOutConfirmDialog.vue';
+import CashOutReceiptPreview from 'src/components/CashOutReceiptPreview.vue';
 import type {
   CashOutPaymentDetection,
   CashOutRecord,
@@ -255,6 +286,7 @@ const errorMessage = ref('');
 const paymentDetectionError = ref('');
 
 const isConfirmDialogOpen = ref(false);
+const isReceiptPreviewOpen = ref(false);
 const pendingCashOut = ref<CashOutRecord | null>(null);
 const paymentWatcher = ref<TreasuryIncomingPaymentWatcher | null>(null);
 
@@ -564,13 +596,12 @@ async function handleReviewCashOut(): Promise<void> {
 }
 
 function handlePrintReceiptPlaceholder(): void {
-  isPreparingReceipt.value = true;
-
-  try {
+  if (!pendingCashOut.value || !isPendingCashOutPaymentDetected.value) {
     warningMessage.value = t('cashOutPage.messages.receiptPrintingPending');
-  } finally {
-    isPreparingReceipt.value = false;
+    return;
   }
+
+  isReceiptPreviewOpen.value = true;
 }
 
 function handleConfirmDialogModelUpdate(value: boolean): void {
@@ -687,6 +718,19 @@ h1 {
   line-height: 1.45;
   margin: 12px 0 0;
   max-width: 660px;
+}
+
+.cash-out-receipt-dialog {
+  border-radius: 24px;
+  max-width: 95vw;
+  width: 720px;
+}
+
+.receipt-dialog-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 22px;
 }
 
 .cash-out-form {
