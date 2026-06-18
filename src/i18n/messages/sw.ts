@@ -41,6 +41,13 @@ const sw = {
     voucherHistory: 'Historia ya vocha',
     treasuryWallet: 'Pochi ya hazina',
     receiptPreview: 'Muonekano wa risiti',
+    glance: {
+      title: 'At a glance',
+      subtitle: 'Summary of todays activity so far',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      totalActions: 'Total actions',
+    },
     status: {
       receipts: {
         title: 'Risiti za vocha',

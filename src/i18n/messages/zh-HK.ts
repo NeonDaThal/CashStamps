@@ -41,6 +41,13 @@ const zhHK = {
     voucherHistory: '增值券記錄',
     treasuryWallet: '資金錢包',
     receiptPreview: '收據預覽',
+    glance: {
+      title: 'At a glance',
+      subtitle: 'Summary of todays activity so far',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      totalActions: 'Total actions',
+    },
     status: {
       receipts: {
         title: '增值券收據',

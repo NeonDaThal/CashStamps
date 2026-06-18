@@ -30,17 +30,25 @@ const en = {
   },
 
   home: {
-    eyebrow: 'Merchant voucher app',
-    title: 'Bitcoin Cash Vouchers',
+    eyebrow: 'Merchant topup voucher app',
+    title: 'Bitcoin Cash Topups',
+    logoAlt: 'Bitcoin Cash logo',
     intro:
-      'Sell Bitcoin Cash vouchers in-store, issue a receipt, and let the customer sweep the BCH into their own wallet.',
+      'Sell Bitcoin Cash Topup Vouchers and print receipt for customer to sweep with their wallet or buy Bitcoin Cash from customers for cash in-store.',
     actionTitle: 'What would you like to do?',
-    actionSubtitle: 'Choose the next merchant action.',
-    sellVoucher: 'Sell New Voucher',
-    cashOutBch: 'Cash-out BCH',
-    voucherHistory: 'Voucher History',
-    treasuryWallet: 'Treasury Wallet',
+    actionSubtitle: 'Choose the next customer action.',
+    sellVoucher: 'Topup',
+    cashOutBch: 'Cash-out',
+    voucherHistory: 'History',
+    treasuryWallet: 'Treasury',
     receiptPreview: 'Receipt Preview',
+    glance: {
+      title: 'At a glance',
+      subtitle: 'Summary of todays activity so far',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      totalActions: 'Total actions',
+    },
     status: {
       receipts: {
         title: 'Voucher receipts',

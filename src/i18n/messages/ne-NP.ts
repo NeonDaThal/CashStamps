@@ -41,6 +41,13 @@ const neNP = {
     voucherHistory: 'भौचर इतिहास',
     treasuryWallet: 'ट्रेजरी वालेट',
     receiptPreview: 'रसिद पूर्वावलोकन',
+    glance: {
+      title: 'At a glance',
+      subtitle: 'Summary of todays activity so far',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      totalActions: 'Total actions',
+    },
     status: {
       receipts: {
         title: 'भौचर रसिदहरू',

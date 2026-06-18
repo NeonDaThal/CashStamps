@@ -41,6 +41,13 @@ const svSE = {
     voucherHistory: 'Värdekodshistorik',
     treasuryWallet: 'Treasury-plånbok',
     receiptPreview: 'Kvittovisning',
+    glance: {
+      title: 'At a glance',
+      subtitle: 'Summary of todays activity so far',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      totalActions: 'Total actions',
+    },
     status: {
       receipts: {
         title: 'Värdekodskvitton',

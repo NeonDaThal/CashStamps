@@ -41,6 +41,13 @@ const de = {
     voucherHistory: 'Voucher-Verlauf',
     treasuryWallet: 'Treasury-Wallet',
     receiptPreview: 'Belegvorschau',
+    glance: {
+      title: 'At a glance',
+      subtitle: 'Summary of todays activity so far',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      totalActions: 'Total actions',
+    },
     status: {
       receipts: {
         title: 'Voucher-Belege',

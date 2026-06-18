@@ -41,6 +41,13 @@ const pt = {
     voucherHistory: 'Histórico de vales',
     treasuryWallet: 'Carteira de tesouraria',
     receiptPreview: 'Pré-visualização do recibo',
+    glance: {
+      title: 'At a glance',
+      subtitle: 'Summary of todays activity so far',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      totalActions: 'Total actions',
+    },
     status: {
       receipts: {
         title: 'Recibos de vales',

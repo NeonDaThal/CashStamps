@@ -31,16 +31,23 @@ const es = {
 
   home: {
     eyebrow: 'Aplicación de vales para comercios',
-    title: 'Vales de Bitcoin Cash',
+    title: 'Recargas Bitcoin Cash',
     intro:
       'Vende vales de Bitcoin Cash en tienda, emite un recibo y permite que el cliente transfiera el BCH a su propia billetera.',
     actionTitle: '¿Qué quieres hacer?',
-    actionSubtitle: 'Elige la siguiente acción del comercio.',
-    sellVoucher: 'Vender nuevo vale',
-    cashOutBch: 'Vender BCH por efectivo',
-    voucherHistory: 'Historial de vales',
-    treasuryWallet: 'Billetera de tesorería',
+    actionSubtitle: 'Elige la siguiente acción del cliente.',
+    sellVoucher: 'Recarga',
+    cashOutBch: 'Retiro',
+    voucherHistory: 'Historial',
+    treasuryWallet: 'Tesorería',
     receiptPreview: 'Vista previa del recibo',
+    glance: {
+      title: 'At a glance',
+      subtitle: 'Summary of todays activity so far',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      totalActions: 'Total actions',
+    },
     status: {
       receipts: {
         title: 'Recibos de vales',
