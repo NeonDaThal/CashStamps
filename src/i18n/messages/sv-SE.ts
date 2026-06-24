@@ -233,7 +233,7 @@ const svSE = {
 
   cashOutConfirm: {
     header: {
-      reviewTitle: 'Granska kontantuttag',
+      reviewTitle: 'Granska uttag',
       receivedTitle: 'BCH mottaget',
       reviewSubtitle: 'Be kunden skanna QR-koden och skicka den BCH som krävs.',
       receivedSubtitle:
@@ -243,6 +243,15 @@ const svSE = {
       fallback:
         'Reservkurs användes. Kontrollera kursen noggrant innan du fortsätter.',
       liveLocked: 'Livekursen har låsts.',
+    },
+    breakdown: {
+      title: 'Cash-out breakdown',
+      subtitle: 'Customer payout and BCH required',
+      cashOutAmount: 'Cash-out amount',
+      cashOutAmountNote: 'Cash paid to the customer',
+      serviceFeeSpread: 'Service fee / spread',
+      cashOutTotal: 'Cash-out total',
+      cashOutTotalNote: 'Customer sends this total value in BCH',
     },
     summary: {
       cashCustomerReceives: 'Kontanter kunden får',
@@ -260,12 +269,15 @@ const svSE = {
     paymentDetails: {
       amountToSend: 'Belopp att skicka',
       treasuryReceivingAddress: 'Treasury-mottagaradress',
+      tapToRevealAddress: 'Tap to show full address',
       paymentUri: 'Betalnings-URI',
     },
     paymentUri: {
       label: 'BCH kontantuttag',
     },
     details: {
+      orderDetailsTitle: 'Order details',
+      orderDetailsCaption: 'Click here to see details of Cash-out order',
       reference: 'Referens',
       marketRate: 'Marknadskurs',
       quoteSource: 'Kurskälla',
@@ -285,7 +297,7 @@ const svSE = {
     actions: {
       copyAddress: 'Kopiera adress',
       copyPaymentUri: 'Kopiera betalnings-URI',
-      closeReview: 'Stäng granskning',
+      closeReview: 'Cancel cash-out and close',
       printReceipt: 'Skriv ut kvitto',
     },
     messages: {

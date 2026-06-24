@@ -228,7 +228,7 @@ const neNP = {
 
   cashOutConfirm: {
     header: {
-      reviewTitle: 'क्यास-आउट भुक्तानी समीक्षा गर्नुहोस्',
+      reviewTitle: 'निकाल्ने जाँच गर्नुहोस्',
       receivedTitle: 'BCH प्राप्त भयो',
       reviewSubtitle:
         'ग्राहकलाई QR कोड स्क्यान गरेर आवश्यक BCH पठाउन भन्नुहोस्।',
@@ -238,6 +238,15 @@ const neNP = {
       fallback:
         'ब्याकअप मूल्य दर प्रयोग भयो। जारी राख्नु अघि दर सावधानीपूर्वक जाँच गर्नुहोस्।',
       liveLocked: 'लाइभ मूल्य दर सफलतापूर्वक लक भयो।',
+    },
+    breakdown: {
+      title: 'Cash-out breakdown',
+      subtitle: 'Customer payout and BCH required',
+      cashOutAmount: 'Cash-out amount',
+      cashOutAmountNote: 'Cash paid to the customer',
+      serviceFeeSpread: 'Service fee / spread',
+      cashOutTotal: 'Cash-out total',
+      cashOutTotalNote: 'Customer sends this total value in BCH',
     },
     summary: {
       cashCustomerReceives: 'ग्राहकले प्राप्त गर्ने नगद',
@@ -255,12 +264,15 @@ const neNP = {
     paymentDetails: {
       amountToSend: 'पठाउनुपर्ने रकम',
       treasuryReceivingAddress: 'ट्रेजरी प्राप्त गर्ने ठेगाना',
+      tapToRevealAddress: 'Tap to show full address',
       paymentUri: 'भुक्तानी URI',
     },
     paymentUri: {
       label: 'BCH क्यास-आउट',
     },
     details: {
+      orderDetailsTitle: 'Order details',
+      orderDetailsCaption: 'Click here to see details of Cash-out order',
       reference: 'सन्दर्भ',
       marketRate: 'बजार दर',
       quoteSource: 'दर स्रोत',
@@ -280,7 +292,7 @@ const neNP = {
     actions: {
       copyAddress: 'ठेगाना प्रतिलिपि गर्नुहोस्',
       copyPaymentUri: 'भुक्तानी URI प्रतिलिपि गर्नुहोस्',
-      closeReview: 'समीक्षा बन्द गर्नुहोस्',
+      closeReview: 'Cancel cash-out and close',
       printReceipt: 'रसिद प्रिन्ट गर्नुहोस्',
     },
     messages: {

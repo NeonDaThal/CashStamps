@@ -236,7 +236,7 @@ const de = {
 
   cashOutConfirm: {
     header: {
-      reviewTitle: 'Auszahlungszahlung prüfen',
+      reviewTitle: 'Auszahlung prüfen',
       receivedTitle: 'BCH empfangen',
       reviewSubtitle:
         'Bitte den Kunden, den QR-Code zu scannen und das erforderliche BCH zu senden.',
@@ -247,6 +247,15 @@ const de = {
       fallback:
         'Fallback-Kurs verwendet. Prüfe den Kurs sorgfältig, bevor du fortfährst.',
       liveLocked: 'Live-Kurs erfolgreich festgeschrieben.',
+    },
+    breakdown: {
+      title: 'Cash-out breakdown',
+      subtitle: 'Customer payout and BCH required',
+      cashOutAmount: 'Cash-out amount',
+      cashOutAmountNote: 'Cash paid to the customer',
+      serviceFeeSpread: 'Service fee / spread',
+      cashOutTotal: 'Cash-out total',
+      cashOutTotalNote: 'Customer sends this total value in BCH',
     },
     summary: {
       cashCustomerReceives: 'Bargeld, das der Kunde erhält',
@@ -264,12 +273,15 @@ const de = {
     paymentDetails: {
       amountToSend: 'Zu sendender Betrag',
       treasuryReceivingAddress: 'Empfangsadresse der Treasury',
+      tapToRevealAddress: 'Tap to show full address',
       paymentUri: 'Zahlungs-URI',
     },
     paymentUri: {
       label: 'BCH-Auszahlung',
     },
     details: {
+      orderDetailsTitle: 'Order details',
+      orderDetailsCaption: 'Click here to see details of Cash-out order',
       reference: 'Referenz',
       marketRate: 'Marktkurs',
       quoteSource: 'Kursquelle',
@@ -289,7 +301,7 @@ const de = {
     actions: {
       copyAddress: 'Adresse kopieren',
       copyPaymentUri: 'Zahlungs-URI kopieren',
-      closeReview: 'Prüfung schließen',
+      closeReview: 'Cancel cash-out and close',
       printReceipt: 'Beleg drucken',
     },
     messages: {

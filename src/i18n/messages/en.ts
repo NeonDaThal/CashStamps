@@ -229,10 +229,10 @@ const en = {
 
   cashOutConfirm: {
     header: {
-      reviewTitle: 'Review cash-out payment',
+      reviewTitle: 'Review Cash-out',
       receivedTitle: 'BCH received',
       reviewSubtitle:
-        'Ask the customer to scan the QR code and send the required BCH.',
+        'Ask the customer to scan the QR code below with their BCH wallet and send the required BCH amount. Once it is confirmed your Treasury Wallet has received the payment, you can give them the Cash-out amount.',
       receivedSubtitle:
         'The customer payment has been detected in the merchant treasury.',
     },
@@ -241,6 +241,15 @@ const en = {
         'Fallback price quote used. Check the rate carefully before continuing.',
       liveLocked: 'Live price quote locked successfully.',
     },
+    breakdown: {
+      title: 'Cash-out breakdown',
+      subtitle: 'Cash-out breakdown',
+      cashOutAmount: 'Cash-out requested',
+      cashOutAmountNote: 'To pay to customer',
+      serviceFeeSpread: '10% fee',
+      cashOutTotal: 'Cash-out total to pay',
+      cashOutTotalNote: 'Customer to send to you',
+    },
     summary: {
       cashCustomerReceives: 'Cash customer receives',
       customerSends: 'Customer sends',
@@ -248,21 +257,24 @@ const en = {
       serviceFeeSpread: 'Service fee / spread',
     },
     paymentQr: {
-      title: 'Customer payment QR',
+      title: 'Ask customer to scan QR code and send requested amount',
       subtitle:
-        'Ask the customer to scan this QR code with their BCH wallet. Wait for the BCH payment to arrive in your Treasury Wallet before giving their cash.',
-      qrAlt: 'Cash-out BCH payment QR',
-      qrUnavailable: 'QR unavailable',
+        'You will see a notification of successful transfer before giving the customer their cash.',
+      qrAlt: 'Cash-out payment QR code',
+      qrUnavailable: 'Payment QR code unavailable.',
     },
     paymentDetails: {
-      amountToSend: 'Amount to send',
-      treasuryReceivingAddress: 'Treasury receiving address',
+      amountToSend: 'Amount:',
+      treasuryReceivingAddress: 'Receiving address',
+      tapToRevealAddress: 'Tap to show full address',
       paymentUri: 'Payment URI',
     },
     paymentUri: {
       label: 'BCH Cash-out',
     },
     details: {
+      orderDetailsTitle: 'Order details',
+      orderDetailsCaption: 'Click here to see details of Cash-out order',
       reference: 'Reference',
       marketRate: 'Market rate',
       quoteSource: 'Quote source',
@@ -282,7 +294,7 @@ const en = {
     actions: {
       copyAddress: 'Copy address',
       copyPaymentUri: 'Copy payment URI',
-      closeReview: 'Close review',
+      closeReview: 'Cancel cash-out and close',
       printReceipt: 'Print Receipt',
     },
     messages: {

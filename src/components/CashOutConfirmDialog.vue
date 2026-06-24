@@ -6,48 +6,48 @@
   >
     <q-card class="confirm-card">
       <q-card-section class="dialog-header">
-        <div class="header-icon">
-          <q-icon :name="isPaymentDetected ? 'check_circle' : 'qr_code_2'" />
-        </div>
+        <div class="dialog-title-row">
+          <div class="header-icon">
+            <q-icon
+              :name="isPaymentDetected ? 'check_circle' : 'currency_exchange'"
+            />
+          </div>
 
-        <div>
-          <div class="text-h5 text-weight-bold">
+          <div class="dialog-title">
             {{
               isPaymentDetected
                 ? t('cashOutConfirm.header.receivedTitle')
                 : t('cashOutConfirm.header.reviewTitle')
             }}
           </div>
-          <p class="text-grey-7 q-mb-none">
-            {{
-              isPaymentDetected
-                ? t('cashOutConfirm.header.receivedSubtitle')
-                : t('cashOutConfirm.header.reviewSubtitle')
-            }}
-          </p>
         </div>
+
+        <p class="dialog-subtitle">
+          {{
+            isPaymentDetected
+              ? t('cashOutConfirm.header.receivedSubtitle')
+              : t('cashOutConfirm.header.reviewSubtitle')
+          }}
+        </p>
       </q-card-section>
 
       <q-separator />
 
       <q-card-section class="dialog-body">
         <template v-if="!isPaymentDetected">
-          <q-banner
-            :class="
+          <div
+            :class="[
+              'quote-status-pill',
               cashOut.quote.isFallbackQuote
-                ? 'bg-orange-1 text-orange-10'
-                : 'bg-green-1 text-green-10'
-            "
-            rounded
-            class="q-mb-md"
+                ? 'quote-status-pill--fallback'
+                : 'quote-status-pill--locked',
+            ]"
+            role="status"
           >
-            <template #avatar>
-              <q-icon
-                :name="
-                  cashOut.quote.isFallbackQuote ? 'warning' : 'check_circle'
-                "
-              />
-            </template>
+            <q-icon
+              :name="cashOut.quote.isFallbackQuote ? 'warning' : 'check_circle'"
+              class="quote-status-pill-icon"
+            />
 
             <span v-if="cashOut.quote.isFallbackQuote">
               {{ t('cashOutConfirm.quoteStatus.fallback') }}
@@ -56,161 +56,180 @@
             <span v-else>
               {{ t('cashOutConfirm.quoteStatus.liveLocked') }}
             </span>
-          </q-banner>
+          </div>
 
-          <section class="summary-grid">
-            <div class="summary-tile highlight">
-              <div class="summary-label">
-                {{ t('cashOutConfirm.summary.cashCustomerReceives') }}
+          <section class="cash-out-breakdown">
+            <div class="breakdown-header">
+              <div class="breakdown-title">
+                {{ t('cashOutConfirm.breakdown.title') }}
               </div>
-              <div class="summary-value">
-                {{
-                  formatFiatAmount(
-                    cashOut.fiatAmountMinor,
-                    cashOut.fiatCurrency
-                  )
-                }}
+
+              <q-icon
+                name="format_list_bulleted"
+                class="breakdown-header-icon"
+              />
+            </div>
+
+            <div class="breakdown-lines">
+              <div class="breakdown-line breakdown-line--main">
+                <div class="breakdown-line-text">
+                  <div class="breakdown-label">
+                    {{ t('cashOutConfirm.breakdown.cashOutAmount') }}
+                  </div>
+                  <div class="breakdown-note">
+                    {{ t('cashOutConfirm.breakdown.cashOutAmountNote') }}
+                  </div>
+                </div>
+
+                <div class="breakdown-values">
+                  <strong>
+                    {{
+                      formatFiatAmount(
+                        cashOut.fiatAmountMinor,
+                        cashOut.fiatCurrency
+                      )
+                    }}
+                  </strong>
+
+                  <span class="breakdown-bch-value">
+                    <img :src="bchLogoUrl" alt="" class="breakdown-bch-logo" />
+                    {{ formatBchAmount(cashOut.marketBchSats) }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="breakdown-fee-row">
+                <span class="breakdown-fee-label">
+                  {{ t('cashOutConfirm.breakdown.serviceFeeSpread') }}
+                </span>
+
+                <span class="breakdown-fee-fiat">
+                  {{
+                    formatFiatAmount(
+                      cashOut.fee.totalServiceFeeAmountMinor,
+                      cashOut.fiatCurrency
+                    )
+                  }}
+                </span>
+
+                <span class="breakdown-fee-bch">
+                  <img :src="bchLogoUrl" alt="" class="breakdown-bch-logo" />
+                  {{ formatBchAmount(serviceFeeBchSats) }}
+                </span>
               </div>
             </div>
 
-            <div class="summary-tile">
-              <div class="summary-label">
-                {{ t('cashOutConfirm.summary.customerSends') }}
+            <div class="breakdown-total">
+              <div>
+                <div class="breakdown-total-label">
+                  {{ t('cashOutConfirm.breakdown.cashOutTotal') }}
+                </div>
+                <div class="breakdown-total-note">
+                  {{ t('cashOutConfirm.breakdown.cashOutTotalNote') }}
+                </div>
               </div>
-              <div class="summary-value">
-                {{ formatBchAmount(cashOut.bchSatsRequired) }}
-              </div>
-            </div>
 
-            <div class="summary-tile">
-              <div class="summary-label">
-                {{ t('cashOutConfirm.summary.fiatEquivalentSent') }}
-              </div>
-              <div class="summary-value">
-                {{
-                  formatFiatAmount(
-                    cashOut.customerSendsFiatEquivalentMinor,
-                    cashOut.fiatCurrency
-                  )
-                }}
-              </div>
-            </div>
+              <div class="breakdown-total-values">
+                <strong>
+                  {{
+                    formatFiatAmount(
+                      cashOut.customerSendsFiatEquivalentMinor,
+                      cashOut.fiatCurrency
+                    )
+                  }}
+                </strong>
 
-            <div class="summary-tile">
-              <div class="summary-label">
-                {{ t('cashOutConfirm.summary.serviceFeeSpread') }}
-              </div>
-              <div class="summary-value">
-                {{
-                  formatFiatAmount(
-                    cashOut.fee.totalServiceFeeAmountMinor,
-                    cashOut.fiatCurrency
-                  )
-                }}
-                —
-                {{ formatPercent(cashOut.fee.totalServiceFeeBasisPoints) }}
+                <span>
+                  <img :src="bchLogoUrl" alt="" class="breakdown-bch-logo" />
+                  {{ formatBchAmount(cashOut.bchSatsRequired) }}
+                </span>
               </div>
             </div>
           </section>
 
-          <q-card flat bordered class="qr-card q-mt-md">
+          <q-card flat bordered class="payment-card q-mt-md">
             <q-card-section>
-              <div class="payment-heading">
-                <div>
-                  <div class="text-h6">
-                    {{ t('cashOutConfirm.paymentQr.title') }}
-                  </div>
-                  <p class="text-grey-7 q-mb-none">
-                    {{ t('cashOutConfirm.paymentQr.subtitle') }}
-                  </p>
-                </div>
+              <div class="payment-instruction">
+                <p class="payment-instruction-title">
+                  {{ t('cashOutConfirm.paymentQr.title') }}
+                </p>
+                <p class="payment-instruction-subtitle">
+                  {{ t('cashOutConfirm.paymentQr.subtitle') }}
+                </p>
               </div>
 
-              <div class="payment-layout q-mt-md">
-                <div class="qr-wrap">
-                  <q-spinner
-                    v-if="isGeneratingQr"
-                    color="primary"
-                    size="42px"
-                  />
+              <div class="payment-layout">
+                <div class="payment-qr-panel">
+                  <div class="amount-to-send-card">
+                    <div class="amount-label">
+                      {{ t('cashOutConfirm.paymentDetails.amountToSend') }}
+                    </div>
 
-                  <q-img
-                    v-else-if="qrDataUrl"
-                    :src="qrDataUrl"
-                    :alt="t('cashOutConfirm.paymentQr.qrAlt')"
-                    class="qr-image"
-                    fit="contain"
-                  />
+                    <div class="amount-values">
+                      <strong>
+                        {{
+                          formatFiatAmount(
+                            cashOut.customerSendsFiatEquivalentMinor,
+                            cashOut.fiatCurrency
+                          )
+                        }}
+                      </strong>
 
-                  <div v-else class="text-negative text-center">
-                    {{ t('cashOutConfirm.paymentQr.qrUnavailable') }}
+                      <span>
+                        <img :src="bchLogoUrl" alt="" class="amount-bch-logo" />
+                        {{ formatBchAmount(cashOut.bchSatsRequired) }}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div class="payment-details">
-                  <q-list bordered separator class="details-list">
-                    <q-item>
-                      <q-item-section>
-                        <q-item-label caption>
-                          {{ t('cashOutConfirm.paymentDetails.amountToSend') }}
-                        </q-item-label>
-                        <q-item-label class="text-weight-bold">
-                          {{ formatBchAmount(cashOut.bchSatsRequired) }}
-                        </q-item-label>
-                      </q-item-section>
-                    </q-item>
+                  <button
+                    type="button"
+                    class="qr-copy-button"
+                    :aria-label="t('cashOutConfirm.actions.copyPaymentUri')"
+                    @click="handleCopyUri"
+                  >
+                    <div class="qr-wrap">
+                      <q-spinner
+                        v-if="isGeneratingQr"
+                        color="primary"
+                        size="42px"
+                      />
 
-                    <q-item>
-                      <q-item-section>
-                        <q-item-label caption>
-                          {{
-                            t(
-                              'cashOutConfirm.paymentDetails.treasuryReceivingAddress'
-                            )
-                          }}
-                        </q-item-label>
-                        <q-item-label class="text-break">
-                          {{ cashOut.treasuryReceivingAddress }}
-                        </q-item-label>
-                      </q-item-section>
-                    </q-item>
+                      <q-img
+                        v-else-if="qrDataUrl"
+                        :src="qrDataUrl"
+                        :alt="t('cashOutConfirm.paymentQr.qrAlt')"
+                        class="qr-image"
+                        fit="contain"
+                      />
 
-                    <q-item>
-                      <q-item-section>
-                        <q-item-label caption>
-                          {{ t('cashOutConfirm.paymentDetails.paymentUri') }}
-                        </q-item-label>
-                        <q-item-label class="text-break">
-                          {{ paymentUri }}
-                        </q-item-label>
-                      </q-item-section>
-                    </q-item>
-                  </q-list>
+                      <div v-else class="text-negative text-center">
+                        {{ t('cashOutConfirm.paymentQr.qrUnavailable') }}
+                      </div>
+                    </div>
+                  </button>
 
-                  <div class="copy-actions q-mt-md">
-                    <q-btn
-                      color="primary"
-                      outline
-                      :label="t('cashOutConfirm.actions.copyAddress')"
-                      no-caps
-                      @click="handleCopyAddress"
-                    />
-
-                    <q-btn
-                      color="primary"
-                      outline
-                      :label="t('cashOutConfirm.actions.copyPaymentUri')"
-                      no-caps
-                      @click="handleCopyUri"
-                    />
-                  </div>
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    icon="content_copy"
+                    class="copy-soft-button"
+                    :label="t('cashOutConfirm.actions.copyPaymentUri')"
+                    @click="handleCopyUri"
+                  />
                 </div>
               </div>
             </q-card-section>
           </q-card>
 
-          <q-card flat bordered class="details-card q-mt-md">
-            <q-card-section>
+          <q-expansion-item
+            dense
+            class="order-details-card q-mt-md"
+            :label="t('cashOutConfirm.details.orderDetailsTitle')"
+            :caption="t('cashOutConfirm.details.orderDetailsCaption')"
+          >
+            <div class="order-details-body">
               <div class="details-row">
                 <span>{{ t('cashOutConfirm.details.reference') }}</span>
                 <strong>{{ cashOut.serial }}</strong>
@@ -222,20 +241,6 @@
                   {{
                     formatRate(cashOut.quote.marketRate, cashOut.fiatCurrency)
                   }}
-                </strong>
-              </div>
-
-              <div class="details-row">
-                <span>{{ t('cashOutConfirm.details.quoteSource') }}</span>
-                <strong>
-                  {{ quoteSourceLabel }}
-                  <q-badge
-                    v-if="cashOut.quote.isFallbackQuote"
-                    color="orange"
-                    class="q-ml-sm"
-                  >
-                    {{ t('cashOutConfirm.details.fallbackBadge') }}
-                  </q-badge>
                 </strong>
               </div>
 
@@ -254,11 +259,35 @@
               </div>
 
               <div class="details-row">
-                <span>{{ t('cashOutConfirm.details.status') }}</span>
-                <strong>{{ cashOut.status }}</strong>
+                <span>
+                  {{
+                    t('cashOutConfirm.paymentDetails.treasuryReceivingAddress')
+                  }}
+                </span>
+
+                <div class="details-address-value">
+                  <strong class="details-address-text">
+                    {{ cashOut.treasuryReceivingAddress }}
+                  </strong>
+
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    icon="content_copy"
+                    class="details-copy-button"
+                    :label="t('cashOutConfirm.actions.copyAddress')"
+                    @click="handleCopyAddress"
+                  />
+                </div>
               </div>
-            </q-card-section>
-          </q-card>
+
+              <div class="details-row">
+                <span>{{ t('cashOutConfirm.details.status') }}</span>
+                <strong>{{ cashOutStatusLabel }}</strong>
+              </div>
+            </div>
+          </q-expansion-item>
 
           <q-banner
             v-if="paymentDetectionError"
@@ -355,15 +384,21 @@
 
       <q-separator />
 
-      <q-card-actions align="right" class="dialog-actions">
+      <q-card-actions
+        align="right"
+        :class="[
+          'dialog-actions',
+          { 'dialog-actions--review': !isPaymentDetected },
+        ]"
+      >
         <q-btn
           flat
+          class="cancel-review-button"
           :label="
             isPaymentDetected
               ? t('common.close')
               : t('cashOutConfirm.actions.closeReview')
           "
-          color="grey-8"
           :disable="isPreparingReceipt"
           no-caps
           @click="emit('update:modelValue', false)"
@@ -394,6 +429,7 @@ import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
+import bchLogoUrl from 'src/assets/bch-logo.png';
 import type { CashOutRecord } from 'src/types/cash-out';
 import {
   formatCashOutBasisPointsAsPercent,
@@ -446,17 +482,18 @@ const paymentUri = computed(() => {
   }).uri;
 });
 
-const quoteSourceLabel = computed(() => {
-  const labels: Record<CashOutRecord['quote']['source'], string> = {
-    fake_phase_2_quote: t('cashOutConfirm.quoteSources.developmentQuote'),
-    coingecko: 'CoinGecko',
-    cached: t('cashOutConfirm.quoteSources.cachedQuote'),
-    general_protocols_oracle: 'General Protocols Oracle',
-    manual: t('cashOutConfirm.quoteSources.manualQuote'),
-    unknown: t('cashOutConfirm.quoteSources.unknown'),
-  };
+const serviceFeeBchSats = computed(() => {
+  return Math.max(
+    props.cashOut.bchSatsRequired - props.cashOut.marketBchSats,
+    0
+  );
+});
 
-  return labels[props.cashOut.quote.source];
+const cashOutStatusLabel = computed(() => {
+  return props.cashOut.status
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 });
 
 function satsToBchAmount(sats: number): number {
@@ -563,17 +600,17 @@ watch(
 }
 
 .dialog-header {
-  align-items: flex-start;
   display: flex;
-  gap: 14px;
+  flex-direction: column;
+  gap: 12px;
   padding: 22px;
 }
 
 .header-icon {
   align-items: center;
-  background: #00ce1b;
+  background: #111111;
   border-radius: 16px;
-  color: #000000;
+  color: #00ce1b;
   display: flex;
   flex: 0 0 48px;
   font-size: 28px;
@@ -582,101 +619,447 @@ watch(
   width: 48px;
 }
 
+.dialog-title-row {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.dialog-title {
+  color: #111111;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.4px;
+  line-height: 1.08;
+}
+
+.dialog-subtitle {
+  color: #666666;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.quote-status-pill {
+  --quote-pill-bg: #ffffff;
+  --quote-pill-border: rgba(0, 206, 27, 0.45);
+  --quote-pill-text: #111111;
+  --quote-pill-icon: #00ce1b;
+
+  align-items: center;
+  background: var(--quote-pill-bg);
+  border: 2px solid var(--quote-pill-border);
+  border-radius: 999px;
+  color: var(--quote-pill-text);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 5px;
+  line-height: 1.2;
+  margin-bottom: 12px;
+  max-width: 100%;
+  padding: 5px 9px;
+}
+
+.quote-status-pill--locked {
+  --quote-pill-bg: #ffffff;
+  --quote-pill-border: rgba(0, 206, 27, 0.45);
+  --quote-pill-text: #235c2b;
+  --quote-pill-icon: #00ce1b;
+}
+
+.quote-status-pill--fallback {
+  --quote-pill-bg: #ffffff;
+  --quote-pill-border: rgba(245, 130, 32, 0.45);
+  --quote-pill-text: #8a4b00;
+  --quote-pill-icon: #f58220;
+}
+
+.quote-status-pill-icon {
+  color: var(--quote-pill-icon);
+  flex: 0 0 auto;
+  font-size: 16px;
+  padding-bottom: 1px;
+}
+
 .dialog-body {
   padding: 22px;
 }
 
-.summary-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, 1fr);
+.cash-out-breakdown {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 22px;
+  overflow: hidden;
 }
 
-.summary-tile {
+.breakdown-header {
+  align-items: center;
   background: #f7f8f7;
-  border: 1px solid #dddddd;
-  border-radius: 18px;
+  border-bottom: 1px solid #e4e4e4;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
   padding: 16px;
 }
 
-.summary-tile.highlight {
-  border-color: rgba(0, 206, 27, 0.55);
-  box-shadow: 0 0 0 3px rgba(0, 206, 27, 0.12);
-}
-
-.summary-label {
-  color: #666666;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  margin-bottom: 6px;
+.breakdown-title {
+  color: #000000;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
   text-transform: uppercase;
 }
 
-.summary-value {
-  color: #111111;
-  font-size: 17px;
-  font-weight: 850;
-  line-height: 1.25;
+.breakdown-header-icon {
+  align-items: center;
+  background: #111111;
+  border-radius: 14px;
+  color: #00ce1b;
+  display: flex;
+  flex: 0 0 42px;
+  font-size: 24px;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
 }
 
-.qr-card,
+.breakdown-lines {
+  padding: 14px 16px;
+}
+
+.breakdown-line {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.breakdown-line--main {
+  padding-top: 2px;
+}
+
+.breakdown-line-text {
+  min-width: 0;
+}
+
+.breakdown-label {
+  color: #111111;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.breakdown-note {
+  color: #777777;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.breakdown-values {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 5px;
+  text-align: right;
+}
+
+.breakdown-values strong {
+  color: #111111;
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.breakdown-bch-value,
+.breakdown-total-values span {
+  align-items: center;
+  color: #666666;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 5px;
+  justify-content: flex-end;
+  line-height: 1.2;
+}
+
+.breakdown-bch-logo {
+  border-radius: 999px;
+  display: block;
+  height: 15px;
+  width: 15px;
+}
+
+.breakdown-fee-row {
+  align-items: center;
+  border-top: 1px solid #eeeeee;
+  color: #777777;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 10px;
+  text-align: right;
+}
+
+.breakdown-fee-label {
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.breakdown-fee-fiat {
+  color: #444444;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.breakdown-fee-bch {
+  align-items: center;
+  color: #777777;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 750;
+  gap: 4px;
+}
+
+.breakdown-fee-percent {
+  color: #888888;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.breakdown-total {
+  align-items: center;
+  background: #111111;
+  color: #ffffff;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.breakdown-total-label {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 950;
+  line-height: 1.15;
+}
+
+.breakdown-total-note {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.breakdown-total-values {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 5px;
+  text-align: right;
+}
+
+.breakdown-total-values strong {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1.05;
+}
+
+.breakdown-total-values span {
+  color: #00ce1b;
+}
+
+.payment-card,
 .details-card {
   background: #ffffff;
   border-color: #dddddd;
   border-radius: 18px;
 }
 
-.payment-heading {
-  align-items: flex-start;
-  display: flex;
-  gap: 12px;
+.payment-card :deep(.q-card__section) {
+  padding: 16px;
+}
+
+.payment-instruction {
+  margin-bottom: 14px;
+}
+
+.payment-instruction-title {
+  color: #111111;
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.payment-instruction-subtitle {
+  color: #777777;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  margin: 4px 0 0;
 }
 
 .payment-layout {
+  display: flex;
+  justify-content: center;
+}
+
+.payment-qr-panel {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.amount-to-send-card {
   align-items: flex-start;
-  display: grid;
-  gap: 16px;
-  grid-template-columns: auto 1fr;
+  background: transparent;
+  border: 0;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 0 2px 4px;
+  width: 246px;
+}
+
+.amount-label {
+  color: #666666;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.amount-values {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  text-align: right;
+}
+
+.amount-values strong {
+  color: #111111;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.amount-values span {
+  align-items: center;
+  color: #666666;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 4px;
+  justify-content: flex-end;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.amount-bch-logo {
+  border-radius: 999px;
+  display: block;
+  flex: 0 0 13px;
+  height: 13px;
+  width: 13px;
+}
+
+.qr-copy-button {
+  background: transparent;
+  border: 0;
+  border-radius: 20px;
+  cursor: pointer;
+  display: block;
+  padding: 0;
+}
+
+.qr-copy-button:focus-visible {
+  outline: 3px solid rgba(0, 206, 27, 0.35);
+  outline-offset: 3px;
 }
 
 .qr-wrap {
   align-items: center;
   background: #ffffff;
-  border: 1px solid #dddddd;
-  border-radius: 18px;
+  border: 3px solid #00ce1b;
+  border-radius: 20px;
   display: flex;
-  height: 240px;
+  height: 246px;
   justify-content: center;
   padding: 10px;
-  width: 240px;
+  transition: border-color 160ms ease, transform 160ms ease;
+  width: 246px;
+}
+
+.qr-copy-button:hover .qr-wrap {
+  border-color: rgba(0, 206, 27, 0.65);
+  transform: translateY(-1px);
 }
 
 .qr-image {
-  height: 220px;
-  width: 220px;
+  height: 226px;
+  width: 226px;
 }
 
-.payment-details {
-  min-width: 0;
+.copy-soft-button {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 999px;
+  color: #333333;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 12px;
 }
 
-.details-list {
-  border-radius: 16px;
+.copy-soft-button :deep(.q-icon) {
+  color: #00a816;
+  font-size: 17px;
+}
+
+.order-details-card {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 18px;
   overflow: hidden;
 }
 
-.copy-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.order-details-card :deep(.q-item) {
+  min-height: 54px;
+  padding: 10px 12px;
+}
+
+.order-details-card :deep(.q-item__label) {
+  color: #111111;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.order-details-card :deep(.q-item__label--caption) {
+  color: #777777;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.order-details-body {
+  border-top: 1px solid #e4e4e4;
+  padding: 10px 14px;
 }
 
 .details-row {
-  align-items: flex-start;
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: max-content minmax(0, 1fr);
   padding: 8px 0;
 }
 
@@ -686,11 +1069,50 @@ watch(
 
 .details-row span {
   color: #666666;
+  font-size: 13px;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .details-row strong {
   color: #111111;
+  font-size: 13px;
+  font-weight: 850;
+  min-width: 0;
+  overflow: hidden;
   text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details-address-value {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.details-address-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.details-copy-button {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 999px;
+  color: #333333;
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 800;
+  min-height: 28px;
+  padding: 0 9px;
+}
+
+.details-copy-button :deep(.q-icon) {
+  color: #00a816;
+  font-size: 14px;
 }
 
 .success-panel {
@@ -738,6 +1160,28 @@ watch(
   padding: 14px 22px;
 }
 
+.dialog-actions--review {
+  background: #111111;
+  justify-content: center;
+}
+
+.cancel-review-button {
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 850;
+  min-height: 38px;
+  padding: 0 16px;
+}
+
+.dialog-actions--review .cancel-review-button {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.cancel-review-button :deep(.q-focus-helper) {
+  border-radius: inherit;
+}
+
 .primary-button {
   background: #00ce1b;
   border-radius: 14px;
@@ -761,29 +1205,112 @@ watch(
 
 @media (max-width: 640px) {
   .dialog-header {
+    gap: 10px;
     padding: 18px;
+  }
+
+  .dialog-title-row {
+    gap: 12px;
+  }
+
+  .dialog-title {
+    font-size: 26px;
+  }
+
+  .dialog-subtitle {
+    font-size: 13px;
   }
 
   .dialog-body {
     padding: 18px;
   }
 
-  .summary-grid,
-  .payment-layout {
-    grid-template-columns: 1fr;
+  .breakdown-header {
+    padding: 14px;
+  }
+
+  .breakdown-heading {
+    font-size: 17px;
+  }
+
+  .breakdown-header-icon {
+    flex-basis: 38px;
+    font-size: 22px;
+    height: 38px;
+    width: 38px;
+  }
+
+  .breakdown-lines {
+    padding: 13px 14px;
+  }
+
+  .breakdown-label {
+    font-size: 14px;
+  }
+
+  .breakdown-values strong {
+    font-size: 17px;
+  }
+
+  .breakdown-total {
+    padding: 14px;
+  }
+
+  .breakdown-total-values strong {
+    font-size: 20px;
+  }
+
+  .payment-card :deep(.q-card__section) {
+    padding: 14px;
+  }
+
+  .amount-to-send-card {
+    margin: 0 auto;
+    max-width: 236px;
+    padding: 0 2px 4px;
+    width: 236px;
+  }
+
+  .amount-label {
+    font-size: 13px;
+  }
+
+  .amount-values strong {
+    font-size: 16px;
+  }
+
+  .amount-values span {
+    font-size: 11px;
   }
 
   .qr-wrap {
-    justify-self: center;
+    height: 236px;
+    width: 236px;
+  }
+
+  .qr-image {
+    height: 216px;
+    width: 216px;
   }
 
   .details-row {
-    flex-direction: column;
-    gap: 4px;
+    gap: 10px;
+    grid-template-columns: max-content minmax(0, 1fr);
   }
 
+  .details-row span,
   .details-row strong {
-    text-align: left;
+    font-size: 12px;
+  }
+
+  .details-copy-button {
+    font-size: 10px;
+    min-height: 26px;
+    padding: 0 7px;
+  }
+
+  .details-copy-button :deep(.q-icon) {
+    font-size: 13px;
   }
 
   .dialog-actions {

@@ -218,7 +218,7 @@ const zhHK = {
 
   cashOutConfirm: {
     header: {
-      reviewTitle: '覆核兌現付款',
+      reviewTitle: '確認套現',
       receivedTitle: '已收到 BCH',
       reviewSubtitle: '請顧客掃描 QR 碼並發送所需 BCH。',
       receivedSubtitle: '顧客付款已在商戶資金錢包偵測到。',
@@ -226,6 +226,15 @@ const zhHK = {
     quoteStatus: {
       fallback: '使用了備用價格報價。繼續前請仔細核對匯率。',
       liveLocked: '即時價格報價已成功鎖定。',
+    },
+    breakdown: {
+      title: 'Cash-out breakdown',
+      subtitle: 'Customer payout and BCH required',
+      cashOutAmount: 'Cash-out amount',
+      cashOutAmountNote: 'Cash paid to the customer',
+      serviceFeeSpread: 'Service fee / spread',
+      cashOutTotal: 'Cash-out total',
+      cashOutTotalNote: 'Customer sends this total value in BCH',
     },
     summary: {
       cashCustomerReceives: '顧客收取現金',
@@ -243,12 +252,15 @@ const zhHK = {
     paymentDetails: {
       amountToSend: '要發送的金額',
       treasuryReceivingAddress: '資金錢包收款地址',
+      tapToRevealAddress: 'Tap to show full address',
       paymentUri: '付款 URI',
     },
     paymentUri: {
       label: 'BCH 兌現',
     },
     details: {
+      orderDetailsTitle: 'Order details',
+      orderDetailsCaption: 'Click here to see details of Cash-out order',
       reference: '參考',
       marketRate: '市場匯率',
       quoteSource: '報價來源',
@@ -268,7 +280,7 @@ const zhHK = {
     actions: {
       copyAddress: '複製地址',
       copyPaymentUri: '複製付款 URI',
-      closeReview: '關閉覆核',
+      closeReview: 'Cancel cash-out and close',
       printReceipt: '打印收據',
     },
     messages: {

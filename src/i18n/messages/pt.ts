@@ -232,7 +232,7 @@ const pt = {
 
   cashOutConfirm: {
     header: {
-      reviewTitle: 'Rever pagamento de levantamento',
+      reviewTitle: 'Revisar saque',
       receivedTitle: 'BCH recebido',
       reviewSubtitle:
         'Peça ao cliente para digitalizar o código QR e enviar o BCH necessário.',
@@ -243,6 +243,15 @@ const pt = {
       fallback:
         'Cotação de reserva usada. Verifique a taxa cuidadosamente antes de continuar.',
       liveLocked: 'Cotação de preço em tempo real bloqueada com sucesso.',
+    },
+    breakdown: {
+      title: 'Cash-out breakdown',
+      subtitle: 'Customer payout and BCH required',
+      cashOutAmount: 'Cash-out amount',
+      cashOutAmountNote: 'Cash paid to the customer',
+      serviceFeeSpread: 'Service fee / spread',
+      cashOutTotal: 'Cash-out total',
+      cashOutTotalNote: 'Customer sends this total value in BCH',
     },
     summary: {
       cashCustomerReceives: 'Dinheiro que o cliente recebe',
@@ -260,12 +269,15 @@ const pt = {
     paymentDetails: {
       amountToSend: 'Valor a enviar',
       treasuryReceivingAddress: 'Endereço de receção da tesouraria',
+      tapToRevealAddress: 'Tap to show full address',
       paymentUri: 'URI de pagamento',
     },
     paymentUri: {
       label: 'Levantamento BCH',
     },
     details: {
+      orderDetailsTitle: 'Order details',
+      orderDetailsCaption: 'Click here to see details of Cash-out order',
       reference: 'Referência',
       marketRate: 'Taxa de mercado',
       quoteSource: 'Fonte da cotação',
@@ -285,7 +297,7 @@ const pt = {
     actions: {
       copyAddress: 'Copiar endereço',
       copyPaymentUri: 'Copiar URI de pagamento',
-      closeReview: 'Fechar revisão',
+      closeReview: 'Cancel cash-out and close',
       printReceipt: 'Imprimir recibo',
     },
     messages: {

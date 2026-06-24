@@ -233,7 +233,7 @@ const sw = {
 
   cashOutConfirm: {
     header: {
-      reviewTitle: 'Kagua malipo ya kubadili fedha',
+      reviewTitle: 'Kagua toa pesa',
       receivedTitle: 'BCH imepokelewa',
       reviewSubtitle: 'Mwambie mteja ascan QR code na atume BCH inayohitajika.',
       receivedSubtitle:
@@ -243,6 +243,15 @@ const sw = {
       fallback:
         'Bei mbadala imetumika. Kagua kiwango cha bei kwa makini kabla ya kuendelea.',
       liveLocked: 'Bei ya moja kwa moja imefungwa kwa mafanikio.',
+    },
+    breakdown: {
+      title: 'Cash-out breakdown',
+      subtitle: 'Customer payout and BCH required',
+      cashOutAmount: 'Cash-out amount',
+      cashOutAmountNote: 'Cash paid to the customer',
+      serviceFeeSpread: 'Service fee / spread',
+      cashOutTotal: 'Cash-out total',
+      cashOutTotalNote: 'Customer sends this total value in BCH',
     },
     summary: {
       cashCustomerReceives: 'Fedha taslimu anazopokea mteja',
@@ -260,12 +269,15 @@ const sw = {
     paymentDetails: {
       amountToSend: 'Kiasi cha kutuma',
       treasuryReceivingAddress: 'Anwani ya kupokea ya hazina',
+      tapToRevealAddress: 'Tap to show full address',
       paymentUri: 'URI ya malipo',
     },
     paymentUri: {
       label: 'BCH fedha taslimu',
     },
     details: {
+      orderDetailsTitle: 'Order details',
+      orderDetailsCaption: 'Click here to see details of Cash-out order',
       reference: 'Rejea',
       marketRate: 'Bei ya soko',
       quoteSource: 'Chanzo cha bei',
@@ -285,7 +297,7 @@ const sw = {
     actions: {
       copyAddress: 'Nakili anwani',
       copyPaymentUri: 'Nakili URI ya malipo',
-      closeReview: 'Funga ukaguzi',
+      closeReview: 'Cancel cash-out and close',
       printReceipt: 'Chapisha risiti',
     },
     messages: {
