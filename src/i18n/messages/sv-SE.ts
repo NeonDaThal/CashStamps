@@ -666,116 +666,156 @@ const svSE = {
 
   merchantReportsPage: {
     hero: {
-      eyebrow: 'Handlarrapporter',
-      title: 'Rapporter',
-      intro:
-        'Följ värdekodsförsäljning, BCH-kontantuttag, intäkter och tillväxt från den här enheten.',
+      eyebrow: 'Merchant Reports',
+      title: 'Reports',
+      intro: 'Track topups, cash-outs, revenue, and growth from this device.',
     },
     actions: {
-      viewHistory: 'Visa historik',
-      sellVoucher: 'Sälj värdekod',
-      printReport: 'Skriv ut rapport',
-      exportPdf: 'Exportera PDF',
-      saveImage: 'Spara bild',
-      shareReport: 'Dela rapport',
-      refreshReport: 'Uppdatera rapport',
+      viewHistory: 'View History',
+      sellVoucher: 'Sell Topup',
+      printReport: 'Print Report',
+      exportPdf: 'Export PDF',
+      saveImage: 'Save Image',
+      shareReport: 'Share Report',
+      refreshReport: 'Refresh Report',
     },
     range: {
-      title: 'Rapportintervall',
-      subtitle: 'Växla mellan användbara rapportperioder för handlaren.',
+      title: 'Report Range',
+      subtitle: 'Switch between useful merchant reporting periods.',
     },
     ranges: {
-      today: 'Idag',
-      week: 'Denna vecka',
-      month: 'Denna månad',
-      year: 'Detta år',
-      allTime: 'All tid',
+      today: 'Today',
+      week: 'This Week',
+      month: 'This Month',
+      year: 'This Year',
+      allTime: 'All Time',
     },
     period: {
-      currentRange: 'Aktuellt intervall',
-      loading: 'Läser in rapportintervall...',
-      noRecordsYet: 'Inga slutförda värdekodsregister ännu',
+      currentRange: 'Current Range',
+      loading: 'Loading report range...',
+      noRecordsYet: 'No completed topup or cash-out records yet',
     },
     summary: {
-      localData: 'Lokalt',
-      previousPeriod: 'Föregående period',
-      totalVouchers: 'Totalt utfärdade värdekoder',
-      totalVouchersCaption:
-        'Antal slutförda värdekodsförsäljningar under valt intervall.',
-      grossFiat: 'Brutto fiat-värde',
-      grossFiatCaption:
-        'Totalt kundkontantvärde hanterat genom värdekodsförsäljning.',
-      netFiat: 'Netto fiat-värde',
+      localData: 'Local',
+      previousPeriod: 'Previous',
+
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+
+      totalTopups: 'Topups Issued',
+      totalTopupsCaption:
+        'Number of completed customer topups in the selected period.',
+
+      cashOutsCompleted: 'Cash-outs Completed',
+      cashOutsCompletedCaption:
+        'Number of completed customer cash-outs in the selected period.',
+
+      grossFiat: 'Gross Fiat Movement',
+      grossFiatCaption: 'Total fiat value handled across topups and cash-outs.',
+
+      netFiat: 'Net Fiat Movement',
       netFiatCaption:
-        'Beräknat värde efter avdrag för spårade värdekodsavgifter.',
-      bchLoaded: 'BCH laddat',
+        'Estimated value after tracked fee deductions where available.',
+
+      bchLoaded: 'BCH Loaded Into Topups',
       bchLoadedCaption:
-        'Total BCH som laddats på kundvärdekoder under perioden.',
-      averageVoucherValue: 'Genomsnittligt värdekodsvärde',
-      averageVoucherValueCaption:
-        'Genomsnittligt fiat-värde per slutförd värdekodsförsäljning.',
-      growth: 'Tillväxt mot föregående period',
+        'Total BCH loaded into customer topups during this period.',
+
+      bchBoughtFromCustomers: 'BCH Bought From Customers',
+      bchBoughtFromCustomersCaption:
+        'Total BCH customers sold back to the merchant through cash-outs.',
+
+      fiatPaidOut: 'Fiat Paid Out',
+      fiatPaidOutCaption:
+        'Total cash paid out to customers for completed cash-outs.',
+
+      averageTopupValue: 'Average Topup Value',
+      averageTopupValueCaption:
+        'Average fiat value per completed customer topup.',
+
+      totalBchMovement: 'Total BCH Movement',
+      totalBchMovementCaption:
+        'Combined BCH loaded into topups and bought from customers.',
+
+      growth: 'Growth vs Previous Period',
       growthCaption:
-        'Jämförelse av värdekodsantal mot motsvarande föregående rapportperiod.',
-      noPreviousPeriod: 'Ingen föregående period',
-      newActivity: 'Ny',
+        'Topup count compared with the matching previous report period.',
+      noPreviousPeriod: 'No previous period',
+      newActivity: 'New',
+    },
+    tracker: {
+      title: 'Topups vs Cash-outs',
+      subtitle:
+        'See whether this merchant is mainly selling BCH topups or buying BCH back from customers.',
+      fiatMovement: 'Fiat Movement',
+      localPeriod: 'Selected Range',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      transactionCount: '{count} transactions',
+      emptyState: 'No completed topups or cash-outs in this range yet.',
     },
     targets: {
-      title: 'Slå föregående period',
+      title: 'Beat Last Period',
       subtitle:
-        'Automatiska mål jämför det här intervallet med motsvarande föregående period.',
-      progressLabel: 'Målframsteg',
-      noPreviousPeriod: 'Ingen föregående period',
+        'Automatic targets compare this range with the previous matching period.',
+      progressLabel: 'Target Progress',
+      noPreviousPeriod: 'No previous period',
       noPreviousPeriodMessage:
-        'Välj idag, denna vecka, denna månad eller detta år när det finns föregående aktivitet att jämföra med.',
-      newActivity: 'Ny aktivitet',
+        'Choose Today, This Week, This Month, or This Year once there is previous activity to compare against.',
+      newActivity: 'New activity',
       newActivityMessage:
-        'Föregående period hade ingen aktivitet, så den här perioden börjar från noll.',
-      matchedLastPeriod: 'Matchade föregående period',
+        'There was no activity in the previous period, so this period has started fresh.',
+      matchedLastPeriod: 'Matched last period',
       matchedMessage:
-        'Den här perioden ligger just nu lika med motsvarande föregående period.',
-      aheadBy: 'Före med {amount}',
+        'This period is currently level with the previous matching period.',
+      aheadBy: '{amount} ahead',
       aheadMessage:
-        'Handlaren ligger just nu före motsvarande föregående period.',
-      leftToBeat: '{amount} kvar',
+        'The merchant is currently ahead of the previous matching period.',
+      leftToBeat: '{amount} left',
       behindMessage:
-        'Detta återstår för att slå motsvarande föregående period.',
+        'This is the amount still needed to beat the previous matching period.',
     },
     breakdowns: {
-      title: 'Uppdelningar',
+      title: 'Breakdowns',
       subtitle:
-        'Se valutatotaler, värdekodsflöde och vilka lokala register som räknas.',
-      currencyTitle: 'Efter valuta',
+        'View currency totals, topup flow, cash-out flow, and which local records are counted.',
+      currencyTitle: 'By Currency',
       noCurrencyData:
-        'Ingen slutförd värdekodsaktivitet finns för detta intervall ännu.',
-      voucherCount: '{count} värdekoder',
-      flowTitle: 'Värdekodsflöde',
-      vouchersIssued: 'Utfärdade värdekoder',
-      bchLoaded: 'BCH laddat',
+        'No completed topup or cash-out activity in this range yet.',
+      topupCount: '{count} topups',
+      cashOutCount: '{count} cash-outs',
+
+      flowTitle: 'Topup & Cash-out Flow',
+      topupsIssued: 'Topups issued',
+      cashOutsCompleted: 'Cash-outs completed',
+      totalBchMovement: 'Total BCH movement',
       flowText:
-        'BCH-kontantuttag läggs till här när rapportvyn för värdekoder har bekräftats.',
-      statusTitle: 'Rapporterbara register',
-      recordsLoaded: 'Inlästa värdekodsregister',
-      reportableVouchers: 'Rapporterbara värdekoder',
+        'This compares the merchant’s BCH sold through topups against BCH bought back from customers through cash-outs.',
+
+      statusTitle: 'Reportable Records',
+      recordsLoaded: 'Records loaded',
+      reportableTopups: 'Reportable topups',
+      reportableCashOuts: 'Reportable cash-outs',
       statusText:
-        'Rapporter räknar för närvarande finansierade, utskrivna och inlösta värdekoder. Utkast, kurslåsta register, fel och återtagna register ingår inte.',
+        'Reports count funded, printed, and redeemed topups, plus completed cash-outs. Drafts, quote-locked records, errors, cancelled records, and reclaimed records are excluded.',
     },
     reportActions: {
-      title: 'Rapportåtgärder',
-      subtitle: 'Förberett för utskrift, PDF-export, bildsparande och delning.',
-      comingSoon: 'Rapportåtgärder kopplas in senare.',
+      title: 'Report Actions',
+      subtitle:
+        'Prepared for print, PDF export, image save, and sharing features.',
+      comingSoon: 'Report actions will be connected later.',
     },
     localFirst: {
-      title: 'Lokala rapporter först.',
+      title: 'Local-first reports.',
       message:
-        'Rapporter beräknas från register som sparats på den här enheten. Ingen serverspårning läggs till i detta steg.',
+        'Reports are calculated from records stored on this device. No server tracking is added in this step.',
     },
     messages: {
-      loadingReport: 'Läser in lokal rapportdata...',
-      couldNotLoadReport: 'Kunde inte läsa in handlarrapportdata.',
+      loadingReport: 'Loading local report data...',
+      couldNotLoadReport: 'Could not load merchant report data.',
     },
     connectedNotice:
-      'Rapporter är nu kopplade till den här enhetens lokala värdekodsregister.',
+      'Reports are now connected to local topup and cash-out records for this device.',
   },
 
   receiptPreview: {

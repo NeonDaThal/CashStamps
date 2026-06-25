@@ -654,109 +654,156 @@ const neNP = {
 
   merchantReportsPage: {
     hero: {
-      eyebrow: 'व्यापारी रिपोर्टहरू',
-      title: 'रिपोर्टहरू',
-      intro:
-        'यस उपकरणबाट भौचर बिक्री, क्यास-आउट, राजस्व, र वृद्धि ट्र्याक गर्नुहोस्।',
+      eyebrow: 'Merchant Reports',
+      title: 'Reports',
+      intro: 'Track topups, cash-outs, revenue, and growth from this device.',
     },
     actions: {
-      viewHistory: 'इतिहास हेर्नुहोस्',
-      sellVoucher: 'भौचर बेच्नुहोस्',
-      printReport: 'रिपोर्ट प्रिन्ट गर्नुहोस्',
-      exportPdf: 'PDF निर्यात गर्नुहोस्',
-      saveImage: 'तस्बिर सुरक्षित गर्नुहोस्',
-      shareReport: 'रिपोर्ट सेयर गर्नुहोस्',
-      refreshReport: 'रिपोर्ट रिफ्रेस गर्नुहोस्',
+      viewHistory: 'View History',
+      sellVoucher: 'Sell Topup',
+      printReport: 'Print Report',
+      exportPdf: 'Export PDF',
+      saveImage: 'Save Image',
+      shareReport: 'Share Report',
+      refreshReport: 'Refresh Report',
     },
     range: {
-      title: 'रिपोर्ट अवधि',
-      subtitle: 'उपयोगी व्यापारी रिपोर्टिङ अवधिहरू बीच स्विच गर्नुहोस्।',
+      title: 'Report Range',
+      subtitle: 'Switch between useful merchant reporting periods.',
     },
     ranges: {
-      today: 'आज',
-      week: 'यो हप्ता',
-      month: 'यो महिना',
-      year: 'यो वर्ष',
-      allTime: 'सबै समय',
+      today: 'Today',
+      week: 'This Week',
+      month: 'This Month',
+      year: 'This Year',
+      allTime: 'All Time',
     },
     period: {
-      currentRange: 'हालको अवधि',
-      loading: 'रिपोर्ट अवधि लोड हुँदै...',
-      noRecordsYet: 'अहिलेसम्म कुनै पूरा भएको भौचर रेकर्ड छैन',
+      currentRange: 'Current Range',
+      loading: 'Loading report range...',
+      noRecordsYet: 'No completed topup or cash-out records yet',
     },
     summary: {
-      localData: 'स्थानीय',
-      previousPeriod: 'अघिल्लो',
-      totalVouchers: 'जारी भएका कुल भौचरहरू',
-      totalVouchersCaption: 'छानिएको अवधिमा पूरा भएका भौचर बिक्रीको संख्या।',
-      grossFiat: 'कुल फियाट मूल्य',
-      grossFiatCaption:
-        'भौचर बिक्रीमार्फत ह्यान्डल गरिएको ग्राहक नगदको कुल मूल्य।',
-      netFiat: 'नेट फियाट मूल्य',
-      netFiatCaption: 'ट्र्याक गरिएको भौचर शुल्क कटौतीपछि अनुमानित मूल्य।',
-      bchLoaded: 'लोड भएको BCH',
-      bchLoadedCaption: 'यस अवधिमा ग्राहक भौचरहरूमा लोड गरिएको कुल BCH।',
-      averageVoucherValue: 'औसत भौचर मूल्य',
-      averageVoucherValueCaption:
-        'प्रति पूरा भएको भौचर बिक्रीको औसत फियाट मूल्य।',
-      growth: 'अघिल्लो अवधिसँग तुलना वृद्धि',
-      growthCaption: 'मिल्दो अघिल्लो रिपोर्ट अवधिसँग भौचर संख्याको तुलना।',
-      noPreviousPeriod: 'अघिल्लो अवधि छैन',
-      newActivity: 'नयाँ',
+      localData: 'Local',
+      previousPeriod: 'Previous',
+
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+
+      totalTopups: 'Topups Issued',
+      totalTopupsCaption:
+        'Number of completed customer topups in the selected period.',
+
+      cashOutsCompleted: 'Cash-outs Completed',
+      cashOutsCompletedCaption:
+        'Number of completed customer cash-outs in the selected period.',
+
+      grossFiat: 'Gross Fiat Movement',
+      grossFiatCaption: 'Total fiat value handled across topups and cash-outs.',
+
+      netFiat: 'Net Fiat Movement',
+      netFiatCaption:
+        'Estimated value after tracked fee deductions where available.',
+
+      bchLoaded: 'BCH Loaded Into Topups',
+      bchLoadedCaption:
+        'Total BCH loaded into customer topups during this period.',
+
+      bchBoughtFromCustomers: 'BCH Bought From Customers',
+      bchBoughtFromCustomersCaption:
+        'Total BCH customers sold back to the merchant through cash-outs.',
+
+      fiatPaidOut: 'Fiat Paid Out',
+      fiatPaidOutCaption:
+        'Total cash paid out to customers for completed cash-outs.',
+
+      averageTopupValue: 'Average Topup Value',
+      averageTopupValueCaption:
+        'Average fiat value per completed customer topup.',
+
+      totalBchMovement: 'Total BCH Movement',
+      totalBchMovementCaption:
+        'Combined BCH loaded into topups and bought from customers.',
+
+      growth: 'Growth vs Previous Period',
+      growthCaption:
+        'Topup count compared with the matching previous report period.',
+      noPreviousPeriod: 'No previous period',
+      newActivity: 'New',
+    },
+    tracker: {
+      title: 'Topups vs Cash-outs',
+      subtitle:
+        'See whether this merchant is mainly selling BCH topups or buying BCH back from customers.',
+      fiatMovement: 'Fiat Movement',
+      localPeriod: 'Selected Range',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      transactionCount: '{count} transactions',
+      emptyState: 'No completed topups or cash-outs in this range yet.',
     },
     targets: {
-      title: 'अघिल्लो अवधि भन्दा राम्रो गर्नुहोस्',
+      title: 'Beat Last Period',
       subtitle:
-        'स्वचालित लक्ष्यहरूले यो अवधि अघिल्लो मिल्दो अवधिसँग तुलना गर्छन्।',
-      progressLabel: 'लक्ष्य प्रगति',
-      noPreviousPeriod: 'अघिल्लो अवधि छैन',
+        'Automatic targets compare this range with the previous matching period.',
+      progressLabel: 'Target Progress',
+      noPreviousPeriod: 'No previous period',
       noPreviousPeriodMessage:
-        'तुलना गर्न अघिल्लो गतिविधि भएपछि आज, यो हप्ता, यो महिना, वा यो वर्ष छान्नुहोस्।',
-      newActivity: 'नयाँ गतिविधि',
+        'Choose Today, This Week, This Month, or This Year once there is previous activity to compare against.',
+      newActivity: 'New activity',
       newActivityMessage:
-        'अघिल्लो अवधिमा कुनै गतिविधि थिएन, त्यसैले यो अवधि नयाँ सुरु भएको छ।',
-      matchedLastPeriod: 'अघिल्लो अवधि बराबर',
-      matchedMessage: 'यो अवधि हाल अघिल्लो मिल्दो अवधिसँग बराबर छ।',
-      aheadBy: '{amount} अगाडि',
-      aheadMessage: 'व्यापारी हाल अघिल्लो मिल्दो अवधिभन्दा अगाडि छ।',
-      leftToBeat: '{amount} बाँकी',
-      behindMessage: 'अघिल्लो मिल्दो अवधि भन्दा राम्रो गर्न अझै आवश्यक रकम।',
+        'There was no activity in the previous period, so this period has started fresh.',
+      matchedLastPeriod: 'Matched last period',
+      matchedMessage:
+        'This period is currently level with the previous matching period.',
+      aheadBy: '{amount} ahead',
+      aheadMessage:
+        'The merchant is currently ahead of the previous matching period.',
+      leftToBeat: '{amount} left',
+      behindMessage:
+        'This is the amount still needed to beat the previous matching period.',
     },
     breakdowns: {
-      title: 'विवरणहरू',
+      title: 'Breakdowns',
       subtitle:
-        'मुद्रा कुल, भौचर प्रवाह, र कुन स्थानीय रेकर्डहरू गणना गरिन्छन् हेर्नुहोस्।',
-      currencyTitle: 'मुद्रा अनुसार',
-      noCurrencyData: 'यस अवधिमा अझै कुनै पूरा भएको भौचर गतिविधि छैन।',
-      voucherCount: '{count} भौचरहरू',
-      flowTitle: 'भौचर प्रवाह',
-      vouchersIssued: 'जारी भएका भौचरहरू',
-      bchLoaded: 'लोड भएको BCH',
+        'View currency totals, topup flow, cash-out flow, and which local records are counted.',
+      currencyTitle: 'By Currency',
+      noCurrencyData:
+        'No completed topup or cash-out activity in this range yet.',
+      topupCount: '{count} topups',
+      cashOutCount: '{count} cash-outs',
+
+      flowTitle: 'Topup & Cash-out Flow',
+      topupsIssued: 'Topups issued',
+      cashOutsCompleted: 'Cash-outs completed',
+      totalBchMovement: 'Total BCH movement',
       flowText:
-        'भौचर रिपोर्ट दृश्य पुष्टि भएपछि यहाँ क्यास-आउट रिपोर्टिङ थपिनेछ।',
-      statusTitle: 'रिपोर्ट गर्न मिल्ने रेकर्डहरू',
-      recordsLoaded: 'लोड भएका भौचर रेकर्डहरू',
-      reportableVouchers: 'रिपोर्ट गर्न मिल्ने भौचरहरू',
+        'This compares the merchant’s BCH sold through topups against BCH bought back from customers through cash-outs.',
+
+      statusTitle: 'Reportable Records',
+      recordsLoaded: 'Records loaded',
+      reportableTopups: 'Reportable topups',
+      reportableCashOuts: 'Reportable cash-outs',
       statusText:
-        'रिपोर्टहरूले हाल फन्डेड, प्रिन्टेड, र रिडिम गरिएका भौचरहरू गणना गर्छन्। ड्राफ्ट, दर-लक रेकर्डहरू, त्रुटि, र रिक्लेम गरिएका रेकर्डहरू समावेश हुँदैनन्।',
+        'Reports count funded, printed, and redeemed topups, plus completed cash-outs. Drafts, quote-locked records, errors, cancelled records, and reclaimed records are excluded.',
     },
     reportActions: {
-      title: 'रिपोर्ट कार्यहरू',
+      title: 'Report Actions',
       subtitle:
-        'प्रिन्ट, PDF निर्यात, तस्बिर सुरक्षित, र सेयर सुविधाका लागि तयार गरिएको।',
-      comingSoon: 'रिपोर्ट कार्यहरू पछि जडान गरिनेछन्।',
+        'Prepared for print, PDF export, image save, and sharing features.',
+      comingSoon: 'Report actions will be connected later.',
     },
     localFirst: {
-      title: 'स्थानीय-प्रथम रिपोर्टहरू।',
+      title: 'Local-first reports.',
       message:
-        'रिपोर्टहरू यस उपकरणमा सुरक्षित रेकर्डहरूबाट गणना गरिन्छन्। यस चरणमा कुनै सर्भर ट्र्याकिङ थपिएको छैन।',
+        'Reports are calculated from records stored on this device. No server tracking is added in this step.',
     },
     messages: {
-      loadingReport: 'स्थानीय रिपोर्ट डाटा लोड हुँदै...',
-      couldNotLoadReport: 'व्यापारी रिपोर्ट डाटा लोड गर्न सकिएन।',
+      loadingReport: 'Loading local report data...',
+      couldNotLoadReport: 'Could not load merchant report data.',
     },
     connectedNotice:
-      'रिपोर्टहरू अब यस उपकरणका स्थानीय भौचर रेकर्डहरूसँग जोडिएका छन्।',
+      'Reports are now connected to local topup and cash-out records for this device.',
   },
 
   receiptPreview: {

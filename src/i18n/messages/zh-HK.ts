@@ -625,99 +625,156 @@ const zhHK = {
 
   merchantReportsPage: {
     hero: {
-      eyebrow: '商戶報告',
-      title: '報告',
-      intro: '追蹤此裝置上的增值券銷售、BCH 兌現、收入和增長。',
+      eyebrow: 'Merchant Reports',
+      title: 'Reports',
+      intro: 'Track topups, cash-outs, revenue, and growth from this device.',
     },
     actions: {
-      viewHistory: '查看記錄',
-      sellVoucher: '出售增值券',
-      printReport: '打印報告',
-      exportPdf: '匯出 PDF',
-      saveImage: '儲存圖片',
-      shareReport: '分享報告',
-      refreshReport: '更新報告',
+      viewHistory: 'View History',
+      sellVoucher: 'Sell Topup',
+      printReport: 'Print Report',
+      exportPdf: 'Export PDF',
+      saveImage: 'Save Image',
+      shareReport: 'Share Report',
+      refreshReport: 'Refresh Report',
     },
     range: {
-      title: '報告範圍',
-      subtitle: '切換不同有用的商戶報告時段。',
+      title: 'Report Range',
+      subtitle: 'Switch between useful merchant reporting periods.',
     },
     ranges: {
-      today: '今日',
-      week: '本週',
-      month: '本月',
-      year: '今年',
-      allTime: '全部時間',
+      today: 'Today',
+      week: 'This Week',
+      month: 'This Month',
+      year: 'This Year',
+      allTime: 'All Time',
     },
     period: {
-      currentRange: '目前範圍',
-      loading: '正在載入報告範圍...',
-      noRecordsYet: '尚未有已完成的增值券記錄',
+      currentRange: 'Current Range',
+      loading: 'Loading report range...',
+      noRecordsYet: 'No completed topup or cash-out records yet',
     },
     summary: {
-      localData: '本機',
-      previousPeriod: '上一期',
-      totalVouchers: '已發出增值券總數',
-      totalVouchersCaption: '所選期間內已完成增值券銷售的數量。',
-      grossFiat: '法幣總值',
-      grossFiatCaption: '透過增值券銷售處理的顧客現金總值。',
-      netFiat: '法幣淨值',
-      netFiatCaption: '扣除已追蹤增值券費用後的估算價值。',
-      bchLoaded: '已載入 BCH',
-      bchLoadedCaption: '此期間內載入顧客增值券的 BCH 總量。',
-      averageVoucherValue: '平均增值券價值',
-      averageVoucherValueCaption: '每筆已完成增值券銷售的平均法幣價值。',
-      growth: '相對上一期增長',
-      growthCaption: '增值券數量與上一個相同報告期間比較。',
-      noPreviousPeriod: '沒有上一期',
-      newActivity: '新增',
+      localData: 'Local',
+      previousPeriod: 'Previous',
+
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+
+      totalTopups: 'Topups Issued',
+      totalTopupsCaption:
+        'Number of completed customer topups in the selected period.',
+
+      cashOutsCompleted: 'Cash-outs Completed',
+      cashOutsCompletedCaption:
+        'Number of completed customer cash-outs in the selected period.',
+
+      grossFiat: 'Gross Fiat Movement',
+      grossFiatCaption: 'Total fiat value handled across topups and cash-outs.',
+
+      netFiat: 'Net Fiat Movement',
+      netFiatCaption:
+        'Estimated value after tracked fee deductions where available.',
+
+      bchLoaded: 'BCH Loaded Into Topups',
+      bchLoadedCaption:
+        'Total BCH loaded into customer topups during this period.',
+
+      bchBoughtFromCustomers: 'BCH Bought From Customers',
+      bchBoughtFromCustomersCaption:
+        'Total BCH customers sold back to the merchant through cash-outs.',
+
+      fiatPaidOut: 'Fiat Paid Out',
+      fiatPaidOutCaption:
+        'Total cash paid out to customers for completed cash-outs.',
+
+      averageTopupValue: 'Average Topup Value',
+      averageTopupValueCaption:
+        'Average fiat value per completed customer topup.',
+
+      totalBchMovement: 'Total BCH Movement',
+      totalBchMovementCaption:
+        'Combined BCH loaded into topups and bought from customers.',
+
+      growth: 'Growth vs Previous Period',
+      growthCaption:
+        'Topup count compared with the matching previous report period.',
+      noPreviousPeriod: 'No previous period',
+      newActivity: 'New',
+    },
+    tracker: {
+      title: 'Topups vs Cash-outs',
+      subtitle:
+        'See whether this merchant is mainly selling BCH topups or buying BCH back from customers.',
+      fiatMovement: 'Fiat Movement',
+      localPeriod: 'Selected Range',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      transactionCount: '{count} transactions',
+      emptyState: 'No completed topups or cash-outs in this range yet.',
     },
     targets: {
-      title: '超越上一期',
-      subtitle: '自動目標會將此範圍與上一個相同期間比較。',
-      progressLabel: '目標進度',
-      noPreviousPeriod: '沒有上一期',
+      title: 'Beat Last Period',
+      subtitle:
+        'Automatic targets compare this range with the previous matching period.',
+      progressLabel: 'Target Progress',
+      noPreviousPeriod: 'No previous period',
       noPreviousPeriodMessage:
-        '當有上一期活動可比較時，請選擇今日、本週、本月或今年。',
-      newActivity: '新活動',
-      newActivityMessage: '上一期沒有活動，因此本期由零開始。',
-      matchedLastPeriod: '已追平上一期',
-      matchedMessage: '本期目前與上一個相同期間持平。',
-      aheadBy: '領先 {amount}',
-      aheadMessage: '商戶目前領先上一個相同期間。',
-      leftToBeat: '尚差 {amount}',
-      behindMessage: '這是超越上一個相同期間仍需要的金額。',
+        'Choose Today, This Week, This Month, or This Year once there is previous activity to compare against.',
+      newActivity: 'New activity',
+      newActivityMessage:
+        'There was no activity in the previous period, so this period has started fresh.',
+      matchedLastPeriod: 'Matched last period',
+      matchedMessage:
+        'This period is currently level with the previous matching period.',
+      aheadBy: '{amount} ahead',
+      aheadMessage:
+        'The merchant is currently ahead of the previous matching period.',
+      leftToBeat: '{amount} left',
+      behindMessage:
+        'This is the amount still needed to beat the previous matching period.',
     },
     breakdowns: {
-      title: '分類明細',
-      subtitle: '查看貨幣總額、增值券流程，以及哪些本機記錄被計算。',
-      currencyTitle: '按貨幣',
-      noCurrencyData: '此範圍內尚未有已完成增值券活動。',
-      voucherCount: '{count} 張增值券',
-      flowTitle: '增值券流程',
-      vouchersIssued: '已發出增值券',
-      bchLoaded: '已載入 BCH',
-      flowText: '在確認增值券報告畫面後，會在此加入 BCH 兌現報告。',
-      statusTitle: '可報告記錄',
-      recordsLoaded: '已載入增值券記錄',
-      reportableVouchers: '可報告增值券',
+      title: 'Breakdowns',
+      subtitle:
+        'View currency totals, topup flow, cash-out flow, and which local records are counted.',
+      currencyTitle: 'By Currency',
+      noCurrencyData:
+        'No completed topup or cash-out activity in this range yet.',
+      topupCount: '{count} topups',
+      cashOutCount: '{count} cash-outs',
+
+      flowTitle: 'Topup & Cash-out Flow',
+      topupsIssued: 'Topups issued',
+      cashOutsCompleted: 'Cash-outs completed',
+      totalBchMovement: 'Total BCH movement',
+      flowText:
+        'This compares the merchant’s BCH sold through topups against BCH bought back from customers through cash-outs.',
+
+      statusTitle: 'Reportable Records',
+      recordsLoaded: 'Records loaded',
+      reportableTopups: 'Reportable topups',
+      reportableCashOuts: 'Reportable cash-outs',
       statusText:
-        '報告目前計算已入資、已打印和已兌換的增值券。草稿、已鎖定報價記錄、錯誤和已收回記錄會被排除。',
+        'Reports count funded, printed, and redeemed topups, plus completed cash-outs. Drafts, quote-locked records, errors, cancelled records, and reclaimed records are excluded.',
     },
     reportActions: {
-      title: '報告操作',
-      subtitle: '已為打印、PDF 匯出、儲存圖片和分享功能作準備。',
-      comingSoon: '報告操作稍後會連接。',
+      title: 'Report Actions',
+      subtitle:
+        'Prepared for print, PDF export, image save, and sharing features.',
+      comingSoon: 'Report actions will be connected later.',
     },
     localFirst: {
-      title: '本機優先報告。',
-      message: '報告由儲存在此裝置上的記錄計算。此步驟不加入伺服器追蹤。',
+      title: 'Local-first reports.',
+      message:
+        'Reports are calculated from records stored on this device. No server tracking is added in this step.',
     },
     messages: {
-      loadingReport: '正在載入本機報告資料...',
-      couldNotLoadReport: '無法載入商戶報告資料。',
+      loadingReport: 'Loading local report data...',
+      couldNotLoadReport: 'Could not load merchant report data.',
     },
-    connectedNotice: '報告現已連接到此裝置的本機增值券記錄。',
+    connectedNotice:
+      'Reports are now connected to local topup and cash-out records for this device.',
   },
 
   receiptPreview: {

@@ -668,119 +668,156 @@ const sw = {
 
   merchantReportsPage: {
     hero: {
-      eyebrow: 'Ripoti za mfanyabiashara',
-      title: 'Ripoti',
-      intro:
-        'Fuatilia mauzo ya vocha, kubadili BCH kuwa fedha taslimu, mapato, na ukuaji kutoka kwenye kifaa hiki.',
+      eyebrow: 'Merchant Reports',
+      title: 'Reports',
+      intro: 'Track topups, cash-outs, revenue, and growth from this device.',
     },
     actions: {
-      viewHistory: 'Tazama historia',
-      sellVoucher: 'Uza vocha',
-      printReport: 'Chapisha ripoti',
-      exportPdf: 'Hamisha PDF',
-      saveImage: 'Hifadhi picha',
-      shareReport: 'Shiriki ripoti',
-      refreshReport: 'Sasisha ripoti',
+      viewHistory: 'View History',
+      sellVoucher: 'Sell Topup',
+      printReport: 'Print Report',
+      exportPdf: 'Export PDF',
+      saveImage: 'Save Image',
+      shareReport: 'Share Report',
+      refreshReport: 'Refresh Report',
     },
     range: {
-      title: 'Kipindi cha ripoti',
-      subtitle:
-        'Badilisha kati ya vipindi muhimu vya ripoti za mfanyabiashara.',
+      title: 'Report Range',
+      subtitle: 'Switch between useful merchant reporting periods.',
     },
     ranges: {
-      today: 'Leo',
-      week: 'Wiki hii',
-      month: 'Mwezi huu',
-      year: 'Mwaka huu',
-      allTime: 'Muda wote',
+      today: 'Today',
+      week: 'This Week',
+      month: 'This Month',
+      year: 'This Year',
+      allTime: 'All Time',
     },
     period: {
-      currentRange: 'Kipindi cha sasa',
-      loading: 'Inapakia kipindi cha ripoti...',
-      noRecordsYet: 'Bado hakuna rekodi za vocha zilizokamilika',
+      currentRange: 'Current Range',
+      loading: 'Loading report range...',
+      noRecordsYet: 'No completed topup or cash-out records yet',
     },
     summary: {
-      localData: 'Ndani ya kifaa',
-      previousPeriod: 'Kipindi kilichopita',
-      totalVouchers: 'Jumla ya vocha zilizotolewa',
-      totalVouchersCaption:
-        'Idadi ya mauzo ya vocha yaliyokamilika ndani ya kipindi kilichochaguliwa.',
-      grossFiat: 'Jumla ya thamani ya fiat',
-      grossFiatCaption:
-        'Jumla ya fedha za wateja zilizoshughulikiwa kupitia mauzo ya vocha.',
-      netFiat: 'Thamani halisi ya fiat',
+      localData: 'Local',
+      previousPeriod: 'Previous',
+
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+
+      totalTopups: 'Topups Issued',
+      totalTopupsCaption:
+        'Number of completed customer topups in the selected period.',
+
+      cashOutsCompleted: 'Cash-outs Completed',
+      cashOutsCompletedCaption:
+        'Number of completed customer cash-outs in the selected period.',
+
+      grossFiat: 'Gross Fiat Movement',
+      grossFiatCaption: 'Total fiat value handled across topups and cash-outs.',
+
+      netFiat: 'Net Fiat Movement',
       netFiatCaption:
-        'Thamani inayokadiriwa baada ya kuondoa ada za vocha zilizofuatiliwa.',
-      bchLoaded: 'BCH iliyopakiwa',
+        'Estimated value after tracked fee deductions where available.',
+
+      bchLoaded: 'BCH Loaded Into Topups',
       bchLoadedCaption:
-        'Jumla ya BCH iliyopakiwa kwenye vocha za wateja ndani ya kipindi hiki.',
-      averageVoucherValue: 'Wastani wa thamani ya vocha',
-      averageVoucherValueCaption:
-        'Wastani wa thamani ya fiat kwa kila mauzo ya vocha yaliyokamilika.',
-      growth: 'Ukuaji dhidi ya kipindi kilichopita',
+        'Total BCH loaded into customer topups during this period.',
+
+      bchBoughtFromCustomers: 'BCH Bought From Customers',
+      bchBoughtFromCustomersCaption:
+        'Total BCH customers sold back to the merchant through cash-outs.',
+
+      fiatPaidOut: 'Fiat Paid Out',
+      fiatPaidOutCaption:
+        'Total cash paid out to customers for completed cash-outs.',
+
+      averageTopupValue: 'Average Topup Value',
+      averageTopupValueCaption:
+        'Average fiat value per completed customer topup.',
+
+      totalBchMovement: 'Total BCH Movement',
+      totalBchMovementCaption:
+        'Combined BCH loaded into topups and bought from customers.',
+
+      growth: 'Growth vs Previous Period',
       growthCaption:
-        'Ulinganisho wa idadi ya vocha dhidi ya kipindi cha ripoti kilichopita kinacholingana.',
-      noPreviousPeriod: 'Hakuna kipindi kilichopita',
-      newActivity: 'Mpya',
+        'Topup count compared with the matching previous report period.',
+      noPreviousPeriod: 'No previous period',
+      newActivity: 'New',
+    },
+    tracker: {
+      title: 'Topups vs Cash-outs',
+      subtitle:
+        'See whether this merchant is mainly selling BCH topups or buying BCH back from customers.',
+      fiatMovement: 'Fiat Movement',
+      localPeriod: 'Selected Range',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      transactionCount: '{count} transactions',
+      emptyState: 'No completed topups or cash-outs in this range yet.',
     },
     targets: {
-      title: 'Shinda kipindi kilichopita',
+      title: 'Beat Last Period',
       subtitle:
-        'Malengo ya moja kwa moja yanalinganisha kipindi hiki na kipindi kilichopita kinacholingana.',
-      progressLabel: 'Maendeleo ya lengo',
-      noPreviousPeriod: 'Hakuna kipindi kilichopita',
+        'Automatic targets compare this range with the previous matching period.',
+      progressLabel: 'Target Progress',
+      noPreviousPeriod: 'No previous period',
       noPreviousPeriodMessage:
-        'Chagua leo, wiki hii, mwezi huu, au mwaka huu pale ambapo kuna shughuli ya awali ya kulinganisha.',
-      newActivity: 'Shughuli mpya',
+        'Choose Today, This Week, This Month, or This Year once there is previous activity to compare against.',
+      newActivity: 'New activity',
       newActivityMessage:
-        'Kipindi kilichopita hakikuwa na shughuli, hivyo kipindi hiki kinaanza kutoka sifuri.',
-      matchedLastPeriod: 'Imelingana na kipindi kilichopita',
+        'There was no activity in the previous period, so this period has started fresh.',
+      matchedLastPeriod: 'Matched last period',
       matchedMessage:
-        'Kipindi hiki kwa sasa kinalingana na kipindi kilichopita kinacholingana.',
-      aheadBy: 'Mbele kwa {amount}',
+        'This period is currently level with the previous matching period.',
+      aheadBy: '{amount} ahead',
       aheadMessage:
-        'Mfanyabiashara kwa sasa yuko mbele ya kipindi kilichopita kinacholingana.',
-      leftToBeat: '{amount} imebaki',
+        'The merchant is currently ahead of the previous matching period.',
+      leftToBeat: '{amount} left',
       behindMessage:
-        'Hiki ndicho kiasi kilichobaki ili kushinda kipindi kilichopita kinacholingana.',
+        'This is the amount still needed to beat the previous matching period.',
     },
     breakdowns: {
-      title: 'Mgawanyo',
+      title: 'Breakdowns',
       subtitle:
-        'Tazama jumla kwa sarafu, mtiririko wa vocha, na rekodi za ndani zinazohesabiwa.',
-      currencyTitle: 'Kwa sarafu',
+        'View currency totals, topup flow, cash-out flow, and which local records are counted.',
+      currencyTitle: 'By Currency',
       noCurrencyData:
-        'Bado hakuna shughuli ya vocha iliyokamilika kwenye kipindi hiki.',
-      voucherCount: 'Vocha {count}',
-      flowTitle: 'Mtiririko wa vocha',
-      vouchersIssued: 'Vocha zilizotolewa',
-      bchLoaded: 'BCH iliyopakiwa',
+        'No completed topup or cash-out activity in this range yet.',
+      topupCount: '{count} topups',
+      cashOutCount: '{count} cash-outs',
+
+      flowTitle: 'Topup & Cash-out Flow',
+      topupsIssued: 'Topups issued',
+      cashOutsCompleted: 'Cash-outs completed',
+      totalBchMovement: 'Total BCH movement',
       flowText:
-        'Ripoti za kubadili BCH kuwa fedha taslimu zitaongezwa hapa baada ya muonekano wa ripoti za vocha kuthibitishwa.',
-      statusTitle: 'Rekodi zinazoweza kuripotiwa',
-      recordsLoaded: 'Rekodi za vocha zilizopakiwa',
-      reportableVouchers: 'Vocha zinazoweza kuripotiwa',
+        'This compares the merchant’s BCH sold through topups against BCH bought back from customers through cash-outs.',
+
+      statusTitle: 'Reportable Records',
+      recordsLoaded: 'Records loaded',
+      reportableTopups: 'Reportable topups',
+      reportableCashOuts: 'Reportable cash-outs',
       statusText:
-        'Ripoti kwa sasa zinahesabu vocha zilizofadhiliwa, zilizochapishwa, na zilizokombolewa. Drafti, rekodi za bei iliyofungwa, makosa, na rekodi zilizorejeshwa hazihesabiwi.',
+        'Reports count funded, printed, and redeemed topups, plus completed cash-outs. Drafts, quote-locked records, errors, cancelled records, and reclaimed records are excluded.',
     },
     reportActions: {
-      title: 'Hatua za ripoti',
+      title: 'Report Actions',
       subtitle:
-        'Imeandaliwa kwa uchapishaji, uhamishaji wa PDF, kuhifadhi picha, na kushiriki.',
-      comingSoon: 'Hatua za ripoti zitaunganishwa baadaye.',
+        'Prepared for print, PDF export, image save, and sharing features.',
+      comingSoon: 'Report actions will be connected later.',
     },
     localFirst: {
-      title: 'Ripoti za ndani kwanza.',
+      title: 'Local-first reports.',
       message:
-        'Ripoti huhesabiwa kutoka kwenye rekodi zilizohifadhiwa kwenye kifaa hiki. Hakuna ufuatiliaji wa seva unaoongezwa katika hatua hii.',
+        'Reports are calculated from records stored on this device. No server tracking is added in this step.',
     },
     messages: {
-      loadingReport: 'Inapakia data ya ripoti ya ndani...',
-      couldNotLoadReport:
-        'Haikuwezekana kupakia data ya ripoti ya mfanyabiashara.',
+      loadingReport: 'Loading local report data...',
+      couldNotLoadReport: 'Could not load merchant report data.',
     },
     connectedNotice:
-      'Ripoti sasa zimeunganishwa na rekodi za vocha za ndani za kifaa hiki.',
+      'Reports are now connected to local topup and cash-out records for this device.',
   },
 
   receiptPreview: {

@@ -674,6 +674,160 @@ const de = {
     },
   },
 
+  merchantReportsPage: {
+    hero: {
+      eyebrow: 'Merchant Reports',
+      title: 'Reports',
+      intro: 'Track topups, cash-outs, revenue, and growth from this device.',
+    },
+    actions: {
+      viewHistory: 'View History',
+      sellVoucher: 'Sell Topup',
+      printReport: 'Print Report',
+      exportPdf: 'Export PDF',
+      saveImage: 'Save Image',
+      shareReport: 'Share Report',
+      refreshReport: 'Refresh Report',
+    },
+    range: {
+      title: 'Report Range',
+      subtitle: 'Switch between useful merchant reporting periods.',
+    },
+    ranges: {
+      today: 'Today',
+      week: 'This Week',
+      month: 'This Month',
+      year: 'This Year',
+      allTime: 'All Time',
+    },
+    period: {
+      currentRange: 'Current Range',
+      loading: 'Loading report range...',
+      noRecordsYet: 'No completed topup or cash-out records yet',
+    },
+    summary: {
+      localData: 'Local',
+      previousPeriod: 'Previous',
+
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+
+      totalTopups: 'Topups Issued',
+      totalTopupsCaption:
+        'Number of completed customer topups in the selected period.',
+
+      cashOutsCompleted: 'Cash-outs Completed',
+      cashOutsCompletedCaption:
+        'Number of completed customer cash-outs in the selected period.',
+
+      grossFiat: 'Gross Fiat Movement',
+      grossFiatCaption: 'Total fiat value handled across topups and cash-outs.',
+
+      netFiat: 'Net Fiat Movement',
+      netFiatCaption:
+        'Estimated value after tracked fee deductions where available.',
+
+      bchLoaded: 'BCH Loaded Into Topups',
+      bchLoadedCaption:
+        'Total BCH loaded into customer topups during this period.',
+
+      bchBoughtFromCustomers: 'BCH Bought From Customers',
+      bchBoughtFromCustomersCaption:
+        'Total BCH customers sold back to the merchant through cash-outs.',
+
+      fiatPaidOut: 'Fiat Paid Out',
+      fiatPaidOutCaption:
+        'Total cash paid out to customers for completed cash-outs.',
+
+      averageTopupValue: 'Average Topup Value',
+      averageTopupValueCaption:
+        'Average fiat value per completed customer topup.',
+
+      totalBchMovement: 'Total BCH Movement',
+      totalBchMovementCaption:
+        'Combined BCH loaded into topups and bought from customers.',
+
+      growth: 'Growth vs Previous Period',
+      growthCaption:
+        'Topup count compared with the matching previous report period.',
+      noPreviousPeriod: 'No previous period',
+      newActivity: 'New',
+    },
+    tracker: {
+      title: 'Topups vs Cash-outs',
+      subtitle:
+        'See whether this merchant is mainly selling BCH topups or buying BCH back from customers.',
+      fiatMovement: 'Fiat Movement',
+      localPeriod: 'Selected Range',
+      topups: 'Topups',
+      cashOuts: 'Cash-outs',
+      transactionCount: '{count} transactions',
+      emptyState: 'No completed topups or cash-outs in this range yet.',
+    },
+    targets: {
+      title: 'Beat Last Period',
+      subtitle:
+        'Automatic targets compare this range with the previous matching period.',
+      progressLabel: 'Target Progress',
+      noPreviousPeriod: 'No previous period',
+      noPreviousPeriodMessage:
+        'Choose Today, This Week, This Month, or This Year once there is previous activity to compare against.',
+      newActivity: 'New activity',
+      newActivityMessage:
+        'There was no activity in the previous period, so this period has started fresh.',
+      matchedLastPeriod: 'Matched last period',
+      matchedMessage:
+        'This period is currently level with the previous matching period.',
+      aheadBy: '{amount} ahead',
+      aheadMessage:
+        'The merchant is currently ahead of the previous matching period.',
+      leftToBeat: '{amount} left',
+      behindMessage:
+        'This is the amount still needed to beat the previous matching period.',
+    },
+    breakdowns: {
+      title: 'Breakdowns',
+      subtitle:
+        'View currency totals, topup flow, cash-out flow, and which local records are counted.',
+      currencyTitle: 'By Currency',
+      noCurrencyData:
+        'No completed topup or cash-out activity in this range yet.',
+      topupCount: '{count} topups',
+      cashOutCount: '{count} cash-outs',
+
+      flowTitle: 'Topup & Cash-out Flow',
+      topupsIssued: 'Topups issued',
+      cashOutsCompleted: 'Cash-outs completed',
+      totalBchMovement: 'Total BCH movement',
+      flowText:
+        'This compares the merchant’s BCH sold through topups against BCH bought back from customers through cash-outs.',
+
+      statusTitle: 'Reportable Records',
+      recordsLoaded: 'Records loaded',
+      reportableTopups: 'Reportable topups',
+      reportableCashOuts: 'Reportable cash-outs',
+      statusText:
+        'Reports count funded, printed, and redeemed topups, plus completed cash-outs. Drafts, quote-locked records, errors, cancelled records, and reclaimed records are excluded.',
+    },
+    reportActions: {
+      title: 'Report Actions',
+      subtitle:
+        'Prepared for print, PDF export, image save, and sharing features.',
+      comingSoon: 'Report actions will be connected later.',
+    },
+    localFirst: {
+      title: 'Local-first reports.',
+      message:
+        'Reports are calculated from records stored on this device. No server tracking is added in this step.',
+    },
+    messages: {
+      loadingReport: 'Loading local report data...',
+      couldNotLoadReport: 'Could not load merchant report data.',
+    },
+    connectedNotice:
+      'Reports are now connected to local topup and cash-out records for this device.',
+  },
+
   receiptPreview: {
     printLabels: {
       valueLoaded: 'Geladener Wert',
