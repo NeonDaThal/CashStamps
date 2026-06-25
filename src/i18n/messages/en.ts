@@ -66,14 +66,14 @@ const en = {
   },
 
   sellForm: {
-    customerCashAmount: 'Customer cash amount',
+    customerCashAmount: 'Enter amount customer is paying',
     salePreviewTitle: 'Sale preview',
     salePreviewSubtitle:
       'A live BCH quote will be locked on the review screen.',
     customerPays: 'Customer pays',
-    serviceFee: 'Service fee',
-    voucherValueBeforeQuote: 'Voucher value before quote',
-    quoteSource: 'Quote source',
+    serviceFee: 'Fees',
+    voucherValueBeforeQuote: 'Customer receives (minus fees)',
+    quoteSource: 'Quote',
     lockedAfterReview: 'Locked after review',
     reviewVoucher: 'Review Voucher',
     viewHistory: 'View History',
@@ -88,10 +88,10 @@ const en = {
 
   sellPage: {
     hero: {
-      eyebrow: 'New Voucher',
-      title: 'Sell BCH Voucher',
+      eyebrow: 'New Voucher Sale',
+      title: 'Sell Topup',
       intro:
-        'Enter the cash amount the customer is paying. The app will lock a BCH quote and show a review screen before issuing the voucher. You then present the QR code to the customer.',
+        'Enter the cash amount the customer is paying. The app will lock a BCH quote and show a review screen before issuing the voucher. You then present the voucher with QR code to the customer.',
     },
     treasury: {
       title: 'Treasury Wallet',

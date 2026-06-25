@@ -1,17 +1,23 @@
 <template>
   <q-form class="voucher-sale-form" @submit.prevent="handleSubmit">
-    <q-input
-      v-model.number="fiatAmount"
-      type="number"
-      inputmode="decimal"
-      min="0.01"
-      step="0.01"
-      :label="t('sellForm.customerCashAmount')"
-      prefix="£"
-      outlined
-      :disable="isSubmitting"
-      class="amount-input"
-    />
+    <div class="amount-field">
+      <div class="amount-field-label">
+        {{ t('sellForm.customerCashAmount') }}
+      </div>
+
+      <q-input
+        v-model.number="fiatAmount"
+        type="number"
+        inputmode="decimal"
+        min="0.01"
+        step="0.01"
+        :aria-label="t('sellForm.customerCashAmount')"
+        prefix="£"
+        borderless
+        :disable="isSubmitting"
+        class="amount-input"
+      />
+    </div>
 
     <q-card flat bordered class="pricing-card">
       <q-card-section>
@@ -30,11 +36,12 @@
           </div>
         </div>
 
-        <div class="preview-grid">
-          <div class="preview-item highlight">
+        <div class="preview-breakdown">
+          <div class="preview-line preview-line--primary">
             <div class="preview-label">
               {{ t('sellForm.customerPays') }}
             </div>
+
             <div class="preview-value">
               {{
                 formatMinorFiatAmount(
@@ -45,10 +52,11 @@
             </div>
           </div>
 
-          <div class="preview-item">
+          <div class="preview-line preview-line--subtle">
             <div class="preview-label">
               {{ t('sellForm.serviceFee') }}
             </div>
+
             <div class="preview-value">
               {{
                 formatBasisPointsAsPercent(previewPricing.serviceFeeBasisPoints)
@@ -63,10 +71,11 @@
             </div>
           </div>
 
-          <div class="preview-item">
+          <div class="preview-line">
             <div class="preview-label">
               {{ t('sellForm.voucherValueBeforeQuote') }}
             </div>
+
             <div class="preview-value">
               {{
                 formatMinorFiatAmount(
@@ -77,10 +86,11 @@
             </div>
           </div>
 
-          <div class="preview-item">
+          <div class="preview-line preview-line--quote">
             <div class="preview-label">
               {{ t('sellForm.quoteSource') }}
             </div>
+
             <div class="preview-value">
               {{ t('sellForm.lockedAfterReview') }}
             </div>
@@ -154,8 +164,48 @@ function handleSubmit(): void {
   gap: 16px;
 }
 
+.amount-field {
+  background: #ffffff;
+  border: 2px solid #00ce1b;
+  border-radius: 20px;
+  padding: 7px 16px 8px;
+}
+
+.amount-field-label {
+  color: #555555;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.1;
+  margin-bottom: 0;
+}
+
 .amount-input :deep(.q-field__control) {
-  border-radius: 16px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.amount-input :deep(.q-field__control-container) {
+  padding-top: 0;
+}
+
+.amount-input :deep(.q-field__native),
+.amount-input :deep(.q-field__prefix) {
+  color: #111111;
+  font-size: 30px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.amount-input :deep(.q-field__prefix) {
+  align-items: center;
+  display: flex;
+  padding-bottom: 0;
+  padding-right: 5px;
+  transform: translateY(-3px);
+}
+
+.amount-input :deep(.q-field__native) {
+  padding: 0;
 }
 
 .amount-input :deep(input[type='number']) {
@@ -207,38 +257,74 @@ function handleSubmit(): void {
   width: 82%;
 }
 
-.preview-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.preview-item {
+.preview-breakdown {
   background: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 16px;
-  padding: 14px;
+  overflow: hidden;
+  padding: 2px 14px;
 }
 
-.preview-item.highlight {
-  border-color: rgba(0, 206, 27, 0.55);
-  box-shadow: 0 0 0 3px rgba(0, 206, 27, 0.12);
+.preview-line {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.preview-line + .preview-line {
+  border-top: 1px solid #eeeeee;
+}
+
+.preview-line--primary {
+  padding-top: 13px;
+}
+
+.preview-line--subtle {
+  color: #777777;
+  padding: 9px 0;
+}
+
+.preview-line--quote {
+  background: transparent;
 }
 
 .preview-label {
   color: #666666;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  margin-bottom: 6px;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.2;
+  min-width: 0;
 }
 
 .preview-value {
   color: #111111;
-  font-size: 16px;
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.preview-line--primary .preview-value {
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.preview-line--subtle .preview-label,
+.preview-line--subtle .preview-value {
+  color: #777777;
+  font-size: 12px;
   font-weight: 800;
-  line-height: 1.25;
+}
+
+.preview-line--quote .preview-label,
+.preview-line--quote .preview-value {
+  color: #777777;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .action-row {
@@ -250,6 +336,7 @@ function handleSubmit(): void {
   background: #00ce1b;
   border-radius: 14px;
   color: #ffffff;
+  font-size: 17px;
   font-weight: 850;
   min-height: 48px;
   overflow: hidden;
@@ -261,8 +348,51 @@ function handleSubmit(): void {
 }
 
 @media (max-width: 640px) {
-  .preview-grid {
-    grid-template-columns: 1fr;
+  .amount-field {
+    border-radius: 18px;
+    padding: 5px 14px 5px;
+  }
+
+  .amount-field-label {
+    font-size: 12px;
+    line-height: 1;
+    margin-bottom: 0;
+    padding-top: 8px;
+  }
+
+  .amount-input :deep(.q-field__control) {
+    min-height: 28px;
+  }
+
+  .amount-input :deep(.q-field__native),
+  .amount-input :deep(.q-field__prefix) {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .amount-input :deep(.q-field__prefix) {
+    transform: translateY(-2px);
+  }
+
+  .preview-breakdown {
+    padding: 2px 12px;
+  }
+
+  .preview-line {
+    gap: 12px;
+    padding: 11px 0;
+  }
+
+  .preview-label {
+    font-size: 12px;
+  }
+
+  .preview-value {
+    font-size: 14px;
+  }
+
+  .preview-line--primary .preview-value {
+    font-size: 16px;
   }
 
   .action-row {
