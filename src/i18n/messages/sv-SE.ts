@@ -477,6 +477,7 @@ const svSE = {
       subtitle: 'Kontrollera om handlarens treasury-plånbok är redo.',
       setupBanner: 'Treasury-plånboken är konfigurerad.',
       notSetupBanner: 'Ingen treasury-plånbok har konfigurerats ännu.',
+      notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
     summary: {
       status: 'Status',
@@ -487,6 +488,7 @@ const svSE = {
       utxos: 'UTXO:er',
       lastChecked: 'Senast kontrollerad',
       notCheckedYet: 'Inte kontrollerad ännu',
+      balanceUnavailable: 'Fiat balance unavailable',
     },
     details: {
       treasuryAddress: 'Treasury-adress',
@@ -504,6 +506,7 @@ const svSE = {
       checkSeed: 'Kontrollera seed',
       importCheckedSeed: 'Importera kontrollerad seed',
       clearTreasuryWallet: 'Rensa treasury-plånbok',
+      create: 'Create',
     },
     utxoDetails: {
       label: 'UTXO-detaljer',

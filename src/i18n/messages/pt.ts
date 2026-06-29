@@ -484,6 +484,7 @@ const pt = {
       setupBanner: 'A carteira de tesouraria está configurada.',
       notSetupBanner:
         'Ainda não foi configurada nenhuma carteira de tesouraria.',
+      notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
     summary: {
       status: 'Estado',
@@ -494,6 +495,7 @@ const pt = {
       utxos: 'UTXOs',
       lastChecked: 'Última verificação',
       notCheckedYet: 'Ainda não verificado',
+      balanceUnavailable: 'Fiat balance unavailable',
     },
     details: {
       treasuryAddress: 'Endereço da tesouraria',
@@ -511,6 +513,7 @@ const pt = {
       checkSeed: 'Verificar seed',
       importCheckedSeed: 'Importar seed verificada',
       clearTreasuryWallet: 'Apagar carteira de tesouraria',
+      create: 'Create',
     },
     utxoDetails: {
       label: 'Detalhes de UTXO',

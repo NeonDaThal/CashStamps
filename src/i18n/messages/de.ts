@@ -485,6 +485,7 @@ const de = {
       subtitle: 'Prüfe, ob die Treasury-Wallet des Händlers bereit ist.',
       setupBanner: 'Treasury-Wallet ist eingerichtet.',
       notSetupBanner: 'Es wurde noch keine Treasury-Wallet eingerichtet.',
+      notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
     summary: {
       status: 'Status',
@@ -495,6 +496,7 @@ const de = {
       utxos: 'UTXOs',
       lastChecked: 'Zuletzt geprüft',
       notCheckedYet: 'Noch nicht geprüft',
+      balanceUnavailable: 'Fiat balance unavailable',
     },
     details: {
       treasuryAddress: 'Treasury-Adresse',
@@ -512,6 +514,7 @@ const de = {
       checkSeed: 'Seed prüfen',
       importCheckedSeed: 'Geprüften Seed importieren',
       clearTreasuryWallet: 'Treasury-Wallet löschen',
+      create: 'Create',
     },
     utxoDetails: {
       label: 'UTXO-Details',

@@ -472,6 +472,7 @@ const neNP = {
       subtitle: 'व्यापारी ट्रेजरी वालेट तयार छ कि छैन जाँच गर्नुहोस्।',
       setupBanner: 'ट्रेजरी वालेट सेटअप गरिएको छ।',
       notSetupBanner: 'अझै कुनै ट्रेजरी वालेट सेटअप गरिएको छैन।',
+      notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
     summary: {
       status: 'स्थिति',
@@ -482,6 +483,7 @@ const neNP = {
       utxos: 'UTXO हरू',
       lastChecked: 'अन्तिम जाँच',
       notCheckedYet: 'अझै जाँच गरिएको छैन',
+      balanceUnavailable: 'Fiat balance unavailable',
     },
     details: {
       treasuryAddress: 'ट्रेजरी ठेगाना',
@@ -499,6 +501,7 @@ const neNP = {
       checkSeed: 'सीड जाँच गर्नुहोस्',
       importCheckedSeed: 'जाँच गरिएको सीड आयात गर्नुहोस्',
       clearTreasuryWallet: 'ट्रेजरी वालेट हटाउनुहोस्',
+      create: 'Create',
     },
     utxoDetails: {
       label: 'UTXO विवरण',

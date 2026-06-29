@@ -480,6 +480,7 @@ const sw = {
       subtitle: 'Kagua kama pochi ya hazina ya mfanyabiashara iko tayari.',
       setupBanner: 'Pochi ya hazina imesanidiwa.',
       notSetupBanner: 'Bado hakuna pochi ya hazina iliyosanidiwa.',
+      notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
     summary: {
       status: 'Hali',
@@ -490,6 +491,7 @@ const sw = {
       utxos: 'UTXO',
       lastChecked: 'Ilikaguliwa mwisho',
       notCheckedYet: 'Bado haijakaguliwa',
+      balanceUnavailable: 'Fiat balance unavailable',
     },
     details: {
       treasuryAddress: 'Anwani ya hazina',
@@ -507,6 +509,7 @@ const sw = {
       checkSeed: 'Kagua seed',
       importCheckedSeed: 'Leta seed iliyokaguliwa',
       clearTreasuryWallet: 'Ondoa pochi ya hazina',
+      create: 'Create',
     },
     utxoDetails: {
       label: 'Maelezo ya UTXO',

@@ -451,6 +451,7 @@ const zhHK = {
       subtitle: '檢查商戶資金錢包是否已準備好。',
       setupBanner: '資金錢包已設定。',
       notSetupBanner: '尚未設定資金錢包。',
+      notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
     summary: {
       status: '狀態',
@@ -461,6 +462,7 @@ const zhHK = {
       utxos: 'UTXO',
       lastChecked: '上次檢查',
       notCheckedYet: '尚未檢查',
+      balanceUnavailable: 'Fiat balance unavailable',
     },
     details: {
       treasuryAddress: '資金錢包地址',
@@ -478,6 +480,7 @@ const zhHK = {
       checkSeed: '檢查助記詞',
       importCheckedSeed: '匯入已檢查助記詞',
       clearTreasuryWallet: '清除資金錢包',
+      create: 'Create',
     },
     utxoDetails: {
       label: 'UTXO 詳情',

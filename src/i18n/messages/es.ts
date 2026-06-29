@@ -481,6 +481,7 @@ const es = {
       setupBanner: 'La billetera de tesorería está configurada.',
       notSetupBanner:
         'Todavía no se ha configurado una billetera de tesorería.',
+      notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
     summary: {
       status: 'Estado',
@@ -491,6 +492,7 @@ const es = {
       utxos: 'UTXOs',
       lastChecked: 'Última comprobación',
       notCheckedYet: 'Aún no comprobado',
+      balanceUnavailable: 'Fiat balance unavailable',
     },
     details: {
       treasuryAddress: 'Dirección de tesorería',
@@ -508,6 +510,7 @@ const es = {
       checkSeed: 'Comprobar semilla',
       importCheckedSeed: 'Importar semilla comprobada',
       clearTreasuryWallet: 'Borrar billetera de tesorería',
+      create: 'Create',
     },
     utxoDetails: {
       label: 'Detalles de UTXO',
@@ -823,7 +826,7 @@ const es = {
     connectedNotice:
       'Reports are now connected to local topup and cash-out records for this device.',
   },
-  
+
   receiptPreview: {
     printLabels: {
       valueLoaded: 'Valor cargado',

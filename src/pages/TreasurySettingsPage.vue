@@ -2,32 +2,56 @@
   <q-page padding class="treasury-page">
     <div class="treasury-container">
       <section class="treasury-hero">
-        <div>
-          <p class="eyebrow">{{ t('treasuryPage.hero.eyebrow') }}</p>
-          <h1>{{ t('treasuryPage.hero.title') }}</h1>
-          <p class="intro">
-            {{ t('treasuryPage.hero.intro') }}
-          </p>
+        <div class="treasury-hero-heading">
+          <div class="treasury-hero-copy">
+            <p class="eyebrow">{{ t('treasuryPage.hero.eyebrow') }}</p>
+            <h1>{{ t('treasuryPage.hero.title') }}</h1>
+          </div>
+
+          <div class="treasury-hero-actions">
+            <q-btn
+              flat
+              dense
+              round
+              icon="point_of_sale"
+              class="treasury-action-button treasury-action-button--topup"
+              :aria-label="t('home.sellVoucher')"
+              to="/sell-voucher"
+            />
+
+            <q-btn
+              flat
+              dense
+              round
+              icon="currency_exchange"
+              class="treasury-action-button treasury-action-button--cashout"
+              :aria-label="t('home.cashOutBch')"
+              to="/cash-out"
+            />
+          </div>
         </div>
 
-        <q-btn
-          class="secondary-button"
-          :label="t('treasuryPage.actions.sellVoucher')"
-          icon="point_of_sale"
-          to="/sell-voucher"
-          outline
-          no-caps
-        />
+        <p class="intro">
+          {{ t('treasuryPage.hero.intro') }}
+        </p>
       </section>
 
-      <q-card flat bordered class="main-card">
+      <q-card flat bordered class="main-card wallet-status-card">
         <q-card-section>
           <div class="status-heading">
-            <div class="status-icon">
+            <div
+              :class="[
+                'status-icon',
+                treasuryWallet.isSetup
+                  ? 'status-icon--ready'
+                  : 'status-icon--not-ready',
+              ]"
+            >
               <q-icon name="account_balance_wallet" />
+              <span class="status-dot" aria-hidden="true"></span>
             </div>
 
-            <div>
+            <div class="status-heading-copy">
               <div class="text-h6">
                 {{ t('treasuryPage.walletStatus.title') }}
               </div>
@@ -37,199 +61,106 @@
             </div>
           </div>
 
-          <q-banner
-            :class="
-              treasuryWallet.isSetup
-                ? 'bg-green-1 text-green-10'
-                : 'bg-grey-2 text-grey-9'
-            "
-            rounded
-            class="q-mt-md"
+          <div
+            v-if="!treasuryWallet.isSetup"
+            class="wallet-setup-prompt q-mt-md"
           >
-            <template #avatar>
-              <q-icon
-                :name="treasuryWallet.isSetup ? 'check_circle' : 'info'"
-              />
-            </template>
+            <span>{{ t('treasuryPage.walletStatus.notSetupPrompt') }}</span>
 
-            <span v-if="treasuryWallet.isSetup">
-              {{ t('treasuryPage.walletStatus.setupBanner') }}
-            </span>
+            <q-btn
+              class="wallet-create-button"
+              :label="t('treasuryPage.actions.create')"
+              :loading="isSubmitting"
+              unelevated
+              no-caps
+              @click="handleCreateTreasuryWallet"
+            />
+          </div>
 
-            <span v-else>
-              {{ t('treasuryPage.walletStatus.notSetupBanner') }}
-            </span>
-          </q-banner>
+          <section v-else class="wallet-snapshot q-mt-md">
+            <div class="wallet-balance-panel">
+              <div class="wallet-balance-top">
+                <div class="snapshot-label">
+                  {{ t('treasuryPage.summary.balance') }}
+                </div>
 
-          <section class="summary-grid q-mt-md">
-            <div class="summary-tile highlight">
-              <div class="summary-label">
-                {{ t('treasuryPage.summary.status') }}
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="refresh"
+                  class="balance-refresh-button"
+                  :aria-label="t('treasuryPage.actions.refreshBalance')"
+                  :loading="isCheckingBalance"
+                  @click="handleRefreshBalance"
+                />
               </div>
-              <div class="summary-value">
-                {{
-                  treasuryWallet.isSetup
-                    ? t('treasuryPage.summary.ready')
-                    : t('treasuryPage.summary.notSetUp')
-                }}
-              </div>
-            </div>
 
-            <div class="summary-tile">
-              <div class="summary-label">
-                {{ t('treasuryPage.summary.balance') }}
+              <div class="wallet-balance-main">
+                <span v-if="treasuryBalanceFiatDisplay">
+                  {{ treasuryBalanceFiatDisplay }}
+                </span>
+                <span v-else-if="treasuryBalance">
+                  {{ t('treasuryPage.summary.balanceUnavailable') }}
+                </span>
+                <span v-else>
+                  {{ t('treasuryPage.summary.notChecked') }}
+                </span>
               </div>
-              <div class="summary-value">
-                <span v-if="treasuryBalance">
+
+              <div class="wallet-balance-bch">
+                <template v-if="treasuryBalance">
+                  <img :src="bchLogoUrl" alt="" class="wallet-bch-logo" />
                   {{ formatBchSats(treasuryBalance.balanceSats) }}
-                </span>
-                <span v-else>{{ t('treasuryPage.summary.notChecked') }}</span>
-              </div>
-            </div>
+                </template>
 
-            <div class="summary-tile">
-              <div class="summary-label">
-                {{ t('treasuryPage.summary.utxos') }}
-              </div>
-              <div class="summary-value">
-                <span v-if="treasuryBalance">
-                  {{ treasuryBalance.utxoCount }}
-                </span>
                 <span v-else>—</span>
               </div>
             </div>
 
-            <div class="summary-tile">
-              <div class="summary-label">
-                {{ t('treasuryPage.summary.lastChecked') }}
-              </div>
-              <div class="summary-value small">
-                <span v-if="treasuryBalance">
-                  {{ formatDateTime(treasuryBalance.checkedAt) }}
-                </span>
-                <span v-else>
-                  {{ t('treasuryPage.summary.notCheckedYet') }}
-                </span>
-              </div>
-            </div>
-          </section>
+            <div class="wallet-snapshot-grid">
+              <div class="snapshot-row">
+                <span>{{ t('treasuryPage.summary.status') }}</span>
 
-          <q-card
-            v-if="treasuryWallet.isSetup"
-            flat
-            bordered
-            class="details-card q-mt-md"
-          >
-            <q-card-section>
-              <div class="details-row">
-                <span>{{ t('treasuryPage.details.treasuryAddress') }}</span>
-                <strong class="text-break">
-                  {{ treasuryWallet.address }}
+                <strong
+                  :class="[
+                    'status-pill',
+                    treasuryWallet.isSetup
+                      ? 'status-pill--ready'
+                      : 'status-pill--not-ready',
+                  ]"
+                >
+                  {{
+                    treasuryWallet.isSetup
+                      ? t('treasuryPage.summary.ready')
+                      : t('treasuryPage.summary.notSetUp')
+                  }}
                 </strong>
               </div>
 
-              <div v-if="treasuryWallet.createdAt" class="details-row">
+              <div v-if="treasuryWallet.createdAt" class="snapshot-row">
                 <span>{{ t('treasuryPage.details.created') }}</span>
                 <strong>{{ formatDateTime(treasuryWallet.createdAt) }}</strong>
               </div>
 
-              <div v-if="treasuryWallet.updatedAt" class="details-row">
-                <span>{{ t('treasuryPage.details.updated') }}</span>
-                <strong>{{ formatDateTime(treasuryWallet.updatedAt) }}</strong>
+              <div class="snapshot-row">
+                <span>{{ t('treasuryPage.details.treasuryAddress') }}</span>
+                <strong
+                  class="snapshot-address"
+                  :title="treasuryWallet.address"
+                >
+                  {{ shortTreasuryAddress }}
+                </strong>
               </div>
-            </q-card-section>
-          </q-card>
+            </div>
+          </section>
         </q-card-section>
-
-        <q-separator />
-
-        <q-card-actions align="right" class="card-actions">
-          <q-btn
-            v-if="treasuryWallet.isSetup"
-            class="secondary-button"
-            :label="t('treasuryPage.actions.refreshBalance')"
-            icon="refresh"
-            :loading="isCheckingBalance"
-            outline
-            no-caps
-            @click="handleRefreshBalance"
-          />
-
-          <q-btn
-            class="primary-button"
-            :label="
-              treasuryWallet.isSetup
-                ? t('treasuryPage.actions.walletReady')
-                : t('treasuryPage.actions.createWallet')
-            "
-            :disable="treasuryWallet.isSetup"
-            :loading="isSubmitting"
-            unelevated
-            no-caps
-            @click="handleCreateTreasuryWallet"
-          />
-        </q-card-actions>
       </q-card>
 
       <TreasuryTopUpQrCard
         v-if="treasuryWallet.isSetup"
         :treasury-address="treasuryWallet.address"
       />
-
-      <q-card v-if="treasuryBalance" flat bordered class="main-card">
-        <q-expansion-item
-          icon="account_tree"
-          :label="t('treasuryPage.utxoDetails.label')"
-          :caption="t('treasuryPage.utxoDetails.caption')"
-        >
-          <q-card-section>
-            <p class="text-grey-7 q-mb-md">
-              {{ t('treasuryPage.utxoDetails.description') }}
-            </p>
-
-            <q-banner
-              v-if="treasuryBalance.utxos.length === 0"
-              class="bg-grey-2 text-grey-9"
-              rounded
-            >
-              {{ t('treasuryPage.utxoDetails.noneDetected') }}
-            </q-banner>
-
-            <q-list v-else bordered separator>
-              <q-item
-                v-for="(utxo, index) in treasuryBalance.utxos"
-                :key="`${utxo.outpointTransactionHash}:${utxo.outpointIndex}`"
-              >
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">
-                    {{
-                      t('treasuryPage.utxoDetails.utxoNumber', {
-                        number: index + 1,
-                      })
-                    }}
-                  </q-item-label>
-
-                  <q-item-label caption>
-                    {{ t('treasuryPage.utxoDetails.value') }}:
-                    {{ formatBchSats(utxo.valueSats) }}
-                    / {{ utxo.valueSats.toLocaleString() }} sats
-                  </q-item-label>
-
-                  <q-item-label caption class="text-break">
-                    {{ t('treasuryPage.utxoDetails.tx') }}:
-                    {{ utxo.outpointTransactionHash }}
-                  </q-item-label>
-
-                  <q-item-label caption>
-                    {{ t('treasuryPage.utxoDetails.outputIndex') }}:
-                    {{ utxo.outpointIndex }}
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </q-card-section>
-        </q-expansion-item>
-      </q-card>
 
       <q-card flat bordered class="main-card">
         <q-expansion-item
@@ -707,11 +638,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import TreasuryTopUpQrCard from 'src/components/TreasuryTopUpQrCard.vue';
 
+import bchLogoUrl from 'src/assets/bch-logo.png';
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
   TreasuryRestoreCheckResult,
@@ -731,8 +663,13 @@ import {
 } from 'src/services/treasury-wallet';
 import { formatBchSats } from 'src/services/voucher-pricing';
 import { getFeeAddressConfigStatus } from 'src/services/fee-address-config';
+import { PricingService } from 'src/services/pricing-service';
 
 const { t } = useI18n({ useScope: 'global' });
+
+const SATS_PER_BCH = 100_000_000;
+const treasuryFiatCurrency = 'GBP';
+const pricingService = new PricingService();
 
 const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   address: '',
@@ -742,6 +679,7 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
 });
 
 const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
+const treasuryBalanceMarketRate = ref<number | null>(null);
 const treasuryBackup = ref<TreasuryWalletBackupInfo | null>(null);
 const restoreCheck = ref<TreasuryRestoreCheckResult | null>(null);
 const restoreImportResult = ref<TreasuryRestoreImportResult | null>(null);
@@ -759,6 +697,31 @@ const isImportingRestore = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
+const treasuryBalanceFiatDisplay = computed(() => {
+  if (!treasuryBalance.value || treasuryBalanceMarketRate.value === null) {
+    return '';
+  }
+
+  const balanceBch = treasuryBalance.value.balanceSats / SATS_PER_BCH;
+  const balanceFiat = balanceBch * treasuryBalanceMarketRate.value;
+
+  return formatFiatAmount(balanceFiat, treasuryFiatCurrency);
+});
+
+const shortTreasuryAddress = computed(() => {
+  const address = treasuryWallet.value.address;
+
+  if (!address) {
+    return '—';
+  }
+
+  if (address.length <= 28) {
+    return address;
+  }
+
+  return `${address.slice(0, 18)}…${address.slice(-8)}`;
+});
+
 async function loadTreasuryWallet(): Promise<void> {
   errorMessage.value = '';
 
@@ -768,8 +731,12 @@ async function loadTreasuryWallet(): Promise<void> {
 
     if (!treasuryWallet.value.isSetup) {
       treasuryBalance.value = null;
+      treasuryBalanceMarketRate.value = null;
       treasuryBackup.value = null;
+      return;
     }
+
+    await refreshTreasuryBalance({ showSuccess: false });
   } catch (error) {
     console.error(error);
     errorMessage.value = t('treasuryPage.messages.couldNotLoadWalletInfo');
@@ -780,6 +747,7 @@ async function handleCreateTreasuryWallet(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
   treasuryBalance.value = null;
+  treasuryBalanceMarketRate.value = null;
   treasuryBackup.value = null;
   restoreCheck.value = null;
   restoreImportResult.value = null;
@@ -787,6 +755,7 @@ async function handleCreateTreasuryWallet(): Promise<void> {
 
   try {
     treasuryWallet.value = await createTreasuryWallet();
+    await refreshTreasuryBalance({ showSuccess: false });
     successMessage.value = t('treasuryPage.messages.createdWallet');
   } catch (error) {
     console.error(error);
@@ -800,6 +769,7 @@ async function handleClearTreasuryWallet(): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
   treasuryBalance.value = null;
+  treasuryBalanceMarketRate.value = null;
   treasuryBackup.value = null;
   restoreCheck.value = null;
   restoreImportResult.value = null;
@@ -817,20 +787,37 @@ async function handleClearTreasuryWallet(): Promise<void> {
   }
 }
 
-async function handleRefreshBalance(): Promise<void> {
+async function refreshTreasuryBalance(
+  options = { showSuccess: true }
+): Promise<void> {
   successMessage.value = '';
   errorMessage.value = '';
   isCheckingBalance.value = true;
 
   try {
     treasuryBalance.value = await getTreasuryWalletBalance();
-    successMessage.value = t('treasuryPage.messages.balanceRefreshed');
+
+    try {
+      const quote = await pricingService.getLockedQuote(treasuryFiatCurrency);
+      treasuryBalanceMarketRate.value = quote.marketRate;
+    } catch (error) {
+      console.error(error);
+      treasuryBalanceMarketRate.value = null;
+    }
+
+    if (options.showSuccess) {
+      successMessage.value = t('treasuryPage.messages.balanceRefreshed');
+    }
   } catch (error) {
     console.error(error);
     errorMessage.value = t('treasuryPage.messages.couldNotRefreshBalance');
   } finally {
     isCheckingBalance.value = false;
   }
+}
+
+async function handleRefreshBalance(): Promise<void> {
+  await refreshTreasuryBalance();
 }
 
 async function handleRevealTreasuryBackup(): Promise<void> {
@@ -895,6 +882,7 @@ async function handleImportCheckedRestoreMnemonic(): Promise<void> {
     );
 
     treasuryBalance.value = null;
+    treasuryBalanceMarketRate.value = null;
     treasuryBackup.value = null;
 
     await loadTreasuryWallet();
@@ -916,6 +904,13 @@ function handleClearRestoreCheck(): void {
   restoreImportResult.value = null;
   restoreMnemonicInput.value = '';
   successMessage.value = t('treasuryPage.messages.restoreToolCleared');
+}
+
+function formatFiatAmount(amount: number, currency: string): string {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency,
+  }).format(amount);
 }
 
 function formatDateTime(value: string): string {
@@ -960,11 +955,50 @@ onMounted(() => {
 }
 
 .treasury-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.treasury-hero-heading {
   align-items: flex-start;
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  padding: 24px;
+}
+
+.treasury-hero-copy {
+  min-width: 0;
+}
+
+.treasury-hero-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.treasury-action-button {
+  border-radius: 14px;
+  height: 42px;
+  overflow: hidden;
+  width: 42px;
+}
+
+.treasury-action-button :deep(.q-focus-helper) {
+  border-radius: inherit;
+}
+
+.treasury-action-button--topup {
+  background: #00ce1b;
+  color: #000000;
+}
+
+.treasury-action-button--cashout {
+  background: #111111;
+  color: #00ce1b;
 }
 
 .eyebrow {
@@ -998,82 +1032,190 @@ h1 {
   gap: 14px;
 }
 
+.status-heading-copy {
+  min-width: 0;
+}
+
 .status-icon {
   align-items: center;
-  background: #00ce1b;
-  border-radius: 16px;
-  color: #000000;
+  background: #f0f0f0;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  color: #00a816;
   display: flex;
-  flex: 0 0 48px;
-  font-size: 28px;
-  height: 48px;
+  flex: 0 0 46px;
+  font-size: 26px;
+  height: 46px;
   justify-content: center;
-  width: 48px;
+  position: relative;
+  width: 46px;
 }
 
-.summary-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, 1fr);
+.status-dot {
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  height: 12px;
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 12px;
 }
 
-.summary-tile {
+.status-icon--ready .status-dot {
+  background: #00ce1b;
+}
+
+.status-icon--not-ready .status-dot {
+  background: #d93025;
+}
+
+.wallet-setup-prompt {
+  align-items: center;
   background: #f7f8f7;
   border: 1px solid #dddddd;
   border-radius: 18px;
+  color: #333333;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.wallet-setup-prompt span {
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.wallet-create-button {
+  background: #00ce1b;
+  border-radius: 999px;
+  color: #000000;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 850;
+  min-height: 34px;
+  padding: 0 14px;
+}
+
+.wallet-snapshot {
+  display: grid;
+  gap: 14px;
+}
+
+.wallet-balance-panel {
+  background: #111111;
+  border-radius: 22px;
+  color: #ffffff;
   padding: 16px;
 }
 
-.summary-tile.highlight {
-  border-color: rgba(0, 206, 27, 0.55);
-  box-shadow: 0 0 0 3px rgba(0, 206, 27, 0.12);
+.wallet-balance-top {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.summary-label {
-  color: #666666;
+.snapshot-label {
+  color: rgba(255, 255, 255, 0.66);
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  margin-bottom: 6px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.summary-value {
-  color: #111111;
-  font-size: 17px;
+.balance-refresh-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #00ce1b;
+  height: 34px;
+  width: 34px;
+}
+
+.wallet-balance-main {
+  color: #ffffff;
+  font-size: 32px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.05;
+  margin-top: 8px;
+}
+
+.wallet-balance-bch {
+  align-items: center;
+  color: #00ce1b;
+  display: inline-flex;
+  font-size: 13px;
   font-weight: 850;
-  line-height: 1.25;
+  gap: 6px;
+  line-height: 1.2;
+  margin-top: 7px;
 }
 
-.summary-value.small {
-  font-size: 14px;
+.wallet-bch-logo {
+  border-radius: 999px;
+  display: block;
+  height: 16px;
+  width: 16px;
 }
 
-.details-card {
-  background: #ffffff;
-  border-color: #dddddd;
+.wallet-snapshot-grid {
+  background: #f7f8f7;
+  border: 1px solid #dddddd;
   border-radius: 18px;
+  padding: 2px 14px;
 }
 
-.details-row {
-  align-items: flex-start;
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  padding: 8px 0;
+.snapshot-row {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  padding: 11px 0;
 }
 
-.details-row + .details-row {
-  border-top: 1px solid #eeeeee;
+.snapshot-row + .snapshot-row {
+  border-top: 1px solid #e8e8e8;
 }
 
-.details-row span {
+.snapshot-row span {
   color: #666666;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
 }
 
-.details-row strong {
+.snapshot-row strong {
   color: #111111;
+  font-size: 13px;
+  font-weight: 850;
+  min-width: 0;
+  overflow: hidden;
   text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-pill {
+  border-radius: 999px;
+  justify-self: end;
+  padding: 5px 10px;
+}
+
+.status-pill--ready {
+  background: #eaffed;
+  border: 1px solid rgba(0, 206, 27, 0.45);
+  color: #0c5f17;
+}
+
+.status-pill--not-ready {
+  background: #fff0f0;
+  border: 1px solid rgba(217, 48, 37, 0.35);
+  color: #9f1c14;
+}
+
+.snapshot-address {
+  direction: ltr;
 }
 
 .primary-button,
@@ -1100,25 +1242,50 @@ h1 {
 
 @media (max-width: 640px) {
   .treasury-hero {
-    flex-direction: column;
     padding: 22px;
+  }
+
+  .treasury-hero-heading {
+    align-items: flex-start;
+  }
+
+  .treasury-hero-actions {
+    padding-top: 1px;
+  }
+
+  .treasury-action-button {
+    height: 40px;
+    width: 40px;
   }
 
   .secondary-button {
     width: 100%;
   }
 
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .details-row {
+  .wallet-setup-prompt {
+    align-items: stretch;
     flex-direction: column;
-    gap: 4px;
   }
 
-  .details-row strong {
-    text-align: left;
+  .wallet-create-button {
+    width: 100%;
+  }
+
+  .wallet-balance-panel {
+    padding: 14px;
+  }
+
+  .wallet-balance-main {
+    font-size: 28px;
+  }
+
+  .snapshot-row {
+    gap: 10px;
+  }
+
+  .snapshot-row span,
+  .snapshot-row strong {
+    font-size: 12px;
   }
 
   .card-actions {

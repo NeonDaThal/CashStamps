@@ -469,6 +469,7 @@ const en = {
       subtitle: 'Check whether the merchant treasury wallet is ready.',
       setupBanner: 'Treasury wallet is set up.',
       notSetupBanner: 'No treasury wallet has been set up yet.',
+      notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
     summary: {
       status: 'Status',
@@ -479,6 +480,7 @@ const en = {
       utxos: 'UTXOs',
       lastChecked: 'Last checked',
       notCheckedYet: 'Not checked yet',
+      balanceUnavailable: 'Fiat balance unavailable',
     },
     details: {
       treasuryAddress: 'Treasury address',
@@ -496,6 +498,7 @@ const en = {
       checkSeed: 'Check Seed',
       importCheckedSeed: 'Import Checked Seed',
       clearTreasuryWallet: 'Clear Treasury Wallet',
+      create: 'Create',
     },
     utxoDetails: {
       label: 'UTXO details',
