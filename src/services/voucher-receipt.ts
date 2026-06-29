@@ -3,6 +3,16 @@ import type { VoucherKeyExport } from 'src/types/voucher-key';
 import { exportVoucherKeyAtIndex } from 'src/services/voucher-wallet';
 import { formatBchSats } from 'src/services/voucher-pricing';
 
+export interface VoucherReceiptPrintLabels {
+  valueLoaded: string;
+  scanToRedeem: string;
+  reference: string;
+  issued: string;
+  customerPaid: string;
+  loaded: string;
+  voucherAddress: string;
+}
+
 export interface VoucherReceiptData {
   title: string;
   serial: string;
@@ -21,6 +31,11 @@ export interface VoucherReceiptData {
 
   address: string;
   derivationIndex: number;
+
+  /**
+   * Labels used by the native Bluetooth ESC/POS receipt printer.
+   */
+  printLabels?: VoucherReceiptPrintLabels;
 
   /**
    * This is the sweepable private key payload.
@@ -55,6 +70,7 @@ export interface BuildVoucherReceiptDataOptions {
   redemptionInstruction?: string;
   cashWarning?: string;
   supportNote?: string;
+  printLabels?: Partial<VoucherReceiptPrintLabels>;
   errors?: Partial<VoucherReceiptErrorMessages>;
 }
 
@@ -68,6 +84,16 @@ const DEFAULT_CASH_WARNING =
 
 const DEFAULT_SUPPORT_NOTE =
   'Keep this receipt safe until the BCH has been swept into your own wallet.';
+
+const DEFAULT_PRINT_LABELS: VoucherReceiptPrintLabels = {
+  valueLoaded: 'Value loaded',
+  scanToRedeem: 'Scan to Redeem',
+  reference: 'Reference',
+  issued: 'Issued',
+  customerPaid: 'Customer Paid',
+  loaded: 'Loaded',
+  voucherAddress: 'Voucher Address',
+};
 
 const DEFAULT_ERROR_MESSAGES: VoucherReceiptErrorMessages = {
   invalidDerivationIndex: 'Voucher does not have a valid derivation index.',
@@ -190,6 +216,11 @@ export async function buildVoucherReceiptData(
 
     address: voucherAddress,
     derivationIndex: voucher.derivationIndex,
+
+    printLabels: {
+      ...DEFAULT_PRINT_LABELS,
+      ...options.printLabels,
+    },
 
     qrPayload: wifExport.wif,
     wifExport,

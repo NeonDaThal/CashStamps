@@ -210,6 +210,15 @@ async function buildReceiptPreview(): Promise<void> {
       redemptionInstruction: t('receiptPreview.redemptionInstruction'),
       cashWarning: t('receiptPreview.cashWarning'),
       supportNote: t('receiptPreview.supportNote'),
+      printLabels: {
+        valueLoaded: t('receiptPreview.printLabels.valueLoaded'),
+        scanToRedeem: t('receiptPreview.printLabels.scanToRedeem'),
+        reference: t('receiptPreview.printLabels.reference'),
+        issued: t('receiptPreview.printLabels.issued'),
+        customerPaid: t('receiptPreview.printLabels.customerPaid'),
+        loaded: t('receiptPreview.printLabels.loaded'),
+        voucherAddress: t('receiptPreview.printLabels.voucherAddress'),
+      },
       errors: {
         invalidDerivationIndex: t(
           'receiptPreview.errors.invalidDerivationIndex'

@@ -275,6 +275,42 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         final String cashWarning = safeString(call.getString("cashWarning", ""));
         final String supportNote = safeString(call.getString("supportNote", ""));
 
+        final String valueLoadedLabel = getStringWithFallback(
+            call,
+            "valueLoadedLabel",
+            "Value loaded"
+        );
+        final String scanToRedeemLabel = getStringWithFallback(
+            call,
+            "scanToRedeemLabel",
+            "Scan to Redeem"
+        );
+        final String referenceLabel = getStringWithFallback(
+            call,
+            "referenceLabel",
+            "Reference"
+        );
+        final String issuedLabel = getStringWithFallback(
+            call,
+            "issuedLabel",
+            "Issued"
+        );
+        final String customerPaidFieldLabel = getStringWithFallback(
+            call,
+            "customerPaidFieldLabel",
+            "Customer Paid"
+        );
+        final String loadedFieldLabel = getStringWithFallback(
+            call,
+            "loadedFieldLabel",
+            "Loaded"
+        );
+        final String voucherAddressLabel = getStringWithFallback(
+            call,
+            "voucherAddressLabel",
+            "Voucher Address"
+        );
+
         if (!hasText(qrPayload)) {
             call.reject("Voucher receipt QR payload is missing.");
             return;
@@ -293,7 +329,14 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
                     qrPayload,
                     redemptionInstruction,
                     cashWarning,
-                    supportNote
+                    supportNote,
+                    valueLoadedLabel,
+                    scanToRedeemLabel,
+                    referenceLabel,
+                    issuedLabel,
+                    customerPaidFieldLabel,
+                    loadedFieldLabel,
+                    voucherAddressLabel
                 );
 
                 sendBytesToPrinter(printerAddress, bytes);
@@ -335,85 +378,85 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     }
 
     private void sendBytesToPrinter(String address, byte[] bytes) throws IOException {
-    IOException lastError = null;
+        IOException lastError = null;
 
-    for (int attempt = 1; attempt <= MAX_PRINT_ATTEMPTS; attempt += 1) {
+        for (int attempt = 1; attempt <= MAX_PRINT_ATTEMPTS; attempt += 1) {
+            try {
+                sendBytesToPrinterOnce(address, bytes);
+                return;
+            } catch (SecurityException error) {
+                throw new IOException(
+                    "Bluetooth permission error. Check Nearby devices permission is allowed.",
+                    error
+                );
+            } catch (IOException error) {
+                lastError = error;
+
+                if (attempt < MAX_PRINT_ATTEMPTS) {
+                    sleepBeforeRetry();
+                }
+            }
+        }
+
+        String details =
+            lastError != null && lastError.getMessage() != null
+                ? lastError.getMessage()
+                : "Unknown Bluetooth socket error.";
+
+        throw new IOException(
+            "Could not connect to printer. Check the printer is switched on, nearby, and not connected to another app. Last error: "
+                + details,
+            lastError
+        );
+    }
+
+    private void sendBytesToPrinterOnce(String address, byte[] bytes) throws IOException {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+
+        if (adapter == null) {
+            throw new IOException("Bluetooth is not available on this device.");
+        }
+
+        if (!adapter.isEnabled()) {
+            throw new IOException("Bluetooth is turned off.");
+        }
+
+        BluetoothDevice device = adapter.getRemoteDevice(address);
+        BluetoothSocket socket = null;
+
+        adapter.cancelDiscovery();
+
         try {
-            sendBytesToPrinterOnce(address, bytes);
-            return;
-        } catch (SecurityException error) {
-            throw new IOException(
-                "Bluetooth permission error. Check Nearby devices permission is allowed.",
-                error
-            );
-        } catch (IOException error) {
-            lastError = error;
+            socket = createBluetoothSocket(device);
+            socket.connect();
 
-            if (attempt < MAX_PRINT_ATTEMPTS) {
-                sleepBeforeRetry();
+            OutputStream outputStream = socket.getOutputStream();
+            outputStream.write(bytes);
+            outputStream.flush();
+
+            try {
+                Thread.sleep(POST_FLUSH_SETTLE_DELAY_MS);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+        } finally {
+            if (socket != null) {
+                try {
+                    socket.close();
+                } catch (IOException ignored) {
+                    // Ignore close errors after print attempt.
+                }
             }
         }
     }
 
-    String details =
-        lastError != null && lastError.getMessage() != null
-            ? lastError.getMessage()
-            : "Unknown Bluetooth socket error.";
-
-    throw new IOException(
-        "Could not connect to printer. Check the printer is switched on, nearby, and not connected to another app. Last error: "
-            + details,
-        lastError
-    );
-}
-
-private void sendBytesToPrinterOnce(String address, byte[] bytes) throws IOException {
-    BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-
-    if (adapter == null) {
-        throw new IOException("Bluetooth is not available on this device.");
-    }
-
-    if (!adapter.isEnabled()) {
-        throw new IOException("Bluetooth is turned off.");
-    }
-
-    BluetoothDevice device = adapter.getRemoteDevice(address);
-    BluetoothSocket socket = null;
-
-    adapter.cancelDiscovery();
-
-    try {
-        socket = createBluetoothSocket(device);
-        socket.connect();
-
-        OutputStream outputStream = socket.getOutputStream();
-        outputStream.write(bytes);
-        outputStream.flush();
-
+    private void sleepBeforeRetry() {
         try {
-            Thread.sleep(POST_FLUSH_SETTLE_DELAY_MS);
+            Thread.sleep(PRINT_RETRY_DELAY_MS);
         } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt();
         }
-    } finally {
-        if (socket != null) {
-            try {
-                socket.close();
-            } catch (IOException ignored) {
-                // Ignore close errors after print attempt.
-            }
-        }
     }
-}
-
-private void sleepBeforeRetry() {
-    try {
-        Thread.sleep(PRINT_RETRY_DELAY_MS);
-    } catch (InterruptedException ignored) {
-        Thread.currentThread().interrupt();
-    }
-}
 
     private BluetoothSocket createBluetoothSocket(BluetoothDevice device)
         throws IOException {
@@ -479,7 +522,14 @@ private void sleepBeforeRetry() {
             "BCH_VOUCHER_TEST_ONLY_REFERENCE_TEST-0001",
             "This QR is test-only. It does not contain a voucher key.",
             "WARNING: TREAT A REAL VOUCHER LIKE CASH.",
-            "Keep the receipt safe until the voucher is redeemed."
+            "Keep the receipt safe until the voucher is redeemed.",
+            "Value loaded",
+            "Scan to Redeem",
+            "Reference",
+            "Issued",
+            "Customer Paid",
+            "Loaded",
+            "Voucher Address"
         );
     }
 
@@ -494,7 +544,14 @@ private void sleepBeforeRetry() {
         String qrPayload,
         String redemptionInstruction,
         String cashWarning,
-        String supportNote
+        String supportNote,
+        String valueLoadedLabel,
+        String scanToRedeemLabel,
+        String referenceLabel,
+        String issuedLabel,
+        String customerPaidFieldLabel,
+        String loadedFieldLabel,
+        String voucherAddressLabel
     ) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
 
@@ -512,7 +569,7 @@ private void sleepBeforeRetry() {
 
         writeDivider(output);
 
-        writeTextLine(output, "VALUE LOADED");
+        writeTextLine(output, valueLoadedLabel);
         writeBold(output, true);
         writeTextLine(output, loadedFiatLabel);
         writeBold(output, false);
@@ -523,7 +580,7 @@ private void sleepBeforeRetry() {
 
         writeDivider(output);
 
-        writeTextLine(output, "SCAN TO REDEEM");
+        writeTextLine(output, scanToRedeemLabel);
         writeFeedLines(output, 1);
         writeQrCode(output, qrPayload, 6);
         writeFeedLines(output, 1);
@@ -535,23 +592,23 @@ private void sleepBeforeRetry() {
         writeDivider(output);
 
         writeAlignLeft(output);
-        writeKeyValueLine(output, "Reference", serial);
+        writeKeyValueLine(output, referenceLabel, serial);
 
         if (hasText(issuedAtLabel)) {
-            writeKeyValueLine(output, "Issued", issuedAtLabel);
+            writeKeyValueLine(output, issuedLabel, issuedAtLabel);
         }
 
         if (hasText(customerPaidLabel)) {
-            writeKeyValueLine(output, "Customer Paid", customerPaidLabel);
+            writeKeyValueLine(output, customerPaidFieldLabel, customerPaidLabel);
         }
 
         if (hasText(loadedFiatLabel)) {
-            writeKeyValueLine(output, "Loaded", loadedFiatLabel);
+            writeKeyValueLine(output, loadedFieldLabel, loadedFiatLabel);
         }
 
         if (hasText(voucherAddress)) {
             writeFeedLines(output, 1);
-            writeTextLine(output, "Voucher Address:");
+            writeTextLine(output, voucherAddressLabel + ":");
             writeWrappedText(output, voucherAddress, 32);
         }
 
@@ -709,6 +766,20 @@ private void sleepBeforeRetry() {
         }
 
         return address.trim().replace("-", ":").toUpperCase();
+    }
+
+    private String getStringWithFallback(
+        PluginCall call,
+        String key,
+        String fallback
+    ) {
+        String value = call.getString(key);
+
+        if (value == null || value.trim().length() == 0) {
+            return fallback;
+        }
+
+        return value.trim();
     }
 
     private String safeString(String value) {

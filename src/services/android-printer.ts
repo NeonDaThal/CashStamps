@@ -51,6 +51,13 @@ interface BluetoothEscPosPrinterPlugin {
     redemptionInstruction: string;
     cashWarning: string;
     supportNote: string;
+    valueLoadedLabel: string;
+    scanToRedeemLabel: string;
+    referenceLabel: string;
+    issuedLabel: string;
+    customerPaidFieldLabel: string;
+    loadedFieldLabel: string;
+    voucherAddressLabel: string;
   }): Promise<AndroidPrinterResult>;
 }
 
@@ -62,6 +69,16 @@ export const DEFAULT_JK_5803P_PRINTER = {
 const BluetoothEscPosPrinter = registerPlugin<BluetoothEscPosPrinterPlugin>(
   'BluetoothEscPosPrinter'
 );
+
+const DEFAULT_PRINT_LABELS = {
+  valueLoaded: 'Value loaded',
+  scanToRedeem: 'Scan to Redeem',
+  reference: 'Reference',
+  issued: 'Issued',
+  customerPaid: 'Customer Paid',
+  loaded: 'Loaded',
+  voucherAddress: 'Voucher Address',
+} as const;
 
 export function isAndroidPrinterBridgeAvailable(): boolean {
   return Capacitor.getPlatform() === 'android';
@@ -147,6 +164,11 @@ export async function printBluetoothVoucherReceipt(
     throw new Error('Voucher receipt QR payload is missing.');
   }
 
+  const printLabels = {
+    ...DEFAULT_PRINT_LABELS,
+    ...receiptData.printLabels,
+  };
+
   return BluetoothEscPosPrinter.printVoucherReceipt({
     name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
     address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
@@ -161,5 +183,12 @@ export async function printBluetoothVoucherReceipt(
     redemptionInstruction: receiptData.redemptionInstruction,
     cashWarning: receiptData.cashWarning,
     supportNote: receiptData.supportNote,
+    valueLoadedLabel: printLabels.valueLoaded,
+    scanToRedeemLabel: printLabels.scanToRedeem,
+    referenceLabel: printLabels.reference,
+    issuedLabel: printLabels.issued,
+    customerPaidFieldLabel: printLabels.customerPaid,
+    loadedFieldLabel: printLabels.loaded,
+    voucherAddressLabel: printLabels.voucherAddress,
   });
 }
