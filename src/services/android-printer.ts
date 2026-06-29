@@ -37,6 +37,11 @@ interface BluetoothEscPosPrinterPlugin {
     address?: string;
   }): Promise<AndroidPrinterResult>;
 
+  printCharacterEncodingTest(options: {
+    name?: string;
+    address?: string;
+  }): Promise<AndroidPrinterResult>;
+
   printVoucherReceipt(options: {
     name?: string;
     address?: string;
@@ -142,6 +147,22 @@ export async function printBluetoothVoucherReceiptTest(options?: {
   }
 
   return BluetoothEscPosPrinter.printVoucherReceiptTest({
+    name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
+    address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
+  });
+}
+
+export async function printBluetoothCharacterEncodingTest(options?: {
+  name?: string;
+  address?: string;
+}): Promise<AndroidPrinterResult> {
+  if (!isAndroidPrinterBridgeAvailable()) {
+    throw new Error(
+      'Android Bluetooth printer bridge is only available in the Android app.'
+    );
+  }
+
+  return BluetoothEscPosPrinter.printCharacterEncodingTest({
     name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
     address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
   });

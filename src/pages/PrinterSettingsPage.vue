@@ -199,6 +199,15 @@
               :loading="isPrintingAppSideReceipt"
               @click="handlePrintAppSideReceiptTest"
             />
+
+            <q-btn
+              color="accent"
+              icon="language"
+              label="Print character test"
+              :disable="!isBridgeAvailable"
+              :loading="isPrintingCharacterTest"
+              @click="handlePrintCharacterEncodingTest"
+            />
           </div>
 
           <q-banner rounded class="warning-banner">
@@ -226,6 +235,7 @@ import {
   DEFAULT_JK_5803P_PRINTER,
   getPairedPrinterDevices,
   isAndroidPrinterBridgeAvailable,
+  printBluetoothCharacterEncodingTest,
   printBluetoothQrTest,
   printBluetoothTextTest,
   printBluetoothVoucherReceipt,
@@ -249,6 +259,7 @@ const isPrintingText = ref(false);
 const isPrintingQr = ref(false);
 const isPrintingVoucherReceipt = ref(false);
 const isPrintingAppSideReceipt = ref(false);
+const isPrintingCharacterTest = ref(false);
 
 const isBridgeAvailable = computed(() => isAndroidPrinterBridgeAvailable());
 const platformLabel = computed(() => Capacitor.getPlatform());
@@ -455,6 +466,34 @@ async function handlePrintAppSideReceiptTest(): Promise<void> {
     });
   } finally {
     isPrintingAppSideReceipt.value = false;
+  }
+}
+
+async function handlePrintCharacterEncodingTest(): Promise<void> {
+  isPrintingCharacterTest.value = true;
+
+  try {
+    const result = await printBluetoothCharacterEncodingTest({
+      name: printerName.value,
+      address: printerAddress.value,
+    });
+
+    $q.notify({
+      type: 'positive',
+      message: result.message || 'Character encoding test sent to printer.',
+    });
+  } catch (error) {
+    console.error(error);
+
+    $q.notify({
+      type: 'negative',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Character encoding test print failed.',
+    });
+  } finally {
+    isPrintingCharacterTest.value = false;
   }
 }
 </script>

@@ -44,7 +44,8 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     private static final String SPP_UUID_STRING = "00001101-0000-1000-8000-00805F9B34FB";
 
     private static final UUID SPP_UUID = UUID.fromString(SPP_UUID_STRING);
-    private static final Charset PRINTER_TEXT_CHARSET = Charset.forName("GBK");
+    private static final int PRINTER_TEXT_CHARACTER_TABLE = 16;
+    private static final Charset PRINTER_TEXT_CHARSET = Charset.forName("windows-1252");
 
     private static final int MAX_PRINT_ATTEMPTS = 3;
     private static final long PRINT_RETRY_DELAY_MS = 650L;
@@ -124,6 +125,25 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         }
 
         doPrintVoucherReceiptTest(call);
+    }
+
+    @PluginMethod
+    public void printCharacterEncodingTest(PluginCall call) {
+        if (!ensureBluetoothPrinterPermission(call, "printCharacterEncodingTestPermissionCallback")) {
+            return;
+        }
+
+        doPrintCharacterEncodingTest(call);
+    }
+
+    @PermissionCallback
+    private void printCharacterEncodingTestPermissionCallback(PluginCall call) {
+        if (!hasBluetoothPrinterPermission()) {
+            call.reject("Bluetooth permission was not granted.");
+            return;
+        }
+
+        doPrintCharacterEncodingTest(call);
     }
 
     @PluginMethod
@@ -253,6 +273,29 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
                 call.resolve(result);
             } catch (Exception error) {
                 call.reject("Voucher receipt test print failed: " + error.getMessage());
+            }
+        }).start();
+    }
+
+    private void doPrintCharacterEncodingTest(PluginCall call) {
+        final String address = normalisePrinterAddress(
+            call.getString("address", DEFAULT_PRINTER_ADDRESS)
+        );
+        final String printerName = call.getString("name", DEFAULT_PRINTER_NAME);
+
+        new Thread(() -> {
+            try {
+                byte[] bytes = buildCharacterEncodingTestBytes();
+                sendBytesToPrinter(address, bytes);
+
+                JSObject result = new JSObject();
+                result.put("success", true);
+                result.put("printerName", printerName);
+                result.put("address", address);
+                result.put("message", "Character encoding test sent to printer.");
+                call.resolve(result);
+            } catch (Exception error) {
+                call.reject("Character encoding test print failed: " + error.getMessage());
             }
         }).start();
     }
@@ -533,6 +576,111 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         );
     }
 
+    private byte[] buildCharacterEncodingTestBytes() throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        writeInitialize(output);
+        writeAlignCenter(output);
+        writeBold(output, true);
+        writeTextLine(output, "CHARACTER TEST");
+        writeBold(output, false);
+        writeTextLine(output, "JK-5803P ESC/POS");
+        writeFeedLines(output, 1);
+
+        writeAlignLeft(output);
+        writeTextLine(output, "This is test-only.");
+        writeTextLine(output, "Tell the chat which section");
+        writeTextLine(output, "prints best on paper.");
+
+        writeDivider(output);
+
+        writeEncodingTestSection(
+            output,
+            "A: Live receipt profile",
+            PRINTER_TEXT_CHARACTER_TABLE,
+            PRINTER_TEXT_CHARSET.name(),
+            "LATIN: GBP £10.00 EUR €10.00",
+            "ES: España niño acción café",
+            "PT: ação coração ç ã õ",
+            "SV: å ä ö Å Ä Ö",
+            "ZH: 中文 香港 廣東話 現金充值",
+            "NE: नेपाली नमस्ते"
+        );
+
+        writeEncodingTestSection(
+            output,
+            "B: ESC t 0 / IBM437",
+            0,
+            "IBM437",
+            "LATIN: GBP £10.00 EUR €10.00",
+            "ES: España niño acción café",
+            "PT: ação coração ç ã õ",
+            "SV: å ä ö Å Ä Ö"
+        );
+
+        writeEncodingTestSection(
+            output,
+            "C: ESC t 2 / IBM850",
+            2,
+            "IBM850",
+            "LATIN: GBP £10.00 EUR €10.00",
+            "ES: España niño acción café",
+            "PT: ação coração ç ã õ",
+            "SV: å ä ö Å Ä Ö"
+        );
+
+        writeEncodingTestSection(
+            output,
+            "D: ESC t 19 / IBM858",
+            19,
+            "IBM00858",
+            "LATIN: GBP £10.00 EUR €10.00",
+            "ES: España niño acción café",
+            "PT: ação coração ç ã õ",
+            "SV: å ä ö Å Ä Ö"
+        );
+
+        writeEncodingTestSection(
+            output,
+            "E: ESC t 16 / Windows-1252",
+            16,
+            "windows-1252",
+            "LATIN: GBP £10.00 EUR €10.00",
+            "ES: España niño acción café",
+            "PT: ação coração ç ã õ",
+            "SV: å ä ö Å Ä Ö"
+        );
+
+        writeChineseCharacterMode(output, true);
+        writeEncodingTestSection(
+            output,
+            "F: GBK + Chinese mode",
+            -1,
+            "GBK",
+            "ZH: 中文 香港 廣東話 現金充值"
+        );
+        writeChineseCharacterMode(output, false);
+
+        writeEncodingTestSection(
+            output,
+            "G: Raw UTF-8 bytes",
+            -1,
+            "UTF-8",
+            "LATIN: GBP £10.00 EUR €10.00",
+            "ES: España niño acción café",
+            "PT: ação coração ç ã õ",
+            "SV: å ä ö Å Ä Ö",
+            "ZH: 中文 香港 廣東話 現金充值",
+            "NE: नेपाली नमस्ते"
+        );
+
+        writeDivider(output);
+        writeTextLine(output, "END OF CHARACTER TEST");
+        writeFeedLines(output, 4);
+
+        return output.toByteArray();
+    }
+
     private byte[] buildVoucherReceiptBytes(
         String title,
         String serial,
@@ -631,9 +779,58 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         return output.toByteArray();
     }
 
+    private void writeEncodingTestSection(
+        ByteArrayOutputStream output,
+        String heading,
+        int characterCodeTable,
+        String charsetName,
+        String... lines
+    ) throws IOException {
+        writeAlignLeft(output);
+
+        if (characterCodeTable >= 0) {
+            writeSelectCharacterCodeTable(output, characterCodeTable);
+        }
+
+        writeTextLine(output, heading);
+        writeTextLine(output, "Java charset: " + charsetName);
+
+        if (!Charset.isSupported(charsetName)) {
+            writeTextLine(output, "Android charset unsupported.");
+            writeFeedLines(output, 1);
+            return;
+        }
+
+        Charset charset = Charset.forName(charsetName);
+
+        for (String line : lines) {
+            writeTextLine(output, line, charset);
+        }
+
+        writeFeedLines(output, 1);
+    }
+
+    private void writeSelectCharacterCodeTable(
+        ByteArrayOutputStream output,
+        int characterCodeTable
+    ) {
+        output.write(0x1B);
+        output.write(0x74);
+        output.write(characterCodeTable & 0xFF);
+    }
+
+    private void writeChineseCharacterMode(
+        ByteArrayOutputStream output,
+        boolean enabled
+    ) {
+        output.write(0x1C);
+        output.write(enabled ? 0x26 : 0x2E);
+    }
+
     private void writeInitialize(ByteArrayOutputStream output) {
         output.write(0x1B);
         output.write(0x40);
+        writeSelectCharacterCodeTable(output, PRINTER_TEXT_CHARACTER_TABLE);
     }
 
     private void writeAlignLeft(ByteArrayOutputStream output) {
@@ -657,6 +854,15 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     private void writeTextLine(ByteArrayOutputStream output, String text)
         throws IOException {
         output.write(text.getBytes(PRINTER_TEXT_CHARSET));
+        output.write(0x0A);
+    }
+
+    private void writeTextLine(
+        ByteArrayOutputStream output,
+        String text,
+        Charset charset
+    ) throws IOException {
+        output.write(text.getBytes(charset));
         output.write(0x0A);
     }
 
