@@ -428,6 +428,7 @@ import {
   getTreasuryWalletPublicInfo,
 } from 'src/services/treasury-wallet';
 import { addVoucherRecord } from 'src/services/voucher-store';
+import { recordTopupSaleCashReceived } from 'src/services/cash-on-hand-store';
 import {
   deriveNextVoucherAddress,
   exportVoucherKeyAtIndex,
@@ -739,6 +740,25 @@ function handleFundingBroadcastResult(
   pendingFundingBroadcast.value = result;
 }
 
+async function recordCashOnHandForIssuedTopup(
+  voucher: VoucherRecord
+): Promise<void> {
+  try {
+    await recordTopupSaleCashReceived({
+      amountMinor: voucher.fiatAmountMinor,
+      currency: voucher.fiatCurrency,
+      relatedRecordId: voucher.id,
+      note: `Topup ${voucher.serial}`,
+      createdAt: voucher.createdAt,
+    });
+  } catch (error) {
+    console.error(error);
+
+    warningMessage.value =
+      'The Topup was issued, but Cash on Hand could not be updated automatically.';
+  }
+}
+
 async function runFakeIssueProgress(): Promise<void> {
   resetIssueProgressSteps();
 
@@ -796,6 +816,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
     );
 
     await addVoucherRecord(voucher);
+    await recordCashOnHandForIssuedTopup(voucher);
 
     setIssueProgressStepStatus('store', 'complete');
     await waitForFakeStep(300);
