@@ -471,6 +471,67 @@ const en = {
       notSetupBanner: 'No treasury wallet has been set up yet.',
       notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
+    cashOnHand: {
+      title: 'Cash on Hand',
+      subtitle:
+        'Optional physical cash tracker for topups, cash-outs, and local reports.',
+      setUp: 'Set up',
+      notSetUp: 'Not set up',
+      notSetUpPrompt:
+        'Track the physical cash currently available in this shop or drawer.',
+      currentBalance: 'Current Cash on Hand',
+      readyForManualTracking: 'Ready for manual cash tracking.',
+      lastUpdated: 'Last updated: {date}',
+      currency: 'Currency',
+      actions: {
+        setUp: 'Set up',
+        addCash: 'Add cash',
+        withdrawCash: 'Withdraw cash',
+        clear: 'Clear Cash on Hand',
+        confirmClear: 'Clear Cash on Hand',
+        saveSetup: 'Save',
+        saveAdd: 'Save',
+        saveWithdraw: 'Save',
+      },
+      dialog: {
+        setupTitle: 'Set up Cash on Hand',
+        setupSubtitle:
+          'Enter the starting physical cash amount currently available.',
+        addTitle: 'Add cash',
+        addSubtitle: 'Record extra physical cash added to the shop drawer.',
+        withdrawTitle: 'Withdraw cash',
+        withdrawSubtitle: 'Record physical cash removed from the shop drawer.',
+        currentCash: 'Current Cash on Hand',
+        enteredAmount: 'Entered amount',
+        newCash: 'New Cash on Hand',
+        startingAmount: 'Starting amount',
+        amountToAdd: 'Amount to add',
+        amountToWithdraw: 'Amount to withdraw',
+        noteOptional: 'Note optional',
+      },
+      clearDialog: {
+        title: 'Clear Cash on Hand?',
+        message:
+          'This resets Cash on Hand back to the not set up state. Topups and Cash-outs will continue to work.',
+        warning:
+          'The current tracked balance is {amount}. Clearing removes this active balance from the Treasury Wallet page.',
+        clearNote: 'Cash on Hand cleared manually.',
+      },
+      errors: {
+        enterValidAmount: 'Enter a valid cash amount.',
+        enterPositiveAmount: 'Enter an amount greater than zero.',
+        withdrawTooMuch: 'You cannot withdraw more cash than is available.',
+      },
+      messages: {
+        couldNotLoad: 'Could not load Cash on Hand information.',
+        setUp: 'Cash on Hand set up.',
+        added: 'Cash added to Cash on Hand.',
+        withdrawn: 'Cash withdrawn from Cash on Hand.',
+        cleared: 'Cash on Hand cleared.',
+        couldNotSave: 'Could not save Cash on Hand change.',
+        couldNotClear: 'Could not clear Cash on Hand.',
+      },
+    },
     summary: {
       status: 'Status',
       ready: 'Ready',

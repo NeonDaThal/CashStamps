@@ -157,6 +157,128 @@
         </q-card-section>
       </q-card>
 
+      <q-card flat bordered class="main-card cash-on-hand-card">
+        <q-card-section>
+          <div class="cash-on-hand-heading">
+            <div
+              :class="[
+                'cash-on-hand-icon',
+                cashOnHandState.isSetUp
+                  ? 'cash-on-hand-icon--ready'
+                  : 'cash-on-hand-icon--not-ready',
+              ]"
+            >
+              <q-icon name="payments" />
+              <span class="cash-on-hand-dot" aria-hidden="true"></span>
+            </div>
+
+            <div class="cash-on-hand-heading-copy">
+              <div class="text-h6">
+                {{ t('treasuryPage.cashOnHand.title') }}
+              </div>
+              <p class="text-grey-7 q-mb-none">
+                {{ t('treasuryPage.cashOnHand.subtitle') }}
+              </p>
+            </div>
+          </div>
+
+          <div
+            v-if="!cashOnHandState.isSetUp"
+            class="cash-on-hand-setup-prompt q-mt-md"
+          >
+            <div>
+              <strong>{{ t('treasuryPage.cashOnHand.notSetUp') }}</strong>
+              <span>{{ t('treasuryPage.cashOnHand.notSetUpPrompt') }}</span>
+            </div>
+
+            <q-btn
+              class="cash-on-hand-setup-button"
+              icon="settings"
+              :label="t('treasuryPage.cashOnHand.actions.setUp')"
+              unelevated
+              dense
+              no-caps
+              @click="openCashOnHandDialog('setup')"
+            />
+          </div>
+
+          <section v-else class="cash-on-hand-snapshot q-mt-md">
+            <div class="cash-balance-panel">
+              <div class="snapshot-label snapshot-label--dark">
+                {{ t('treasuryPage.cashOnHand.currentBalance') }}
+              </div>
+
+              <div class="cash-balance-main">
+                {{ cashOnHandBalanceDisplay }}
+              </div>
+
+              <div class="cash-balance-subtitle">
+                <span v-if="cashOnHandUpdatedDisplay">
+                  {{
+                    t('treasuryPage.cashOnHand.lastUpdated', {
+                      date: cashOnHandUpdatedDisplay,
+                    })
+                  }}
+                </span>
+                <span v-else>
+                  {{ t('treasuryPage.cashOnHand.readyForManualTracking') }}
+                </span>
+              </div>
+            </div>
+
+            <div class="cash-on-hand-action-grid">
+              <q-btn
+                class="cash-on-hand-primary-button cash-on-hand-action-button"
+                icon="add"
+                :label="t('treasuryPage.cashOnHand.actions.addCash')"
+                unelevated
+                no-caps
+                @click="openCashOnHandDialog('add')"
+              />
+
+              <q-btn
+                class="cash-on-hand-secondary-button cash-on-hand-action-button"
+                icon="remove"
+                :label="t('treasuryPage.cashOnHand.actions.withdrawCash')"
+                outline
+                no-caps
+                @click="openCashOnHandDialog('withdraw')"
+              />
+            </div>
+
+            <div class="wallet-snapshot-grid cash-on-hand-details">
+              <div class="snapshot-row">
+                <span>{{ t('treasuryPage.summary.status') }}</span>
+                <strong class="status-pill status-pill--ready">
+                  {{ t('treasuryPage.cashOnHand.setUp') }}
+                </strong>
+              </div>
+
+              <div class="snapshot-row">
+                <span>{{ t('treasuryPage.cashOnHand.currency') }}</span>
+                <strong>{{ cashOnHandState.currency }}</strong>
+              </div>
+
+              <div v-if="cashOnHandState.createdAt" class="snapshot-row">
+                <span>{{ t('treasuryPage.details.created') }}</span>
+                <strong>{{ formatDateTime(cashOnHandState.createdAt) }}</strong>
+              </div>
+            </div>
+
+            <div class="cash-on-hand-clear-row">
+              <q-btn
+                flat
+                color="negative"
+                icon="delete_sweep"
+                :label="t('treasuryPage.cashOnHand.actions.clear')"
+                no-caps
+                @click="showClearCashOnHandDialog = true"
+              />
+            </div>
+          </section>
+        </q-card-section>
+      </q-card>
+
       <TreasuryTopUpQrCard
         v-if="treasuryWallet.isSetup"
         :treasury-address="treasuryWallet.address"
@@ -633,6 +755,145 @@
 
         {{ t('treasuryPage.safetyNotice') }}
       </q-banner>
+
+      <q-dialog v-model="cashOnHandDialogVisible">
+        <q-card class="cash-on-hand-dialog-card">
+          <q-card-section>
+            <div class="text-h6">{{ cashOnHandDialogTitle }}</div>
+            <p class="text-grey-7 q-mb-none">
+              {{ cashOnHandDialogSubtitle }}
+            </p>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none">
+            <q-list bordered separator class="cash-on-hand-dialog-summary">
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.cashOnHand.dialog.currentCash') }}
+                  </q-item-label>
+                  <q-item-label>{{
+                    cashOnHandDialogCurrentDisplay
+                  }}</q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.cashOnHand.dialog.enteredAmount') }}
+                  </q-item-label>
+                  <q-item-label>{{
+                    cashOnHandDialogAmountDisplay
+                  }}</q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>
+                    {{ t('treasuryPage.cashOnHand.dialog.newCash') }}
+                  </q-item-label>
+                  <q-item-label class="text-weight-bold">
+                    {{ cashOnHandDialogNewDisplay }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <q-input
+              v-model="cashOnHandAmountInput"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="0.01"
+              :label="cashOnHandAmountLabel"
+              :prefix="cashOnHandCurrencyPrefix"
+              outlined
+              class="q-mt-md"
+              :error="showCashOnHandAmountError"
+              :error-message="cashOnHandAmountErrorMessage"
+              @keyup.enter="handleSaveCashOnHandDialog"
+            />
+
+            <q-input
+              v-model="cashOnHandNoteInput"
+              :label="t('treasuryPage.cashOnHand.dialog.noteOptional')"
+              outlined
+              class="q-mt-md"
+            />
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions align="right" class="card-actions">
+            <q-btn
+              flat
+              color="grey-8"
+              :label="t('common.cancel')"
+              no-caps
+              @click="resetCashOnHandDialog"
+            />
+
+            <q-btn
+              class="cash-on-hand-primary-button"
+              :label="cashOnHandDialogActionLabel"
+              :disable="!isCashOnHandAmountValid"
+              :loading="isCashOnHandSubmitting"
+              unelevated
+              no-caps
+              @click="handleSaveCashOnHandDialog"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <q-dialog v-model="showClearCashOnHandDialog">
+        <q-card class="cash-on-hand-dialog-card">
+          <q-card-section>
+            <div class="text-h6">
+              {{ t('treasuryPage.cashOnHand.clearDialog.title') }}
+            </div>
+            <p class="text-grey-7 q-mb-none">
+              {{ t('treasuryPage.cashOnHand.clearDialog.message') }}
+            </p>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none">
+            <q-banner class="bg-orange-1 text-orange-10" rounded>
+              <template #avatar>
+                <q-icon name="warning" />
+              </template>
+
+              {{
+                t('treasuryPage.cashOnHand.clearDialog.warning', {
+                  amount: cashOnHandBalanceDisplay,
+                })
+              }}
+            </q-banner>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-actions align="right" class="card-actions">
+            <q-btn
+              flat
+              color="grey-8"
+              :label="t('common.cancel')"
+              no-caps
+              v-close-popup
+            />
+
+            <q-btn
+              color="negative"
+              :label="t('treasuryPage.cashOnHand.actions.confirmClear')"
+              :loading="isClearingCashOnHand"
+              no-caps
+              @click="handleClearCashOnHand"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -644,6 +905,7 @@ import { useI18n } from 'vue-i18n';
 import TreasuryTopUpQrCard from 'src/components/TreasuryTopUpQrCard.vue';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
+import type { CashOnHandState } from 'src/types/cash-on-hand';
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
   TreasuryRestoreCheckResult,
@@ -664,12 +926,21 @@ import {
 import { formatBchSats } from 'src/services/voucher-pricing';
 import { getFeeAddressConfigStatus } from 'src/services/fee-address-config';
 import { PricingService } from 'src/services/pricing-service';
+import {
+  addToCashOnHand,
+  clearCashOnHand,
+  getCashOnHandState,
+  setUpCashOnHand,
+  withdrawFromCashOnHand,
+} from 'src/services/cash-on-hand-store';
 
 const { t } = useI18n({ useScope: 'global' });
 
 const SATS_PER_BCH = 100_000_000;
 const treasuryFiatCurrency = 'GBP';
 const pricingService = new PricingService();
+
+type CashOnHandDialogMode = 'setup' | 'add' | 'withdraw';
 
 const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   address: '',
@@ -685,6 +956,17 @@ const restoreCheck = ref<TreasuryRestoreCheckResult | null>(null);
 const restoreImportResult = ref<TreasuryRestoreImportResult | null>(null);
 const restoreMnemonicInput = ref('');
 
+const cashOnHandState = ref<CashOnHandState>({
+  isSetUp: false,
+  currency: treasuryFiatCurrency,
+  balanceMinor: 0,
+  movements: [],
+});
+const cashOnHandDialogMode = ref<CashOnHandDialogMode | null>(null);
+const cashOnHandAmountInput = ref('');
+const cashOnHandNoteInput = ref('');
+const showClearCashOnHandDialog = ref(false);
+
 const feeAddressConfig = ref<FeeAddressConfigStatus>(
   getFeeAddressConfigStatus()
 );
@@ -694,6 +976,8 @@ const isCheckingBalance = ref(false);
 const isExportingBackup = ref(false);
 const isCheckingRestore = ref(false);
 const isImportingRestore = ref(false);
+const isCashOnHandSubmitting = ref(false);
+const isClearingCashOnHand = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
@@ -720,6 +1004,189 @@ const shortTreasuryAddress = computed(() => {
   }
 
   return `${address.slice(0, 18)}…${address.slice(-8)}`;
+});
+
+const cashOnHandBalanceDisplay = computed(() =>
+  formatFiatMinorAmount(
+    cashOnHandState.value.balanceMinor,
+    cashOnHandState.value.currency
+  )
+);
+
+const cashOnHandUpdatedDisplay = computed(() => {
+  if (!cashOnHandState.value.updatedAt) {
+    return '';
+  }
+
+  return formatDateTime(cashOnHandState.value.updatedAt);
+});
+
+const cashOnHandDialogVisible = computed({
+  get: () => cashOnHandDialogMode.value !== null,
+  set: (value: boolean) => {
+    if (!value) {
+      resetCashOnHandDialog();
+    }
+  },
+});
+
+const parsedCashOnHandAmountMinor = computed(() =>
+  parseFiatInputToMinor(cashOnHandAmountInput.value)
+);
+
+const isCashOnHandAmountValid = computed(() => {
+  const amountMinor = parsedCashOnHandAmountMinor.value;
+
+  if (amountMinor === null) {
+    return false;
+  }
+
+  if (cashOnHandDialogMode.value === 'setup') {
+    return amountMinor >= 0;
+  }
+
+  if (amountMinor <= 0) {
+    return false;
+  }
+
+  if (cashOnHandDialogMode.value === 'withdraw') {
+    return amountMinor <= cashOnHandState.value.balanceMinor;
+  }
+
+  return true;
+});
+
+const showCashOnHandAmountError = computed(
+  () =>
+    cashOnHandAmountInput.value.trim().length > 0 &&
+    !isCashOnHandAmountValid.value
+);
+
+const cashOnHandAmountErrorMessage = computed(() => {
+  const amountMinor = parsedCashOnHandAmountMinor.value;
+
+  if (amountMinor === null) {
+    return t('treasuryPage.cashOnHand.errors.enterValidAmount');
+  }
+
+  if (cashOnHandDialogMode.value !== 'setup' && amountMinor <= 0) {
+    return t('treasuryPage.cashOnHand.errors.enterPositiveAmount');
+  }
+
+  if (
+    cashOnHandDialogMode.value === 'withdraw' &&
+    amountMinor > cashOnHandState.value.balanceMinor
+  ) {
+    return t('treasuryPage.cashOnHand.errors.withdrawTooMuch');
+  }
+
+  return '';
+});
+
+const cashOnHandCurrencyPrefix = computed(() => {
+  if (cashOnHandState.value.currency === 'GBP') {
+    return '£';
+  }
+
+  return cashOnHandState.value.currency;
+});
+
+const cashOnHandAmountLabel = computed(() => {
+  if (cashOnHandDialogMode.value === 'setup') {
+    return t('treasuryPage.cashOnHand.dialog.startingAmount');
+  }
+
+  if (cashOnHandDialogMode.value === 'withdraw') {
+    return t('treasuryPage.cashOnHand.dialog.amountToWithdraw');
+  }
+
+  return t('treasuryPage.cashOnHand.dialog.amountToAdd');
+});
+
+const cashOnHandDialogTitle = computed(() => {
+  if (cashOnHandDialogMode.value === 'setup') {
+    return t('treasuryPage.cashOnHand.dialog.setupTitle');
+  }
+
+  if (cashOnHandDialogMode.value === 'withdraw') {
+    return t('treasuryPage.cashOnHand.dialog.withdrawTitle');
+  }
+
+  return t('treasuryPage.cashOnHand.dialog.addTitle');
+});
+
+const cashOnHandDialogSubtitle = computed(() => {
+  if (cashOnHandDialogMode.value === 'setup') {
+    return t('treasuryPage.cashOnHand.dialog.setupSubtitle');
+  }
+
+  if (cashOnHandDialogMode.value === 'withdraw') {
+    return t('treasuryPage.cashOnHand.dialog.withdrawSubtitle');
+  }
+
+  return t('treasuryPage.cashOnHand.dialog.addSubtitle');
+});
+
+const cashOnHandDialogActionLabel = computed(() => {
+  if (cashOnHandDialogMode.value === 'setup') {
+    return t('treasuryPage.cashOnHand.actions.saveSetup');
+  }
+
+  if (cashOnHandDialogMode.value === 'withdraw') {
+    return t('treasuryPage.cashOnHand.actions.saveWithdraw');
+  }
+
+  return t('treasuryPage.cashOnHand.actions.saveAdd');
+});
+
+const cashOnHandDialogCurrentDisplay = computed(() => {
+  if (cashOnHandDialogMode.value === 'setup') {
+    return formatFiatMinorAmount(0, treasuryFiatCurrency);
+  }
+
+  return cashOnHandBalanceDisplay.value;
+});
+
+const cashOnHandDialogAmountDisplay = computed(() => {
+  const amountMinor = parsedCashOnHandAmountMinor.value;
+
+  if (amountMinor === null) {
+    return '—';
+  }
+
+  const currency = cashOnHandState.value.isSetUp
+    ? cashOnHandState.value.currency
+    : treasuryFiatCurrency;
+
+  return formatFiatMinorAmount(amountMinor, currency);
+});
+
+const cashOnHandDialogNewDisplay = computed(() => {
+  const amountMinor = parsedCashOnHandAmountMinor.value;
+
+  if (amountMinor === null) {
+    return '—';
+  }
+
+  const currency = cashOnHandState.value.isSetUp
+    ? cashOnHandState.value.currency
+    : treasuryFiatCurrency;
+
+  if (cashOnHandDialogMode.value === 'setup') {
+    return formatFiatMinorAmount(amountMinor, currency);
+  }
+
+  if (cashOnHandDialogMode.value === 'withdraw') {
+    return formatFiatMinorAmount(
+      cashOnHandState.value.balanceMinor - amountMinor,
+      currency
+    );
+  }
+
+  return formatFiatMinorAmount(
+    cashOnHandState.value.balanceMinor + amountMinor,
+    currency
+  );
 });
 
 async function loadTreasuryWallet(): Promise<void> {
@@ -906,6 +1373,130 @@ function handleClearRestoreCheck(): void {
   successMessage.value = t('treasuryPage.messages.restoreToolCleared');
 }
 
+async function loadCashOnHand(): Promise<void> {
+  errorMessage.value = '';
+
+  try {
+    cashOnHandState.value = await getCashOnHandState();
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = t('treasuryPage.cashOnHand.messages.couldNotLoad');
+  }
+}
+
+function openCashOnHandDialog(mode: CashOnHandDialogMode): void {
+  successMessage.value = '';
+  errorMessage.value = '';
+  cashOnHandDialogMode.value = mode;
+  cashOnHandAmountInput.value = '';
+  cashOnHandNoteInput.value = '';
+}
+
+function resetCashOnHandDialog(): void {
+  cashOnHandDialogMode.value = null;
+  cashOnHandAmountInput.value = '';
+  cashOnHandNoteInput.value = '';
+}
+
+async function handleSaveCashOnHandDialog(): Promise<void> {
+  if (!isCashOnHandAmountValid.value || !cashOnHandDialogMode.value) {
+    return;
+  }
+
+  const amountMinor = parsedCashOnHandAmountMinor.value;
+
+  if (amountMinor === null) {
+    return;
+  }
+
+  successMessage.value = '';
+  errorMessage.value = '';
+  isCashOnHandSubmitting.value = true;
+
+  const note = cashOnHandNoteInput.value.trim() || undefined;
+
+  try {
+    if (cashOnHandDialogMode.value === 'setup') {
+      cashOnHandState.value = await setUpCashOnHand({
+        amountMinor,
+        currency: treasuryFiatCurrency,
+        note,
+      });
+      successMessage.value = t('treasuryPage.cashOnHand.messages.setUp');
+    } else if (cashOnHandDialogMode.value === 'add') {
+      cashOnHandState.value = await addToCashOnHand({
+        amountMinor,
+        currency: cashOnHandState.value.currency,
+        note,
+      });
+      successMessage.value = t('treasuryPage.cashOnHand.messages.added');
+    } else {
+      cashOnHandState.value = await withdrawFromCashOnHand({
+        amountMinor,
+        currency: cashOnHandState.value.currency,
+        note,
+      });
+      successMessage.value = t('treasuryPage.cashOnHand.messages.withdrawn');
+    }
+
+    resetCashOnHandDialog();
+  } catch (error) {
+    console.error(error);
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : t('treasuryPage.cashOnHand.messages.couldNotSave');
+  } finally {
+    isCashOnHandSubmitting.value = false;
+  }
+}
+
+async function handleClearCashOnHand(): Promise<void> {
+  successMessage.value = '';
+  errorMessage.value = '';
+  isClearingCashOnHand.value = true;
+
+  try {
+    cashOnHandState.value = await clearCashOnHand(
+      t('treasuryPage.cashOnHand.clearDialog.clearNote')
+    );
+    showClearCashOnHandDialog.value = false;
+    successMessage.value = t('treasuryPage.cashOnHand.messages.cleared');
+  } catch (error) {
+    console.error(error);
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : t('treasuryPage.cashOnHand.messages.couldNotClear');
+  } finally {
+    isClearingCashOnHand.value = false;
+  }
+}
+
+function parseFiatInputToMinor(value: string): number | null {
+  const normalizedValue = value.trim().replace(',', '.');
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const match = normalizedValue.match(/^(\d+)(?:\.(\d{0,2}))?$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const majorUnits = Number.parseInt(match[1] ?? '0', 10);
+  const minorUnits = Number.parseInt((match[2] ?? '').padEnd(2, '0'), 10);
+  const amountMinor = majorUnits * 100 + minorUnits;
+
+  return Number.isSafeInteger(amountMinor) ? amountMinor : null;
+}
+
+function formatFiatMinorAmount(amountMinor: number, currency: string): string {
+  return formatFiatAmount(amountMinor / 100, currency);
+}
+
 function formatFiatAmount(amount: number, currency: string): string {
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',
@@ -922,6 +1513,7 @@ function formatDateTime(value: string): string {
 
 onMounted(() => {
   void loadTreasuryWallet();
+  void loadCashOnHand();
 });
 </script>
 
@@ -1240,6 +1832,186 @@ h1 {
   padding: 14px 22px;
 }
 
+.cash-on-hand-card {
+  border-color: rgba(0, 206, 27, 0.32);
+}
+
+.cash-on-hand-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+}
+
+.cash-on-hand-heading-copy {
+  min-width: 0;
+}
+
+.cash-on-hand-icon {
+  align-items: center;
+  background: #eaffed;
+  border: 1px solid rgba(0, 206, 27, 0.35);
+  border-radius: 14px;
+  color: #0c5f17;
+  display: flex;
+  flex: 0 0 46px;
+  font-size: 26px;
+  height: 46px;
+  justify-content: center;
+  position: relative;
+  width: 46px;
+}
+
+.cash-on-hand-dot {
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  height: 12px;
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 12px;
+}
+
+.cash-on-hand-icon--ready .cash-on-hand-dot {
+  background: #00ce1b;
+}
+
+.cash-on-hand-icon--not-ready .cash-on-hand-dot {
+  background: #f59e0b;
+}
+
+.cash-on-hand-setup-prompt {
+  align-items: center;
+  background: linear-gradient(135deg, #fff8eb 0%, #f7f8f7 100%);
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  border-radius: 18px;
+  color: #333333;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.cash-on-hand-setup-prompt div {
+  display: grid;
+  gap: 3px;
+}
+
+.cash-on-hand-setup-prompt strong {
+  color: #111111;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.cash-on-hand-setup-prompt span {
+  color: #666666;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.cash-on-hand-snapshot {
+  display: grid;
+  gap: 14px;
+}
+
+.cash-balance-panel {
+  background: linear-gradient(135deg, #eaffed 0%, #ffffff 100%);
+  border: 1px solid rgba(0, 206, 27, 0.32);
+  border-radius: 22px;
+  color: #111111;
+  padding: 16px;
+}
+
+.snapshot-label--dark {
+  color: rgba(17, 17, 17, 0.62);
+}
+
+.cash-balance-main {
+  color: #111111;
+  font-size: 32px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.05;
+  margin-top: 8px;
+}
+
+.cash-balance-subtitle {
+  color: #0c5f17;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-top: 7px;
+}
+
+.cash-on-hand-action-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.cash-on-hand-primary-button,
+.cash-on-hand-secondary-button {
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 850;
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.cash-on-hand-primary-button {
+  background: #00ce1b;
+  color: #000000;
+}
+
+.cash-on-hand-setup-button {
+  background: #fff8eb;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 999px;
+  color: #8a4b00;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 850;
+  min-height: 30px;
+  padding: 0 10px;
+}
+
+.cash-on-hand-secondary-button {
+  border-color: #111111;
+  color: #111111;
+}
+
+.cash-on-hand-action-button {
+  min-height: 46px;
+}
+
+.cash-on-hand-clear-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cash-on-hand-clear-row .q-btn {
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cash-on-hand-dialog-card {
+  border-radius: 22px;
+  max-width: 440px;
+  width: calc(100vw - 32px);
+}
+
+.cash-on-hand-dialog-summary {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.cash-on-hand-primary-button :deep(.q-focus-helper),
+.cash-on-hand-secondary-button :deep(.q-focus-helper),
+.cash-on-hand-setup-button :deep(.q-focus-helper) {
+  border-radius: inherit;
+}
+
 @media (max-width: 640px) {
   .treasury-hero {
     padding: 22px;
@@ -1267,8 +2039,25 @@ h1 {
     flex-direction: column;
   }
 
+  .cash-on-hand-setup-prompt {
+    align-items: center;
+    flex-direction: row;
+  }
+
   .wallet-create-button {
     width: 100%;
+  }
+
+  .cash-on-hand-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cash-balance-panel {
+    padding: 14px;
+  }
+
+  .cash-balance-main {
+    font-size: 28px;
   }
 
   .wallet-balance-panel {
@@ -1319,6 +2108,9 @@ h1 {
 
 .primary-button :deep(.q-focus-helper),
 .secondary-button :deep(.q-focus-helper),
+.cash-on-hand-primary-button :deep(.q-focus-helper),
+.cash-on-hand-secondary-button :deep(.q-focus-helper),
+.cash-on-hand-secondary-button :deep(.q-focus-helper),
 .main-card :deep(.q-focus-helper) {
   border-radius: inherit;
 }
