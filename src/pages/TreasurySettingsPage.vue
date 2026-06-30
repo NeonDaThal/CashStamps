@@ -208,7 +208,14 @@
                 {{ t('treasuryPage.cashOnHand.currentBalance') }}
               </div>
 
-              <div class="cash-balance-main">
+              <div
+                :class="[
+                  'cash-balance-main',
+                  {
+                    'cash-balance-main--negative': cashOnHandBalanceIsNegative,
+                  },
+                ]"
+              >
                 {{ cashOnHandBalanceDisplay }}
               </div>
 
@@ -1011,6 +1018,10 @@ const cashOnHandBalanceDisplay = computed(() =>
     cashOnHandState.value.balanceMinor,
     cashOnHandState.value.currency
   )
+);
+
+const cashOnHandBalanceIsNegative = computed(
+  () => cashOnHandState.value.balanceMinor < 0
 );
 
 const cashOnHandUpdatedDisplay = computed(() => {
@@ -1933,6 +1944,10 @@ h1 {
   letter-spacing: -0.6px;
   line-height: 1.05;
   margin-top: 8px;
+}
+
+.cash-balance-main--negative {
+  color: #ff002f;
 }
 
 .cash-balance-subtitle {

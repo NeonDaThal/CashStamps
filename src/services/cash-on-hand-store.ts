@@ -79,10 +79,9 @@ function normalizeStoredState(
   }
 
   const isSetUp = storedState.isSetUp === true;
-  const balanceMinor =
-    Number.isInteger(storedState.balanceMinor) && storedState.balanceMinor >= 0
-      ? storedState.balanceMinor
-      : 0;
+  const balanceMinor = Number.isInteger(storedState.balanceMinor)
+    ? storedState.balanceMinor
+    : 0;
 
   return {
     isSetUp,
@@ -179,11 +178,15 @@ async function applyOutgoingMovement(params: {
   relatedRecordType?: CashOnHandRelatedRecordType;
   note?: string;
   createdAt?: string;
+  allowNegativeBalance?: boolean;
 }): Promise<CashOnHandState> {
   assertCashOnHandIsSetUp(params.state);
   assertPositiveAmountMinor(params.amountMinor);
 
-  if (params.amountMinor > params.state.balanceMinor) {
+  if (
+    !params.allowNegativeBalance &&
+    params.amountMinor > params.state.balanceMinor
+  ) {
     throw new Error('Cash on Hand cannot be withdrawn below zero.');
   }
 
@@ -299,7 +302,7 @@ export async function clearCashOnHand(note?: string): Promise<CashOnHandState> {
 
   const movement = createMovement({
     type: 'clear',
-    amountMinor: state.balanceMinor,
+    amountMinor: Math.abs(state.balanceMinor),
     balanceAfterMinor: 0,
     currency: state.currency,
     note,
@@ -399,5 +402,6 @@ export async function recordCashOutPaid(
     relatedRecordType: 'cash_out',
     note: input.note,
     createdAt: input.createdAt,
+    allowNegativeBalance: true,
   });
 }

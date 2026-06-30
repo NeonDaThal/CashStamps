@@ -246,6 +246,7 @@ import {
   addCashOutRecord,
   markCashOutPaymentDetected,
 } from 'src/services/cash-out-store';
+import { recordCashOutPaid } from 'src/services/cash-on-hand-store';
 import {
   PricingService,
   PricingUnavailableError,
@@ -443,13 +444,36 @@ async function handleDetectedPayment(
     updatedAt: new Date().toISOString(),
   };
 
-  pendingCashOut.value = updatedCashOut ?? fallbackUpdatedCashOut;
+  const detectedCashOut = updatedCashOut ?? fallbackUpdatedCashOut;
+
+  pendingCashOut.value = detectedCashOut;
+
+  await recordCashOnHandForDetectedCashOut(detectedCashOut);
 
   paymentWatcher.value = null;
   isWatchingForPayment.value = false;
   paymentDetectionError.value = '';
   successMessage.value =
     'BCH payment detected in Treasury Wallet. Give cash only after checking the success screen.';
+}
+
+async function recordCashOnHandForDetectedCashOut(
+  cashOut: CashOutRecord
+): Promise<void> {
+  try {
+    await recordCashOutPaid({
+      amountMinor: cashOut.fiatAmountMinor,
+      currency: cashOut.fiatCurrency,
+      relatedRecordId: cashOut.id,
+      note: `Cash-out ${cashOut.serial}`,
+      createdAt: cashOut.detectedAt ?? new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(error);
+
+    warningMessage.value =
+      'The BCH payment was detected, but Cash on Hand could not be updated automatically.';
+  }
 }
 
 async function startPaymentWatcher(
