@@ -35,3 +35,12 @@ yarn-error.log*
 
 # local .env files
 .env.local*
+
+# Android release signing secrets
+src-capacitor/android/keystore.properties
+src-capacitor/android/*.jks
+src-capacitor/android/*.keystore
+src-capacitor/android/*.p12
+src-capacitor/android/app/*.jks
+src-capacitor/android/app/*.keystore
+src-capacitor/android/app/*.p12
