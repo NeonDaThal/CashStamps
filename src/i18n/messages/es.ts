@@ -42,11 +42,11 @@ const es = {
     treasuryWallet: 'Tesorería',
     receiptPreview: 'Vista previa del recibo',
     glance: {
-      title: 'At a glance',
-      subtitle: 'Summary of todays activity so far',
-      topups: 'Topups',
-      cashOuts: 'Cash-outs',
-      totalActions: 'Total actions',
+      title: 'De un vistazo',
+      subtitle: 'Resumen de la actividad de hoy hasta el momento',
+      topups: 'Recargas',
+      cashOuts: 'Retiros',
+      totalActions: 'Total de acciones',
     },
     status: {
       receipts: {
