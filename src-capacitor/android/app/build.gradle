@@ -1,31 +1,55 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.konk.bchvoucher"
+    namespace "app.bitcoincashtopup.android"
     compileSdk rootProject.ext.compileSdkVersion
+
     defaultConfig {
-        applicationId "com.konk.bchvoucher"
+        applicationId "app.bitcoincashtopup.android"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "0.1.0-alpha"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders = [
+            launcherIcon: "bch_voucher_launcher",
+            roundLauncherIcon: "bch_voucher_launcher_round"
+        ]
+
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+            // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
     buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+
+            manifestPlaceholders = [
+                launcherIcon: "bch_dev_launcher",
+                roundLauncherIcon: "bch_dev_launcher_round"
+            ]
+        }
+
         release {
             minifyEnabled false
+
+            manifestPlaceholders = [
+                launcherIcon: "bch_voucher_launcher",
+                roundLauncherIcon: "bch_voucher_launcher_round"
+            ]
+
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }
 
 repositories {
-    flatDir{
+    flatDir {
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
 }
@@ -49,6 +73,6 @@ try {
     if (servicesJSON.text) {
         apply plugin: 'com.google.gms.google-services'
     }
-} catch(Exception e) {
+} catch (Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
