@@ -487,6 +487,70 @@ const de = {
       notSetupBanner: 'Es wurde noch keine Treasury-Wallet eingerichtet.',
       notSetupPrompt: 'Treasury Wallet is not yet set up.',
     },
+    walletTools: {
+      addFunds: 'Add BCH',
+      addFundsTitle: 'Add BCH to your Treasury Wallet',
+      addFundsSubtitle:
+        'Scan this QR code from another BCH wallet or copy the below wallet address, paste and send, to top-up your Treasury Wallet.',
+      sendFunds: 'Send BCH',
+      sendFundsTitle: 'Send BCH',
+      sendFundsSubtitle:
+        'Send BCH from the Treasury Wallet to another BCH address.',
+      sendFundsInstruction:
+        'Paste a BCH receiving address or payment URI, enter the fiat amount, then review before sending.',
+      sendAddressLabel: 'Receiving address or payment URI',
+      sendAddressPlaceholder: 'Paste BCH address or payment URI here',
+      sendAmountLabel: 'Amount to send',
+      sendFiatAmountLabel: 'Fiat amount to send',
+      bchEquivalent: 'BCH equivalent',
+      available: 'Available',
+      max: 'Max',
+      maxSelected:
+        'Max selected. The network fee will be deducted so the wallet can send the maximum available amount.',
+      realBroadcastTestWarning:
+        'Real Treasury Send broadcast testing is enabled. Only test with a tiny amount and turn this off immediately afterwards.',
+      reviewSend: 'Review Send',
+      reviewSendTitle: 'Review Treasury Send',
+      sendAmount: 'Amount',
+      networkFee: 'Network fee',
+      totalDebit: 'Total from treasury',
+      destination: 'Destination',
+      swipeToSend: 'Swipe to send',
+      swipeToSendCaption: 'Slide right to broadcast this treasury transaction.',
+      sending: 'Sending BCH...',
+      sentTitle: 'Sent',
+      sentSubtitle:
+        'BCH has been sent from your Treasury Wallet. Close this window to return to the updated wallet balance.',
+      txid: 'Transaction',
+      copyDestination: 'Copy Destination',
+      copyTxid: 'Copy Transaction ID',
+      errors: {
+        enterValidAmount: 'Enter a valid BCH amount.',
+        couldNotCreateDraft: 'Could not prepare this treasury send.',
+        broadcastFailed:
+          'Treasury send failed. Check the details and try again.',
+      },
+      sendFundsPlaceholder:
+        'The send flow will be added in the next step. This button is placed here now so the Treasury Wallet tools are in their final position before wiring live spending.',
+      backup: 'Backup',
+      import: 'Import',
+      delete: 'Delete',
+      restoreImport: 'Restore/import',
+      backupTitle: 'Backup Treasury Wallet',
+      backupSubtitle:
+        'This 12 word seed phrase is the key to your wallet. Write it down somewhere safe where nobody else will see it. With this, you can access your funds via a BCH wallet anywhere.',
+      backupWarning:
+        "Anyone with this seed phrase can control this Treasury Wallet's BCH. Only reveal this in a safe, private environment.",
+      seedHidden: 'Seed phrase hidden until revealed.',
+      importTitle: 'Import Treasury Wallet',
+      importSubtitle: 'Import an existing Treasury Wallet from a seed phrase.',
+      seedPhraseInput: 'Seed phrase',
+      seedPhrasePlaceholder: 'Enter seed phrase of wallet to import here',
+      importWallet: 'Import Wallet',
+      deleteTitle: 'Delete Treasury Wallet',
+      deleteSubtitle: 'Remove this device’s saved Treasury Wallet data.',
+      deleteWallet: 'Delete Treasury Wallet',
+    },
     cashOnHand: {
       title: 'Cash on Hand',
       subtitle:
@@ -675,23 +739,31 @@ const de = {
   },
 
   treasuryTopUpQr: {
-    title: 'Treasury-Auflade-QR',
+    title: 'Treasury Top-Up QR',
     subtitle:
-      'Scanne diesen QR-Code mit einer anderen BCH-Wallet, um die Treasury-Wallet des Händlers aufzuladen.',
-    receiveOnlyNotice:
-      'Nur-Empfangs-QR. Damit kann der Händler BCH zur Treasury-Wallet hinzufügen. Aus dieser App wird nichts ausgegeben oder übertragen.',
-    qrAlt: 'Treasury-Auflade-QR-Code',
-    qrUnavailable: 'QR-Code nicht verfügbar.',
-    treasuryAddress: 'Treasury-Adresse',
-    paymentUri: 'BCH-Zahlungs-URI',
-    qrGenerated: 'QR generiert',
-    copyAddress: 'Adresse kopieren',
-    copyPaymentUri: 'Zahlungs-URI kopieren',
-    uriLabel: 'BCH-Voucher-Treasury',
-    uriMessage: 'Treasury-Wallet des Händlers aufladen',
-    addressCopied: 'Treasury-Adresse kopiert.',
-    uriCopied: 'Treasury-Zahlungs-URI kopiert.',
-    copyFailed: 'Konnte nicht in die Zwischenablage kopiert werden.',
+      'Scan this QR code from another BCH wallet to top up the merchant treasury wallet.',
+    qrAlt: 'Treasury top-up QR code',
+    qrUnavailable: 'QR code unavailable.',
+    treasuryAddress: 'Treasury Wallet Address',
+    paymentUri: 'BCH payment URI',
+    qrGenerated: 'QR generated',
+    copy: 'Copy',
+    copyAddress: 'Copy Address',
+    copyPaymentUri: 'Copy Payment URI',
+    tapQrToCopy: 'Tap QR to copy wallet address.',
+    watching: 'Waiting for incoming BCH...',
+    watchingError:
+      'Could not watch for incoming BCH. You can still copy the address and refresh the balance after sending.',
+    receivedTitle: 'Received',
+    receivedSubtitle:
+      'Incoming BCH has been detected in your Treasury Wallet. Close this window to return to the updated wallet balance.',
+    receivedAmount: 'Received',
+    receivedTxid: 'Transaction',
+    uriLabel: 'BCH Voucher Treasury',
+    uriMessage: 'Top up merchant treasury wallet',
+    addressCopied: 'Treasury address copied.',
+    uriCopied: 'Treasury payment URI copied.',
+    copyFailed: 'Could not copy to clipboard.',
   },
 
   layout: {
