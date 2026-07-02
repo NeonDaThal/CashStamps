@@ -475,7 +475,7 @@ const en = {
       title: 'Cash on Hand',
       subtitle:
         'Optional physical cash tracker for topups, cash-outs, and local reports.',
-      setUp: 'Set up',
+      setUp: 'Ready',
       notSetUp: 'Not set up',
       notSetUpPrompt:
         'Track the physical cash currently available in this shop or drawer.',

@@ -204,8 +204,34 @@
 
           <section v-else class="cash-on-hand-snapshot q-mt-md">
             <div class="cash-balance-panel">
-              <div class="snapshot-label snapshot-label--dark">
-                {{ t('treasuryPage.cashOnHand.currentBalance') }}
+              <div class="cash-balance-top">
+                <div class="snapshot-label snapshot-label--dark">
+                  {{ t('treasuryPage.cashOnHand.currentBalance') }}
+                </div>
+
+                <div class="cash-balance-actions">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="add"
+                    class="cash-balance-action-button cash-balance-action-button--add"
+                    :aria-label="t('treasuryPage.cashOnHand.actions.addCash')"
+                    @click="openCashOnHandDialog('add')"
+                  />
+
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="remove"
+                    class="cash-balance-action-button cash-balance-action-button--withdraw"
+                    :aria-label="
+                      t('treasuryPage.cashOnHand.actions.withdrawCash')
+                    "
+                    @click="openCashOnHandDialog('withdraw')"
+                  />
+                </div>
               </div>
 
               <div
@@ -231,26 +257,6 @@
                   {{ t('treasuryPage.cashOnHand.readyForManualTracking') }}
                 </span>
               </div>
-            </div>
-
-            <div class="cash-on-hand-action-grid">
-              <q-btn
-                class="cash-on-hand-primary-button cash-on-hand-action-button"
-                icon="add"
-                :label="t('treasuryPage.cashOnHand.actions.addCash')"
-                unelevated
-                no-caps
-                @click="openCashOnHandDialog('add')"
-              />
-
-              <q-btn
-                class="cash-on-hand-secondary-button cash-on-hand-action-button"
-                icon="remove"
-                :label="t('treasuryPage.cashOnHand.actions.withdrawCash')"
-                outline
-                no-caps
-                @click="openCashOnHandDialog('withdraw')"
-              />
             </div>
 
             <div class="wallet-snapshot-grid cash-on-hand-details">
@@ -1844,7 +1850,7 @@ h1 {
 }
 
 .cash-on-hand-card {
-  border-color: rgba(0, 206, 27, 0.32);
+  border-color: #dddddd;
 }
 
 .cash-on-hand-heading {
@@ -1859,10 +1865,10 @@ h1 {
 
 .cash-on-hand-icon {
   align-items: center;
-  background: #eaffed;
-  border: 1px solid rgba(0, 206, 27, 0.35);
+  background: #f0f0f0;
+  border: 1px solid #dddddd;
   border-radius: 14px;
-  color: #0c5f17;
+  color: #00a816;
   display: flex;
   flex: 0 0 46px;
   font-size: 26px;
@@ -1931,6 +1937,38 @@ h1 {
   border-radius: 22px;
   color: #111111;
   padding: 16px;
+}
+
+.cash-balance-top {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.cash-balance-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.cash-balance-action-button {
+  background: rgba(17, 17, 17, 0.08);
+  height: 34px;
+  width: 34px;
+}
+
+.cash-balance-action-button :deep(.q-focus-helper) {
+  border-radius: inherit;
+}
+
+.cash-balance-action-button--add {
+  color: #00a816;
+}
+
+.cash-balance-action-button--withdraw {
+  color: #111111;
 }
 
 .snapshot-label--dark {
@@ -2061,10 +2099,6 @@ h1 {
 
   .wallet-create-button {
     width: 100%;
-  }
-
-  .cash-on-hand-action-grid {
-    grid-template-columns: 1fr;
   }
 
   .cash-balance-panel {
