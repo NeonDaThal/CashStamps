@@ -776,6 +776,7 @@ const neNP = {
       printerSetup: 'प्रिन्टर सेटअप',
       appSettings: 'एप सेटिङहरू',
       howToSellVoucher: 'भौचर कसरी बेच्ने',
+      howToCashOut: 'How to Cash-out',
       howCustomersRedeem: 'ग्राहकले कसरी रिडिम गर्छन्',
       faq: 'प्रश्नोत्तर',
       support: 'सहयोग',

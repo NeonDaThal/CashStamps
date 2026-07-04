@@ -798,6 +798,7 @@ const de = {
       printerSetup: 'Drucker einrichten',
       appSettings: 'App-Einstellungen',
       howToSellVoucher: 'So verkaufst du einen Voucher',
+      howToCashOut: 'How to Cash-out',
       howCustomersRedeem: 'So lösen Kunden ein',
       faq: 'FAQ',
       support: 'Support',

@@ -278,6 +278,20 @@
 
           <q-item disable class="placeholder-item">
             <q-item-section avatar>
+              <q-icon name="menu_book" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>
+                {{ t('layout.items.howToCashOut') }}
+              </q-item-label>
+              <q-item-label caption>
+                {{ t('layout.common.comingSoon') }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+
+          <q-item disable class="placeholder-item">
+            <q-item-section avatar>
               <q-icon name="help_outline" />
             </q-item-section>
             <q-item-section>

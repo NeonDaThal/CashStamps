@@ -788,6 +788,7 @@ const svSE = {
       printerSetup: 'Skrivarinställning',
       appSettings: 'Appinställningar',
       howToSellVoucher: 'Så säljer du en värdekod',
+      howToCashOut: 'How to Cash-out',
       howCustomersRedeem: 'Så löser kunder in',
       faq: 'Vanliga frågor',
       support: 'Support',

@@ -795,6 +795,7 @@ const pt = {
       printerSetup: 'Configurar impressora',
       appSettings: 'Definições da app',
       howToSellVoucher: 'Como vender uma recarga',
+      howToCashOut: 'How to Cash-out',
       howCustomersRedeem: 'Como os clientes resgatam',
       faq: 'Perguntas frequentes',
       support: 'Suporte',

@@ -794,6 +794,7 @@ const es = {
       printerSetup: 'Configurar impresora',
       appSettings: 'Ajustes de la app',
       howToSellVoucher: 'Cómo vender un vale',
+      howToCashOut: 'How to Cash-out',
       howCustomersRedeem: 'Cómo redimen los clientes',
       faq: 'Preguntas frecuentes',
       support: 'Soporte',

@@ -748,6 +748,7 @@ const zhHK = {
       printerSetup: '打印機設定',
       appSettings: '應用程式設定',
       howToSellVoucher: '如何出售增值券',
+      howToCashOut: 'How to Cash-out',
       howCustomersRedeem: '顧客如何兌換',
       faq: '常見問題',
       support: '支援',

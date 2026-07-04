@@ -790,6 +790,7 @@ const sw = {
       printerSetup: 'Usanidi wa printa',
       appSettings: 'Mipangilio ya app',
       howToSellVoucher: 'Jinsi ya kuuza vocha',
+      howToCashOut: 'How to Cash-out',
       howCustomersRedeem: 'Jinsi wateja wanavyokomboa',
       faq: 'Maswali ya mara kwa mara',
       support: 'Msaada',
