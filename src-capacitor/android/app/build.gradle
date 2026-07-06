@@ -1,5 +1,18 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def hasReleaseSigningConfig =
+    keystoreProperties['storeFile'] &&
+    keystoreProperties['storePassword'] &&
+    keystoreProperties['keyAlias'] &&
+    keystoreProperties['keyPassword']
+
 android {
     namespace "app.bitcoincashtopup.android"
     compileSdk rootProject.ext.compileSdkVersion
@@ -24,6 +37,17 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            if (hasReleaseSigningConfig) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
@@ -36,6 +60,13 @@ android {
         }
 
         release {
+            if (!hasReleaseSigningConfig) {
+                throw new GradleException(
+                    "Release signing is not configured. Create src-capacitor/android/keystore.properties with storeFile, storePassword, keyAlias, and keyPassword."
+                )
+            }
+
+            signingConfig signingConfigs.release
             minifyEnabled false
 
             manifestPlaceholders = [
