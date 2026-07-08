@@ -3,6 +3,7 @@ import { del, get, set } from 'idb-keyval';
 
 import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
+import { getCashOutRecords } from 'src/services/cash-out-store';
 import type {
   TreasuryRestoreCheckResult,
   TreasuryRestoreImportResult,
@@ -11,10 +12,14 @@ import type {
   TreasuryWalletBalance,
   TreasuryWalletPublicInfo,
   TreasuryWalletRecord,
+  TreasuryCashOutReceivingAddress,
 } from 'src/types/treasury';
 import { WalletHD } from 'src/utils/wallet-hd';
 
 const TREASURY_WALLET_KEY = 'bch-voucher-treasury-wallet';
+
+const NEXT_TREASURY_CASH_OUT_DERIVATION_INDEX_KEY =
+  'bch-voucher-treasury-next-cash-out-derivation-index';
 
 /**
  * This placeholder Electrum service is only used for address derivation.
@@ -26,9 +31,10 @@ function normalizeMnemonic(mnemonic: string): string {
   return mnemonic.trim().replace(/\s+/g, ' ');
 }
 
-async function deriveTreasuryAddressFromMnemonic(
-  mnemonic: string
-): Promise<string> {
+async function deriveTreasuryWalletAtIndex(
+  mnemonic: string,
+  derivationIndex: number
+) {
   const normalizedMnemonic = normalizeMnemonic(mnemonic);
 
   const walletHd = await WalletHD.fromMnemonic(
@@ -36,22 +42,31 @@ async function deriveTreasuryAddressFromMnemonic(
     DERIVATION_ONLY_ELECTRUM
   );
 
-  const [wallet] = walletHd.deriveWallets(1, 0);
+  const [wallet] = walletHd.deriveWallets(1, derivationIndex);
 
   if (!wallet) {
     throw new Error('Could not derive treasury wallet address.');
   }
 
+  return wallet;
+}
+
+async function deriveTreasuryAddressFromMnemonic(
+  mnemonic: string
+): Promise<string> {
+  const wallet = await deriveTreasuryWalletAtIndex(mnemonic, 0);
+
   return wallet.getAddress();
 }
 
-async function deriveTreasuryWalletWithElectrum(
+async function deriveTreasuryWalletAtIndexWithElectrum(
   mnemonic: string,
+  derivationIndex: number,
   electrum: ElectrumService
 ) {
   const normalizedMnemonic = normalizeMnemonic(mnemonic);
   const walletHd = await WalletHD.fromMnemonic(normalizedMnemonic, electrum);
-  const [wallet] = walletHd.deriveWallets(1, 0);
+  const [wallet] = walletHd.deriveWallets(1, derivationIndex);
 
   if (!wallet) {
     throw new Error('Could not derive treasury wallet.');
@@ -60,13 +75,53 @@ async function deriveTreasuryWalletWithElectrum(
   return wallet;
 }
 
-function mapTreasuryUtxos(unspentOutputs: any[]): TreasuryUtxo[] {
+function mapTreasuryUtxos(
+  unspentOutputs: any[],
+  address: string,
+  derivationIndex: number
+): TreasuryUtxo[] {
   return unspentOutputs.map((utxo) => ({
     outpointTransactionHash:
       utxo.outpointTransactionHash ?? utxo.tx_hash ?? utxo.txHash ?? '',
     outpointIndex: utxo.outpointIndex ?? utxo.tx_pos ?? utxo.vout ?? 0,
     valueSats: Number(utxo.valueSatoshis ?? utxo.value ?? utxo.satoshis ?? 0),
+    address,
+    derivationIndex,
   }));
+}
+
+async function getNextTreasuryCashOutDerivationIndex(): Promise<number> {
+  const existingIndex = await get<number>(
+    NEXT_TREASURY_CASH_OUT_DERIVATION_INDEX_KEY
+  );
+
+  if (typeof existingIndex === 'number' && existingIndex >= 1) {
+    return existingIndex;
+  }
+
+  return 1;
+}
+
+async function incrementNextTreasuryCashOutDerivationIndex(
+  currentIndex: number
+): Promise<void> {
+  await set(NEXT_TREASURY_CASH_OUT_DERIVATION_INDEX_KEY, currentIndex + 1);
+}
+
+async function getKnownTreasuryBalanceDerivationIndexes(): Promise<number[]> {
+  const cashOutRecords = await getCashOutRecords();
+
+  const cashOutIndexes = cashOutRecords
+    .map((record) => record.treasuryReceivingDerivationIndex)
+    .filter((derivationIndex): derivationIndex is number => {
+      return (
+        typeof derivationIndex === 'number' &&
+        Number.isInteger(derivationIndex) &&
+        derivationIndex >= 1
+      );
+    });
+
+  return [...new Set([0, ...cashOutIndexes])].sort((a, b) => a - b);
 }
 
 export async function getTreasuryWalletRecord(): Promise<
@@ -191,6 +246,28 @@ export async function createTreasuryWallet(): Promise<TreasuryWalletPublicInfo> 
   };
 }
 
+export async function deriveNextTreasuryCashOutReceivingAddress(): Promise<TreasuryCashOutReceivingAddress> {
+  const treasuryWallet = await getTreasuryWalletRecord();
+
+  if (!treasuryWallet) {
+    throw new Error('Treasury wallet is not set up.');
+  }
+
+  const derivationIndex = await getNextTreasuryCashOutDerivationIndex();
+  const wallet = await deriveTreasuryWalletAtIndex(
+    treasuryWallet.mnemonic,
+    derivationIndex
+  );
+
+  await incrementNextTreasuryCashOutDerivationIndex(derivationIndex);
+
+  return {
+    treasuryMasterAddress: treasuryWallet.address,
+    address: wallet.getAddress(),
+    derivationIndex,
+  };
+}
+
 export async function getTreasuryWalletBalance(): Promise<TreasuryWalletBalance> {
   const treasuryWallet = await getTreasuryWalletRecord();
 
@@ -201,20 +278,42 @@ export async function getTreasuryWalletBalance(): Promise<TreasuryWalletBalance>
   const electrum = new ElectrumService(ELECTRUM_SERVERS);
   await electrum.start();
 
-  const wallet = await deriveTreasuryWalletWithElectrum(
-    treasuryWallet.mnemonic,
-    electrum
+  const derivationIndexes = await getKnownTreasuryBalanceDerivationIndexes();
+
+  const balances = await Promise.all(
+    derivationIndexes.map(async (derivationIndex) => {
+      const wallet = await deriveTreasuryWalletAtIndexWithElectrum(
+        treasuryWallet.mnemonic,
+        derivationIndex,
+        electrum
+      );
+
+      const address = wallet.getAddress();
+      const unspentOutputs = await wallet.getUnspentOutputs();
+      const utxos = mapTreasuryUtxos(unspentOutputs, address, derivationIndex);
+
+      return {
+        address,
+        derivationIndex,
+        balanceSats: wallet.balance.value,
+        utxos,
+      };
+    })
   );
 
-  const unspentOutputs = await wallet.getUnspentOutputs();
-  const utxos = mapTreasuryUtxos(unspentOutputs);
+  const allUtxos = balances.flatMap((balance) => balance.utxos);
+  const totalBalanceSats = balances.reduce(
+    (total, balance) => total + balance.balanceSats,
+    0
+  );
 
   return {
-    address: wallet.getAddress(),
-    balanceSats: wallet.balance.value,
-    utxoCount: utxos.length,
-    utxos,
+    address: treasuryWallet.address,
+    balanceSats: totalBalanceSats,
+    utxoCount: allUtxos.length,
+    utxos: allUtxos,
     checkedAt: new Date().toISOString(),
+    checkedAddressCount: derivationIndexes.length,
   };
 }
 

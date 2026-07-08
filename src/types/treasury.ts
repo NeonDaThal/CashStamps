@@ -12,6 +12,12 @@ export interface TreasuryWalletPublicInfo {
   isSetup: boolean;
 }
 
+export interface TreasuryCashOutReceivingAddress {
+  treasuryMasterAddress: string;
+  address: string;
+  derivationIndex: number;
+}
+
 export interface TreasuryWalletBackupInfo {
   mnemonic: string;
   address: string;
@@ -36,6 +42,8 @@ export interface TreasuryUtxo {
   outpointTransactionHash: string;
   outpointIndex: number;
   valueSats: number;
+  address?: string;
+  derivationIndex?: number;
 }
 
 export interface TreasuryWalletBalance {
@@ -44,4 +52,12 @@ export interface TreasuryWalletBalance {
   utxoCount: number;
   utxos: TreasuryUtxo[];
   checkedAt: string;
+
+  /**
+   * Number of treasury-derived addresses included in this balance check.
+   *
+   * This includes the main treasury address and any unique cash-out receiving
+   * addresses known from cash-out records.
+   */
+  checkedAddressCount?: number;
 }

@@ -100,7 +100,29 @@ export interface CashOutRecord {
   quote: CashOutQuote;
   fee: CashOutFeeBreakdown;
 
+  /**
+   * Main treasury wallet address at derivation index 0.
+   *
+   * Older cash-out records may not have this because early MVP cash-outs
+   * received directly to the main treasury address.
+   */
+  treasuryMasterAddress?: string;
+
+  /**
+   * Address shown to the customer for this specific cash-out payment.
+   *
+   * New cash-outs use a unique treasury-derived receiving address.
+   */
   treasuryReceivingAddress: string;
+
+  /**
+   * Treasury derivation index for the unique cash-out receiving address.
+   *
+   * Main treasury address remains index 0. Cash-out receiving addresses start
+   * at index 1 so existing treasury wallets are preserved.
+   */
+  treasuryReceivingDerivationIndex?: number;
+
   paymentUri?: string;
 
   paymentDetection?: CashOutPaymentDetection;

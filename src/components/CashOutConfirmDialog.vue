@@ -1,7 +1,7 @@
 <template>
   <q-dialog
     :model-value="modelValue"
-    persistent
+    :persistent="!isPaymentDetected"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <q-card class="confirm-card">
@@ -389,11 +389,19 @@
         :class="[
           'dialog-actions',
           { 'dialog-actions--review': !isPaymentDetected },
+          { 'success-actions': isPaymentDetected },
         ]"
       >
         <q-btn
-          flat
-          class="cancel-review-button"
+          :flat="!isPaymentDetected"
+          :outline="isPaymentDetected"
+          :class="
+            isPaymentDetected
+              ? 'secondary-action-button'
+              : 'cancel-review-button'
+          "
+          :icon="isPaymentDetected ? 'close' : undefined"
+          :color="isPaymentDetected ? 'grey-9' : undefined"
           :label="
             isPaymentDetected
               ? t('common.close')
@@ -1320,6 +1328,27 @@ watch(
 
   .dialog-actions .q-btn {
     width: 100%;
+  }
+  .success-actions {
+    gap: 10px;
+  }
+
+  .secondary-action-button {
+    border-radius: 14px;
+    font-weight: 800;
+    min-height: 44px;
+    padding: 0 18px;
+  }
+
+  @media (max-width: 420px) {
+    .success-actions {
+      align-items: stretch;
+      flex-direction: column-reverse;
+    }
+
+    .success-actions .q-btn {
+      width: 100%;
+    }
   }
 }
 </style>

@@ -252,7 +252,10 @@ import {
   PricingUnavailableError,
 } from 'src/services/pricing-service';
 import { createTreasuryTopUpUri } from 'src/services/treasury-topup-uri';
-import { getTreasuryWalletPublicInfo } from 'src/services/treasury-wallet';
+import {
+  deriveNextTreasuryCashOutReceivingAddress,
+  getTreasuryWalletPublicInfo,
+} from 'src/services/treasury-wallet';
 import {
   BUFFER_RESERVE_BASIS_POINTS,
   MERCHANT_RETAINED_BASIS_POINTS,
@@ -547,8 +550,11 @@ async function handleReviewCashOut(): Promise<void> {
     const now = new Date().toISOString();
     const serial = generateSerial();
 
+    const cashOutReceivingAddress =
+      await deriveNextTreasuryCashOutReceivingAddress();
+
     const paymentUri = createTreasuryTopUpUri({
-      address: treasuryWallet.value.address,
+      address: cashOutReceivingAddress.address,
       amountBch: satsToBchAmount(pricing.bchSatsRequired),
       label: t('cashOutPage.paymentUri.label'),
       message: serial,
@@ -582,7 +588,9 @@ async function handleReviewCashOut(): Promise<void> {
 
       fee: pricing.fee,
 
-      treasuryReceivingAddress: treasuryWallet.value.address,
+      treasuryMasterAddress: cashOutReceivingAddress.treasuryMasterAddress,
+      treasuryReceivingAddress: cashOutReceivingAddress.address,
+      treasuryReceivingDerivationIndex: cashOutReceivingAddress.derivationIndex,
       paymentUri: paymentUri.uri,
 
       status: 'awaiting_payment',
