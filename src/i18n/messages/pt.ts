@@ -794,6 +794,8 @@ const pt = {
       treasuryWallet: 'Carteira de tesouraria',
       printerSetup: 'Configurar impressora',
       appSettings: 'Definições da app',
+      checkForUpdates: 'Check for Updates',
+      checkForUpdatesCaption: 'App version and download status',
       howToSellVoucher: 'Como vender uma recarga',
       howToCashOut: 'How to Cash-out',
       howCustomersRedeem: 'Como os clientes resgatam',
@@ -805,6 +807,33 @@ const pt = {
     },
     common: {
       comingSoon: 'Em breve',
+    },
+    update: {
+      checking: 'Checking for updates...',
+      upToDateTitle: 'You are up to date',
+      upToDateMessage: 'This device is running the latest public release.',
+      updateAvailableTitle: 'Update available',
+      updateAvailableMessage:
+        'A newer Bitcoin Cash Topup release is ready to download.',
+      installedNewerTitle: 'Newer test build installed',
+      installedNewerMessage:
+        'This device is running a newer local/test build than the latest public release.',
+      unsupportedTitle: 'Update channel mismatch',
+      unsupportedMessage:
+        'This update channel is for the public BCH Topups Android release app.',
+      failedTitle: 'Could not check for updates',
+      failedMessage: 'Check your internet connection and try again.',
+      installedVersion: 'Installed version',
+      latestVersion: 'Latest public version',
+      versionCode: 'Version code {code}',
+      releaseNotes: 'Release notes',
+      safetyTitle: 'Before updating',
+      safetyMessage:
+        'This is a non-production alpha release. Back up important wallet recovery information before updating or reinstalling.',
+      verificationHash: 'Verification SHA-256',
+      openReleasePage: 'Open Download Page',
+      openFailed: 'Could not open the download page.',
+      close: 'Close',
     },
   },
 

@@ -244,6 +244,27 @@
             </q-item-section>
           </q-item>
 
+          <q-item
+            clickable
+            class="update-check-item"
+            :disable="isCheckingForUpdates"
+            @click="handleCheckForUpdates"
+          >
+            <q-item-section avatar>
+              <q-icon name="system_update" />
+            </q-item-section>
+
+            <q-item-section>
+              <q-item-label>
+                {{ t('layout.items.checkForUpdates') }}
+              </q-item-label>
+            </q-item-section>
+
+            <q-item-section v-if="isCheckingForUpdates" side>
+              <q-spinner size="18px" />
+            </q-item-section>
+          </q-item>
+
           <q-separator spaced />
 
           <q-item-label header>{{ t('layout.sections.help') }}</q-item-label>
@@ -361,6 +382,114 @@
       </div>
     </q-drawer>
 
+    <q-dialog v-model="isUpdateDialogOpen">
+      <q-card class="update-dialog-card">
+        <q-card-section
+          class="update-dialog-hero"
+          :class="updateDialogToneClass"
+        >
+          <div class="update-dialog-icon">
+            <q-icon :name="updateDialogIcon" />
+          </div>
+
+          <div class="update-dialog-copy">
+            <div class="update-dialog-title">
+              {{ updateDialogTitle }}
+            </div>
+            <div class="update-dialog-subtitle">
+              {{ updateDialogMessage }}
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section class="update-dialog-body">
+          <div class="update-version-grid">
+            <div class="update-version-card">
+              <div class="update-version-label">
+                {{ t('layout.update.installedVersion') }}
+              </div>
+              <div class="update-version-value">
+                {{ updateCheckResult?.installed.versionName ?? '—' }}
+              </div>
+              <div class="update-version-code">
+                {{
+                  t('layout.update.versionCode', {
+                    code: updateCheckResult?.installed.versionCode ?? '—',
+                  })
+                }}
+              </div>
+            </div>
+
+            <div class="update-version-card">
+              <div class="update-version-label">
+                {{ t('layout.update.latestVersion') }}
+              </div>
+              <div class="update-version-value">
+                {{ updateCheckResult?.latest?.versionName ?? '—' }}
+              </div>
+              <div class="update-version-code">
+                {{
+                  t('layout.update.versionCode', {
+                    code: updateCheckResult?.latest?.versionCode ?? '—',
+                  })
+                }}
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-if="latestReleaseNotes.length > 0"
+            class="update-release-notes"
+          >
+            <div class="update-section-title">
+              {{ t('layout.update.releaseNotes') }}
+            </div>
+
+            <ul>
+              <li
+                v-for="(releaseNote, releaseNoteIndex) in latestReleaseNotes"
+                :key="`${releaseNoteIndex}-${releaseNote}`"
+              >
+                {{ releaseNote }}
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="showUpdateSafetyNotice" class="update-safety-notice">
+            <div class="update-section-title">
+              {{ t('layout.update.safetyTitle') }}
+            </div>
+            <div>
+              {{ t('layout.update.safetyMessage') }}
+            </div>
+          </div>
+
+          <div
+            v-if="updateCheckResult?.latest?.apkSha256"
+            class="update-hash-box"
+          >
+            <div class="update-section-title">
+              {{ t('layout.update.verificationHash') }}
+            </div>
+            <code>{{ updateCheckResult.latest.apkSha256 }}</code>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="update-dialog-actions">
+          <q-btn flat rounded :label="t('layout.update.close')" v-close-popup />
+
+          <q-btn
+            v-if="canOpenUpdateReleasePage"
+            unelevated
+            rounded
+            class="update-primary-action"
+            :label="t('layout.update.openReleasePage')"
+            @click="handleOpenUpdateReleasePage"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-page-container>
       <router-view v-slot="{ Component }">
         <transition appear enter-active-class="animated fadeIn">
@@ -377,9 +506,13 @@
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useQuasar } from 'quasar';
+import { openURL, useQuasar } from 'quasar';
 import type { SupportedLocale } from '../i18n';
 import { saveStoredLocale } from '../i18n/locale-storage';
+import {
+  checkForAppUpdate,
+  type AppUpdateCheckResult,
+} from '../services/app-update';
 
 type SupportedCurrency = 'GBP' | 'USD' | 'EUR';
 
@@ -416,6 +549,9 @@ const { locale, t } = useI18n({ useScope: 'global' });
 const $q = useQuasar();
 
 const isDrawerOpen = ref(false);
+const isCheckingForUpdates = ref(false);
+const isUpdateDialogOpen = ref(false);
+const updateCheckResult = ref<AppUpdateCheckResult | null>(null);
 
 function readStoredCurrency(): SupportedCurrency {
   if (typeof window === 'undefined') {
@@ -480,6 +616,105 @@ const localeShortLabel = computed((): string => {
   return 'EN';
 });
 
+const updateDialogTitle = computed((): string => {
+  const status = updateCheckResult.value?.status;
+
+  if (status === 'update_available') {
+    return t('layout.update.updateAvailableTitle');
+  }
+
+  if (status === 'installed_newer_than_public') {
+    return t('layout.update.installedNewerTitle');
+  }
+
+  if (status === 'unsupported_platform' || status === 'package_mismatch') {
+    return t('layout.update.unsupportedTitle');
+  }
+
+  if (status === 'check_failed') {
+    return t('layout.update.failedTitle');
+  }
+
+  return t('layout.update.upToDateTitle');
+});
+
+const updateDialogMessage = computed((): string => {
+  const status = updateCheckResult.value?.status;
+
+  if (status === 'update_available') {
+    return t('layout.update.updateAvailableMessage');
+  }
+
+  if (status === 'installed_newer_than_public') {
+    return t('layout.update.installedNewerMessage');
+  }
+
+  if (status === 'unsupported_platform' || status === 'package_mismatch') {
+    return t('layout.update.unsupportedMessage');
+  }
+
+  if (status === 'check_failed') {
+    return t('layout.update.failedMessage');
+  }
+
+  return t('layout.update.upToDateMessage');
+});
+
+const updateDialogIcon = computed((): string => {
+  const status = updateCheckResult.value?.status;
+
+  if (status === 'update_available') {
+    return 'system_update';
+  }
+
+  if (status === 'installed_newer_than_public') {
+    return 'science';
+  }
+
+  if (status === 'check_failed') {
+    return 'wifi_off';
+  }
+
+  if (status === 'unsupported_platform' || status === 'package_mismatch') {
+    return 'info';
+  }
+
+  return 'check_circle';
+});
+
+const updateDialogToneClass = computed((): string => {
+  const status = updateCheckResult.value?.status;
+
+  if (status === 'update_available') {
+    return 'update-dialog-available';
+  }
+
+  if (status === 'check_failed') {
+    return 'update-dialog-error';
+  }
+
+  if (status === 'installed_newer_than_public') {
+    return 'update-dialog-test';
+  }
+
+  return 'update-dialog-ok';
+});
+
+const latestReleaseNotes = computed((): string[] => {
+  return updateCheckResult.value?.latest?.releaseNotes ?? [];
+});
+
+const canOpenUpdateReleasePage = computed((): boolean => {
+  return (
+    updateCheckResult.value?.status === 'update_available' &&
+    Boolean(updateCheckResult.value.latest?.releasePageUrl)
+  );
+});
+
+const showUpdateSafetyNotice = computed((): boolean => {
+  return updateCheckResult.value?.status === 'update_available';
+});
+
 const setLocale = (newLocale: SupportedLocale) => {
   locale.value = newLocale;
   saveStoredLocale(newLocale);
@@ -495,6 +730,44 @@ const setCurrency = (newCurrency: SupportedCurrency) => {
 
 function closeDrawer(): void {
   isDrawerOpen.value = false;
+}
+
+async function handleCheckForUpdates(): Promise<void> {
+  if (isCheckingForUpdates.value) {
+    return;
+  }
+
+  closeDrawer();
+  isCheckingForUpdates.value = true;
+
+  $q.loading.show({
+    message: t('layout.update.checking'),
+  });
+
+  try {
+    updateCheckResult.value = await checkForAppUpdate();
+    isUpdateDialogOpen.value = true;
+  } finally {
+    isCheckingForUpdates.value = false;
+    $q.loading.hide();
+  }
+}
+
+function handleOpenUpdateReleasePage(): void {
+  const releasePageUrl = updateCheckResult.value?.latest?.releasePageUrl;
+
+  if (!releasePageUrl) {
+    return;
+  }
+
+  try {
+    openURL(releasePageUrl);
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: t('layout.update.openFailed'),
+    });
+  }
 }
 </script>
 
@@ -748,6 +1021,183 @@ function closeDrawer(): void {
   opacity: 0.62;
 }
 
+.update-check-item {
+  border: 1px solid rgba(0, 206, 27, 0.18);
+}
+
+.update-check-item :deep(.q-icon) {
+  color: #00a816;
+}
+
+.update-dialog-card {
+  border-radius: 26px;
+  max-width: 430px;
+  overflow: hidden;
+  width: calc(100vw - 32px);
+}
+
+.update-dialog-hero {
+  align-items: center;
+  color: #111111;
+  display: flex;
+  gap: 14px;
+  padding: 20px;
+}
+
+.update-dialog-ok {
+  background: linear-gradient(135deg, #e9f8eb, #ffffff);
+}
+
+.update-dialog-available {
+  background: linear-gradient(135deg, #00ce1b, #cfffda);
+}
+
+.update-dialog-error {
+  background: linear-gradient(135deg, #fff1f1, #ffffff);
+}
+
+.update-dialog-test {
+  background: linear-gradient(135deg, #eef3ff, #ffffff);
+}
+
+.update-dialog-icon {
+  align-items: center;
+  background: #111111;
+  border-radius: 18px;
+  color: #ffffff;
+  display: flex;
+  flex: 0 0 48px;
+  font-size: 26px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.update-dialog-copy {
+  min-width: 0;
+}
+
+.update-dialog-title {
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+
+.update-dialog-subtitle {
+  color: #444444;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 5px;
+}
+
+.update-dialog-body {
+  padding: 18px 20px 4px;
+}
+
+.update-version-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.update-version-card {
+  background: #f7f8f7;
+  border: 1px solid #e2e2e2;
+  border-radius: 18px;
+  padding: 12px;
+}
+
+.update-version-label {
+  color: #666666;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.update-version-value {
+  color: #111111;
+  font-size: 14px;
+  font-weight: 950;
+  margin-top: 5px;
+  word-break: break-word;
+}
+
+.update-version-code {
+  color: #666666;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 3px;
+}
+
+.update-release-notes,
+.update-safety-notice,
+.update-hash-box {
+  border-radius: 18px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.update-release-notes {
+  background: #f7f8f7;
+  border: 1px solid #e2e2e2;
+}
+
+.update-release-notes ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.update-release-notes li {
+  color: #333333;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 5px;
+}
+
+.update-safety-notice {
+  background: rgba(0, 206, 27, 0.1);
+  border: 1px solid rgba(0, 206, 27, 0.24);
+  color: #222222;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.update-hash-box {
+  background: #111111;
+  color: #ffffff;
+}
+
+.update-hash-box code {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 7px;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.update-section-title {
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.update-dialog-actions {
+  padding: 12px 16px 18px;
+}
+
+.update-primary-action {
+  background: #111111;
+  color: #ffffff;
+  font-weight: 900;
+}
+
 @media (max-width: 430px) {
   .brand-title {
     font-size: 15px;
@@ -762,6 +1212,10 @@ function closeDrawer(): void {
     flex-basis: 38px;
     height: 38px;
     width: 38px;
+  }
+
+  .update-version-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
