@@ -21,8 +21,8 @@ android {
         applicationId "app.bitcoincashtopup.android"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "0.1.0-alpha"
+        versionCode 5
+        versionName "0.1.1-alpha"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         manifestPlaceholders = [
