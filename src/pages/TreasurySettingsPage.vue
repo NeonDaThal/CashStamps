@@ -266,6 +266,22 @@
             />
           </div>
 
+          <div
+            v-if="
+              !cashOnHandState.isSetUp && cashOnHandState.movements.length > 0
+            "
+            class="cash-on-hand-link-row cash-on-hand-link-row--standalone"
+          >
+            <q-btn
+              flat
+              icon="receipt_long"
+              class="cash-on-hand-transactions-link"
+              :label="t('treasuryPage.cashOnHand.transactions.link')"
+              no-caps
+              @click="openCashOnHandTransactionsDialog"
+            />
+          </div>
+
           <section v-else class="cash-on-hand-snapshot q-mt-md">
             <div class="cash-balance-panel">
               <div class="cash-balance-top">
@@ -342,11 +358,21 @@
               </div>
             </div>
 
-            <div class="cash-on-hand-clear-row">
+            <div class="cash-on-hand-link-row">
+              <q-btn
+                flat
+                icon="receipt_long"
+                class="cash-on-hand-transactions-link"
+                :label="t('treasuryPage.cashOnHand.transactions.link')"
+                no-caps
+                @click="openCashOnHandTransactionsDialog"
+              />
+
               <q-btn
                 flat
                 color="negative"
                 icon="delete_sweep"
+                class="cash-on-hand-clear-link"
                 :label="t('treasuryPage.cashOnHand.actions.clear')"
                 no-caps
                 @click="showClearCashOnHandDialog = true"
@@ -1102,6 +1128,12 @@
         </q-card>
       </q-dialog>
 
+      <CashOnHandTransactionsDialog
+        v-model="showCashOnHandTransactionsDialog"
+        :cash-on-hand-state="cashOnHandState"
+        :bch-logo-url="bchLogoUrl"
+      />
+
       <q-dialog v-model="cashOnHandDialogVisible">
         <q-card class="cash-on-hand-dialog-card">
           <q-card-section>
@@ -1250,6 +1282,7 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
 import TreasuryTopUpQrCard from 'src/components/TreasuryTopUpQrCard.vue';
+import CashOnHandTransactionsDialog from 'src/components/CashOnHandTransactionsDialog.vue';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import type { CashOnHandState } from 'src/types/cash-on-hand';
@@ -1323,6 +1356,7 @@ const cashOnHandDialogMode = ref<CashOnHandDialogMode | null>(null);
 const cashOnHandAmountInput = ref('');
 const cashOnHandNoteInput = ref('');
 const showClearCashOnHandDialog = ref(false);
+const showCashOnHandTransactionsDialog = ref(false);
 const showTreasuryTopUpDialog = ref(false);
 const showTreasurySendDialog = ref(false);
 const treasurySendStep = ref<TreasurySendStep>('form');
@@ -2171,6 +2205,15 @@ function openCashOnHandDialog(mode: CashOnHandDialogMode): void {
   cashOnHandNoteInput.value = '';
 }
 
+async function openCashOnHandTransactionsDialog(): Promise<void> {
+  successMessage.value = '';
+  errorMessage.value = '';
+
+  await loadCashOnHand();
+
+  showCashOnHandTransactionsDialog.value = true;
+}
+
 function resetCashOnHandDialog(): void {
   cashOnHandDialogMode.value = null;
   cashOnHandAmountInput.value = '';
@@ -2897,15 +2940,31 @@ h1 {
   min-height: 46px;
 }
 
-.cash-on-hand-clear-row {
+.cash-on-hand-link-row {
+  align-items: center;
   display: flex;
-  justify-content: flex-end;
+  gap: 8px;
+  justify-content: space-between;
 }
 
-.cash-on-hand-clear-row .q-btn {
+.cash-on-hand-link-row--standalone {
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.cash-on-hand-transactions-link,
+.cash-on-hand-clear-link {
   border-radius: 999px;
   font-size: 13px;
   font-weight: 800;
+}
+
+.cash-on-hand-transactions-link {
+  color: #0c5f17;
+}
+
+.cash-on-hand-transactions-link :deep(.q-icon) {
+  color: #00a816;
 }
 
 .cash-on-hand-dialog-card {
