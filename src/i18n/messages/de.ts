@@ -497,6 +497,12 @@ const de = {
       sendFundsTitle: 'Send BCH',
       sendFundsSubtitle:
         'Send BCH from the Treasury Wallet to another BCH address.',
+      scanQr: 'Scan QR',
+      uploadQr: 'Upload QR',
+      scannerTitle: 'Scan recipient QR',
+      scannerSubtitle:
+        'Point the camera at a BCH address or payment QR. Scanning happens locally on this device.',
+      copied: 'Copied.',
       sendFundsInstruction:
         'Paste a BCH receiving address or payment URI, enter the fiat amount, then review before sending.',
       sendAddressLabel: 'Receiving address or payment URI',
@@ -530,6 +536,9 @@ const de = {
         couldNotCreateDraft: 'Could not prepare this treasury send.',
         broadcastFailed:
           'Treasury send failed. Check the details and try again.',
+        noQrValue: 'No QR value was found.',
+        qrScanFailed: 'Could not scan QR code.',
+        qrUploadFailed: 'Could not read QR code from this image.',
       },
       sendFundsPlaceholder:
         'The send flow will be added in the next step. This button is placed here now so the Treasury Wallet tools are in their final position before wiring live spending.',

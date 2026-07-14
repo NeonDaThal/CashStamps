@@ -615,15 +615,23 @@
               </div>
             </div>
 
-            <q-btn
-              flat
-              dense
-              round
-              icon="close"
-              class="treasury-send-close-button"
-              :aria-label="t('common.close')"
-              @click="closeTreasurySendDialog"
-            />
+            <div class="treasury-send-header-actions">
+              <TreasurySendQrTools
+                v-if="treasurySendStep === 'form'"
+                @scanned="handleTreasurySendQrResult"
+                @error="handleTreasurySendQrError"
+              />
+
+              <q-btn
+                flat
+                dense
+                round
+                icon="close"
+                class="treasury-send-close-button"
+                :aria-label="t('common.close')"
+                @click="closeTreasurySendDialog"
+              />
+            </div>
           </q-card-section>
 
           <q-card-section class="treasury-send-body">
@@ -1283,6 +1291,7 @@ import { useI18n } from 'vue-i18n';
 
 import TreasuryTopUpQrCard from 'src/components/TreasuryTopUpQrCard.vue';
 import CashOnHandTransactionsDialog from 'src/components/CashOnHandTransactionsDialog.vue';
+import TreasurySendQrTools from 'src/components/TreasurySendQrTools.vue';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import type { CashOnHandState } from 'src/types/cash-on-hand';
@@ -1854,71 +1863,6 @@ function handleHideTreasuryBackup(): void {
   successMessage.value = t('treasuryPage.messages.seedBackupHidden');
 }
 
-async function handleCheckRestoreMnemonic(): Promise<void> {
-  successMessage.value = '';
-  errorMessage.value = '';
-  restoreCheck.value = null;
-  restoreImportResult.value = null;
-  isCheckingRestore.value = true;
-
-  try {
-    restoreCheck.value = await checkTreasuryRestoreMnemonic(
-      restoreMnemonicInput.value
-    );
-
-    successMessage.value = t('treasuryPage.messages.restoreSeedCheckCompleted');
-  } catch (error) {
-    console.error(error);
-    errorMessage.value =
-      error instanceof Error
-        ? error.message
-        : t('treasuryPage.messages.couldNotCheckRestoreSeed');
-  } finally {
-    isCheckingRestore.value = false;
-  }
-}
-
-async function handleImportCheckedRestoreMnemonic(): Promise<void> {
-  successMessage.value = '';
-  errorMessage.value = '';
-
-  if (!restoreCheck.value) {
-    errorMessage.value = t('treasuryPage.messages.checkSeedBeforeImporting');
-    return;
-  }
-
-  isImportingRestore.value = true;
-
-  try {
-    restoreImportResult.value = await importTreasuryWalletFromMnemonic(
-      restoreCheck.value.mnemonic
-    );
-
-    treasuryBalance.value = null;
-    treasuryBalanceMarketRate.value = null;
-    treasuryBackup.value = null;
-
-    await loadTreasuryWallet();
-
-    successMessage.value = t('treasuryPage.messages.importedCheckedSeed');
-  } catch (error) {
-    console.error(error);
-    errorMessage.value =
-      error instanceof Error
-        ? error.message
-        : t('treasuryPage.messages.couldNotImportSeed');
-  } finally {
-    isImportingRestore.value = false;
-  }
-}
-
-function handleClearRestoreCheck(): void {
-  restoreCheck.value = null;
-  restoreImportResult.value = null;
-  restoreMnemonicInput.value = '';
-  successMessage.value = t('treasuryPage.messages.restoreToolCleared');
-}
-
 function openWalletBackupDialog(): void {
   successMessage.value = '';
   errorMessage.value = '';
@@ -2050,6 +1994,31 @@ function handleUseTreasurySendMax(): void {
   treasurySendAmountInput.value = formatSatsAsFiatInput(
     treasuryBalance.value.balanceSats
   );
+}
+
+function handleTreasurySendQrResult(value: string): void {
+  const scannedValue = value.trim();
+
+  if (!scannedValue) {
+    treasurySendErrorMessage.value = t(
+      'treasuryPage.walletTools.errors.noQrValue'
+    );
+    return;
+  }
+
+  treasurySendErrorMessage.value = '';
+  treasurySendUseMax.value = false;
+  treasurySendInput.value = scannedValue;
+  applyPaymentUriAmountIfPresent();
+}
+
+function handleTreasurySendQrError(message: string): void {
+  treasurySendErrorMessage.value = message;
+
+  $q.notify({
+    type: 'negative',
+    message,
+  });
 }
 
 async function handleReviewTreasurySend(): Promise<void> {
@@ -3135,6 +3104,13 @@ h1 {
   display: flex;
   gap: 14px;
   min-width: 0;
+}
+
+.treasury-send-header-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
 }
 
 .treasury-send-close-button {
