@@ -572,9 +572,10 @@ const en = {
         setupSubtitle:
           'Enter the starting physical cash amount currently available.',
         addTitle: 'Add cash',
-        addSubtitle: 'Record extra physical cash added to the shop drawer.',
+        addSubtitle: 'Record extra physical cash added to your cash holding.',
         withdrawTitle: 'Withdraw cash',
-        withdrawSubtitle: 'Record physical cash removed from the shop drawer.',
+        withdrawSubtitle:
+          'Record physical cash removed from your cash holding.',
         currentCash: 'Current Cash on Hand',
         enteredAmount: 'Entered amount',
         newCash: 'New Cash on Hand',

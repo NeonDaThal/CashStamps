@@ -1142,97 +1142,29 @@
         :bch-logo-url="bchLogoUrl"
       />
 
-      <q-dialog v-model="cashOnHandDialogVisible">
-        <q-card class="cash-on-hand-dialog-card">
-          <q-card-section>
-            <div class="text-h6">{{ cashOnHandDialogTitle }}</div>
-            <p class="text-grey-7 q-mb-none">
-              {{ cashOnHandDialogSubtitle }}
-            </p>
-          </q-card-section>
-
-          <q-card-section class="q-pt-none">
-            <q-list bordered separator class="cash-on-hand-dialog-summary">
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption>
-                    {{ t('treasuryPage.cashOnHand.dialog.currentCash') }}
-                  </q-item-label>
-                  <q-item-label>{{
-                    cashOnHandDialogCurrentDisplay
-                  }}</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption>
-                    {{ t('treasuryPage.cashOnHand.dialog.enteredAmount') }}
-                  </q-item-label>
-                  <q-item-label>{{
-                    cashOnHandDialogAmountDisplay
-                  }}</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption>
-                    {{ t('treasuryPage.cashOnHand.dialog.newCash') }}
-                  </q-item-label>
-                  <q-item-label class="text-weight-bold">
-                    {{ cashOnHandDialogNewDisplay }}
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-
-            <q-input
-              v-model="cashOnHandAmountInput"
-              type="number"
-              inputmode="decimal"
-              min="0"
-              step="0.01"
-              :label="cashOnHandAmountLabel"
-              :prefix="cashOnHandCurrencyPrefix"
-              outlined
-              class="q-mt-md"
-              :error="showCashOnHandAmountError"
-              :error-message="cashOnHandAmountErrorMessage"
-              @keyup.enter="handleSaveCashOnHandDialog"
-            />
-
-            <q-input
-              v-model="cashOnHandNoteInput"
-              :label="t('treasuryPage.cashOnHand.dialog.noteOptional')"
-              outlined
-              class="q-mt-md"
-            />
-          </q-card-section>
-
-          <q-separator />
-
-          <q-card-actions align="right" class="card-actions">
-            <q-btn
-              flat
-              color="grey-8"
-              :label="t('common.cancel')"
-              no-caps
-              @click="resetCashOnHandDialog"
-            />
-
-            <q-btn
-              class="cash-on-hand-primary-button"
-              :label="cashOnHandDialogActionLabel"
-              :disable="!isCashOnHandAmountValid"
-              :loading="isCashOnHandSubmitting"
-              unelevated
-              no-caps
-              @click="handleSaveCashOnHandDialog"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
+      <CashOnHandMovementDialog
+        v-model="cashOnHandDialogVisible"
+        v-model:amount-input="cashOnHandAmountInput"
+        :action-type="cashOnHandDialogActionType"
+        :title="cashOnHandDialogTitle"
+        :subtitle="cashOnHandDialogSubtitle"
+        :amount-label="cashOnHandAmountLabel"
+        :currency-prefix="cashOnHandCurrencyPrefix"
+        :current-display="cashOnHandDialogCurrentDisplay"
+        :entered-display="cashOnHandDialogAmountDisplay"
+        :new-display="cashOnHandDialogNewDisplay"
+        :current-label="t('treasuryPage.cashOnHand.dialog.currentCash')"
+        :entered-label="t('treasuryPage.cashOnHand.dialog.enteredAmount')"
+        :new-label="t('treasuryPage.cashOnHand.dialog.newCash')"
+        :cancel-label="t('common.cancel')"
+        :save-label="cashOnHandDialogActionLabel"
+        :is-amount-valid="isCashOnHandAmountValid"
+        :show-amount-error="showCashOnHandAmountError"
+        :amount-error-message="cashOnHandAmountErrorMessage"
+        :is-submitting="isCashOnHandSubmitting"
+        @cancel="resetCashOnHandDialog"
+        @save="handleSaveCashOnHandDialog"
+      />
 
       <q-dialog v-model="showClearCashOnHandDialog">
         <q-card class="cash-on-hand-dialog-card">
@@ -1291,6 +1223,7 @@ import { useI18n } from 'vue-i18n';
 
 import TreasuryTopUpQrCard from 'src/components/TreasuryTopUpQrCard.vue';
 import CashOnHandTransactionsDialog from 'src/components/CashOnHandTransactionsDialog.vue';
+import CashOnHandMovementDialog from 'src/components/CashOnHandMovementDialog.vue';
 import TreasurySendQrTools from 'src/components/TreasurySendQrTools.vue';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
@@ -1692,6 +1625,10 @@ const cashOnHandDialogActionLabel = computed(() => {
 
   return t('treasuryPage.cashOnHand.actions.saveAdd');
 });
+
+const cashOnHandDialogActionType = computed(
+  () => cashOnHandDialogMode.value ?? 'add'
+);
 
 const cashOnHandDialogCurrentDisplay = computed(() => {
   if (cashOnHandDialogMode.value === 'setup') {
