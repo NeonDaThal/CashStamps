@@ -234,9 +234,9 @@ function handleSave(): void {
 }
 
 .cash-movement-dialog-card--setup .cash-movement-icon {
-  background: #fff8eb;
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  color: #8a4b00;
+  background: #ffffff;
+  border: 3px solid #00ce1b;
+  color: #00ce1b;
 }
 
 .cash-movement-heading-copy {
@@ -517,7 +517,7 @@ function handleSave(): void {
   }
 
   .cash-movement-amount-input :deep(.q-field__prefix) {
-    transform: translateY(-1px);
+    transform: translateY(-2.5px);
   }
 
   .cash-movement-breakdown-header {
