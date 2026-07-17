@@ -1031,6 +1031,9 @@ const sw = {
     printPreview: {
       title: 'Print Preview',
       subtitle: 'A4 merchant report preview',
+      pdfTitle: 'Export PDF',
+      pdfSubtitle: 'Save this A4 merchant report as a PDF.',
+      savePdf: 'Save as PDF',
       close: 'Close',
       print: 'Print',
       reportTitle: 'Merchant Report',

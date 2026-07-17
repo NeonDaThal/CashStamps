@@ -467,6 +467,7 @@
 
       <MerchantReportPrintPreview
         v-model="isPrintPreviewOpen"
+        :mode="printPreviewMode"
         :report="report"
         :current-period-label="currentPeriodLabel"
         :generated-at-label="generatedAtLabel"
@@ -510,6 +511,8 @@ import type { MerchantReportPrintMovementTracker } from 'src/components/Merchant
 const SATS_PER_BCH = 100_000_000;
 const DEFAULT_CURRENCY = 'GBP';
 
+type PrintPreviewMode = 'print' | 'pdf';
+
 interface SummaryCard {
   key: string;
   icon: string;
@@ -535,6 +538,7 @@ const report = ref<MerchantReport | null>(null);
 const isLoading = ref(false);
 const errorMessage = ref('');
 const isPrintPreviewOpen = ref(false);
+const printPreviewMode = ref<PrintPreviewMode>('print');
 
 const rangeOptions = computed(() => [
   {
@@ -809,7 +813,7 @@ const reportActions = computed<ReportAction[]>(() => [
     key: 'pdf',
     icon: 'picture_as_pdf',
     label: t('merchantReportsPage.actions.exportPdf'),
-    disabled: true,
+    disabled: false,
   },
   {
     key: 'image',
@@ -842,11 +846,16 @@ async function loadReport(): Promise<void> {
 async function handleReportAction(
   actionKey: ReportAction['key']
 ): Promise<void> {
-  if (actionKey !== 'print') {
+  if (actionKey === 'print') {
+    printPreviewMode.value = 'print';
+    await openPrintPreview();
     return;
   }
 
-  await openPrintPreview();
+  if (actionKey === 'pdf') {
+    printPreviewMode.value = 'pdf';
+    await openPrintPreview();
+  }
 }
 
 async function openPrintPreview(): Promise<void> {

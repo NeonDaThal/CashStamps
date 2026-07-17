@@ -4,10 +4,10 @@
       <div class="print-preview-toolbar no-print">
         <div>
           <div class="print-preview-title">
-            {{ t('merchantReportsPage.printPreview.title') }}
+            {{ previewTitle }}
           </div>
           <div class="print-preview-subtitle">
-            {{ t('merchantReportsPage.printPreview.subtitle') }}
+            {{ previewSubtitle }}
           </div>
         </div>
 
@@ -25,7 +25,7 @@
             no-caps
             icon="print"
             class="primary-button"
-            :label="t('merchantReportsPage.printPreview.print')"
+            :label="primaryActionLabel"
             @click="handlePrintPreview"
           />
         </div>
@@ -36,7 +36,11 @@
           <article class="report-print-document">
             <header class="print-header">
               <div class="print-brand-row">
-                <div class="print-brand-mark">BCH</div>
+                <img
+                  :src="printLogoSrc"
+                  alt="Bitcoin Cash Topups"
+                  class="print-brand-logo"
+                />
 
                 <div>
                   <div class="print-brand-title">Bitcoin Cash Topups</div>
@@ -259,7 +263,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   isAndroidReportPrinterAvailable,
@@ -270,6 +274,8 @@ import type {
   MerchantReport,
   MerchantReportCurrencyTotals,
 } from 'src/types/merchant-reports';
+
+import appIconUrl from 'src/assets/bch-logo.png';
 
 const SATS_PER_BCH = 100_000_000;
 
@@ -292,6 +298,7 @@ export interface MerchantReportPrintMovementTracker {
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
+    mode: 'print' | 'pdf';
     report: MerchantReport | null;
     currentPeriodLabel: string;
     generatedAtLabel: string;
@@ -301,6 +308,7 @@ const props = withDefaults(
   }>(),
   {
     modelValue: false,
+    mode: 'print',
     report: null,
     currentPeriodLabel: '',
     generatedAtLabel: '',
@@ -330,6 +338,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n({ useScope: 'global' });
 
+const printLogoDataUrl = ref('');
+
 const isDialogOpen = computed({
   get: () => props.modelValue,
   set: (value: boolean) => {
@@ -337,11 +347,38 @@ const isDialogOpen = computed({
   },
 });
 
+const printLogoSrc = computed(() => {
+  return printLogoDataUrl.value || appIconUrl;
+});
+
+const previewTitle = computed(() => {
+  return props.mode === 'pdf'
+    ? t('merchantReportsPage.printPreview.pdfTitle')
+    : t('merchantReportsPage.printPreview.title');
+});
+
+const previewSubtitle = computed(() => {
+  return props.mode === 'pdf'
+    ? t('merchantReportsPage.printPreview.pdfSubtitle')
+    : t('merchantReportsPage.printPreview.subtitle');
+});
+
+const primaryActionLabel = computed(() => {
+  return props.mode === 'pdf'
+    ? t('merchantReportsPage.printPreview.savePdf')
+    : t('merchantReportsPage.printPreview.print');
+});
+
 async function handlePrintPreview(): Promise<void> {
   const originalTitle = document.title;
-  const reportTitle = 'Bitcoin Cash Topups Merchant Report';
+  const reportTitle =
+    props.mode === 'pdf'
+      ? 'Bitcoin Cash Topups Merchant Report PDF'
+      : 'Bitcoin Cash Topups Merchant Report';
 
   document.title = reportTitle;
+
+  await ensurePrintLogoDataUrl();
 
   if (isAndroidReportPrinterAvailable()) {
     const reportElement = document.querySelector('.report-print-document');
@@ -371,6 +408,33 @@ async function handlePrintPreview(): Promise<void> {
       document.title = originalTitle;
     }, 500);
   }, 100);
+}
+
+async function ensurePrintLogoDataUrl(): Promise<void> {
+  if (printLogoDataUrl.value) {
+    return;
+  }
+
+  try {
+    const response = await fetch(appIconUrl);
+    const blob = await response.blob();
+
+    printLogoDataUrl.value = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        resolve(typeof reader.result === 'string' ? reader.result : '');
+      };
+
+      reader.onerror = () => {
+        reject(reader.error);
+      };
+
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Could not prepare report logo for printing.', error);
+  }
 }
 
 function buildAndroidReportPrintHtml(reportHtml: string): string {
@@ -428,19 +492,15 @@ body {
   gap: 12px;
 }
 
-.print-brand-mark {
-  align-items: center;
-  background: #ffffff;
-  border: 2px solid #00ce1b;
-  border-radius: 16px;
-  color: #00a816;
-  display: flex;
-  flex: 0 0 56px;
-  font-size: 20px;
-  font-weight: 900;
-  height: 56px;
-  justify-content: center;
-  width: 56px;
+.print-brand-logo {
+  display: block;
+  flex: 0 0 auto;
+  height: auto;
+  max-height: 52px;
+  max-width: 52px;
+  object-fit: contain;
+  width: auto;
+  margin-right: 10px;
 }
 
 .print-brand-title {
@@ -802,19 +862,15 @@ function formatBchSats(sats: number): string {
   gap: 12px;
 }
 
-.print-brand-mark {
-  align-items: center;
-  background: #ffffff;
-  border: 2px solid #00ce1b;
-  border-radius: 16px;
-  color: #00a816;
-  display: flex;
-  flex: 0 0 56px;
-  font-size: 20px;
-  font-weight: 900;
-  height: 56px;
-  justify-content: center;
-  width: 56px;
+.print-brand-logo {
+  display: block;
+  flex: 0 0 auto;
+  height: auto;
+  max-height: 52px;
+  max-width: 52px;
+  object-fit: contain;
+  width: auto;
+  margin-right: 5px;
 }
 
 .print-brand-title {
