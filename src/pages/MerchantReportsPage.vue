@@ -354,23 +354,23 @@
               </div>
 
               <div class="mini-stat-row">
-                <span>{{
-                  t('merchantReportsPage.breakdowns.topupsIssued')
-                }}</span>
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.topupsIssued') }}
+                </span>
                 <strong>{{ report?.current.vouchers.count ?? 0 }}</strong>
               </div>
 
               <div class="mini-stat-row">
-                <span>{{
-                  t('merchantReportsPage.breakdowns.cashOutsCompleted')
-                }}</span>
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.cashOutsCompleted') }}
+                </span>
                 <strong>{{ report?.current.cashOuts.count ?? 0 }}</strong>
               </div>
 
               <div class="mini-stat-row">
-                <span>{{
-                  t('merchantReportsPage.breakdowns.totalBchMovement')
-                }}</span>
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.totalBchMovement') }}
+                </span>
                 <strong>
                   {{
                     formatBchSats(
@@ -391,9 +391,9 @@
               </div>
 
               <div class="mini-stat-row">
-                <span>{{
-                  t('merchantReportsPage.breakdowns.recordsLoaded')
-                }}</span>
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.recordsLoaded') }}
+                </span>
                 <strong>
                   {{
                     (report?.sourceRecordCounts.vouchersLoaded ?? 0) +
@@ -403,18 +403,18 @@
               </div>
 
               <div class="mini-stat-row">
-                <span>{{
-                  t('merchantReportsPage.breakdowns.reportableTopups')
-                }}</span>
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.reportableTopups') }}
+                </span>
                 <strong>
                   {{ report?.sourceRecordCounts.reportableVouchers ?? 0 }}
                 </strong>
               </div>
 
               <div class="mini-stat-row">
-                <span>{{
-                  t('merchantReportsPage.breakdowns.reportableCashOuts')
-                }}</span>
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.reportableCashOuts') }}
+                </span>
                 <strong>
                   {{ report?.sourceRecordCounts.reportableCashOuts ?? 0 }}
                 </strong>
@@ -452,17 +452,28 @@
               class="report-action-button"
               :label="action.label"
               :icon="action.icon"
-              disable
+              :disable="action.disabled"
               outline
               no-caps
+              @click="handleReportAction(action.key)"
             >
-              <q-tooltip>
+              <q-tooltip v-if="action.disabled">
                 {{ t('merchantReportsPage.reportActions.comingSoon') }}
               </q-tooltip>
             </q-btn>
           </div>
         </q-card-section>
       </q-card>
+
+      <MerchantReportPrintPreview
+        v-model="isPrintPreviewOpen"
+        :report="report"
+        :current-period-label="currentPeriodLabel"
+        :generated-at-label="generatedAtLabel"
+        :primary-currency="primaryCurrency"
+        :movement-tracker="movementTracker"
+        :currency-rows="currencyRows"
+      />
 
       <q-banner class="bg-grey-2 text-grey-9" rounded>
         <template #avatar>
@@ -488,11 +499,13 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import MerchantReportPrintPreview from 'src/components/MerchantReportPrintPreview.vue';
 import { getMerchantReport } from 'src/services/merchant-reports';
 import type {
   MerchantReport,
   MerchantReportRange,
 } from 'src/types/merchant-reports';
+import type { MerchantReportPrintMovementTracker } from 'src/components/MerchantReportPrintPreview.vue';
 
 const SATS_PER_BCH = 100_000_000;
 const DEFAULT_CURRENCY = 'GBP';
@@ -509,9 +522,10 @@ interface SummaryCard {
 }
 
 interface ReportAction {
-  key: string;
+  key: 'print' | 'pdf' | 'image' | 'share';
   icon: string;
   label: string;
+  disabled: boolean;
 }
 
 const { t } = useI18n({ useScope: 'global' });
@@ -520,6 +534,7 @@ const selectedRange = ref<MerchantReportRange>('today');
 const report = ref<MerchantReport | null>(null);
 const isLoading = ref(false);
 const errorMessage = ref('');
+const isPrintPreviewOpen = ref(false);
 
 const rangeOptions = computed(() => [
   {
@@ -559,6 +574,10 @@ const currentPeriodLabel = computed(() => {
   );
 });
 
+const generatedAtLabel = computed(() => {
+  return formatDateTime(report.value?.generatedAt ?? new Date().toISOString());
+});
+
 const currencyRows = computed(() => {
   return report.value?.current.currencyTotals ?? [];
 });
@@ -570,7 +589,7 @@ const localFirstMessage = computed(() => {
   );
 });
 
-const movementTracker = computed(() => {
+const movementTracker = computed<MerchantReportPrintMovementTracker>(() => {
   const topupFiatMinor =
     report.value?.current.vouchers.grossFiatRevenueMinor ?? 0;
   const cashOutFiatMinor = report.value?.current.cashOuts.cashPaidOutMinor ?? 0;
@@ -784,21 +803,25 @@ const reportActions = computed<ReportAction[]>(() => [
     key: 'print',
     icon: 'print',
     label: t('merchantReportsPage.actions.printReport'),
+    disabled: false,
   },
   {
     key: 'pdf',
     icon: 'picture_as_pdf',
     label: t('merchantReportsPage.actions.exportPdf'),
+    disabled: true,
   },
   {
     key: 'image',
     icon: 'image',
     label: t('merchantReportsPage.actions.saveImage'),
+    disabled: true,
   },
   {
     key: 'share',
     icon: 'share',
     label: t('merchantReportsPage.actions.shareReport'),
+    disabled: true,
   },
 ]);
 
@@ -814,6 +837,24 @@ async function loadReport(): Promise<void> {
   } finally {
     isLoading.value = false;
   }
+}
+
+async function handleReportAction(
+  actionKey: ReportAction['key']
+): Promise<void> {
+  if (actionKey !== 'print') {
+    return;
+  }
+
+  await openPrintPreview();
+}
+
+async function openPrintPreview(): Promise<void> {
+  if (!report.value) {
+    await loadReport();
+  }
+
+  isPrintPreviewOpen.value = true;
 }
 
 function formatInteger(value: number): string {
@@ -884,6 +925,13 @@ function formatReportPeriod(startIso: string | null, endIso: string): string {
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'medium',
+  }).format(new Date(value));
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
   }).format(new Date(value));
 }
 
