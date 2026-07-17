@@ -261,6 +261,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import {
+  isAndroidReportPrinterAvailable,
+  printAndroidReportHtml,
+} from 'src/services/android-report-printer';
 
 import type {
   MerchantReport,
@@ -333,10 +337,32 @@ const isDialogOpen = computed({
   },
 });
 
-function handlePrintPreview(): void {
+async function handlePrintPreview(): Promise<void> {
   const originalTitle = document.title;
+  const reportTitle = 'Bitcoin Cash Topups Merchant Report';
 
-  document.title = 'Bitcoin Cash Topups Merchant Report';
+  document.title = reportTitle;
+
+  if (isAndroidReportPrinterAvailable()) {
+    const reportElement = document.querySelector('.report-print-document');
+
+    if (reportElement instanceof HTMLElement) {
+      try {
+        await printAndroidReportHtml({
+          html: buildAndroidReportPrintHtml(reportElement.outerHTML),
+          jobName: reportTitle,
+        });
+
+        document.title = originalTitle;
+        return;
+      } catch (error) {
+        console.error(
+          'Android report print failed. Falling back to web print.',
+          error
+        );
+      }
+    }
+  }
 
   window.setTimeout(() => {
     window.print();
@@ -346,6 +372,303 @@ function handlePrintPreview(): void {
     }, 500);
   }, 100);
 }
+
+function buildAndroidReportPrintHtml(reportHtml: string): string {
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bitcoin Cash Topups Merchant Report</title>
+  <style>
+    ${ANDROID_REPORT_PRINT_CSS}
+  </style>
+</head>
+<body>
+  ${reportHtml}
+</body>
+</html>`;
+}
+
+const ANDROID_REPORT_PRINT_CSS = `
+@page {
+  size: A4 portrait;
+  margin: 14mm;
+}
+
+html,
+body {
+  background: #ffffff;
+  color: #111111;
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.report-print-document {
+  background: #ffffff;
+  box-sizing: border-box;
+  color: #111111;
+  width: 100%;
+}
+
+.print-header {
+  border-bottom: 3px solid #00ce1b;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: space-between;
+  padding-bottom: 18px;
+}
+
+.print-brand-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.print-brand-mark {
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid #00ce1b;
+  border-radius: 16px;
+  color: #00a816;
+  display: flex;
+  flex: 0 0 56px;
+  font-size: 20px;
+  font-weight: 900;
+  height: 56px;
+  justify-content: center;
+  width: 56px;
+}
+
+.print-brand-title {
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  line-height: 1.05;
+}
+
+.print-report-title {
+  color: #555555;
+  font-size: 14px;
+  font-weight: 800;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.print-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 190px;
+  text-align: right;
+}
+
+.print-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.print-meta span {
+  color: #666666;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-meta strong {
+  color: #111111;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.print-section {
+  margin-top: 22px;
+}
+
+.print-section h2 {
+  color: #111111;
+  font-size: 17px;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  margin: 0 0 12px;
+}
+
+.print-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.print-summary-tile {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.print-summary-tile.wide {
+  grid-column: span 3;
+}
+
+.print-summary-tile span {
+  color: #666666;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-summary-tile strong {
+  color: #111111;
+  font-size: 17px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.topup-print-tile {
+  background: #ffffff;
+  border: 2px solid #00ce1b;
+}
+
+.topup-print-tile span,
+.topup-print-tile strong {
+  color: #000000;
+}
+
+.cashout-print-tile {
+  background: #ffffff;
+  border: 2px solid #111111;
+}
+
+.cashout-print-tile span,
+.cashout-print-tile strong {
+  color: #111111;
+}
+
+.print-tracker-bar {
+  background: #eeeeee;
+  border: 1px solid #dddddd;
+  border-radius: 999px;
+  display: flex;
+  height: 18px;
+  overflow: hidden;
+}
+
+.print-tracker-topup {
+  background: #00ce1b;
+}
+
+.print-tracker-cashout {
+  background: #111111;
+}
+
+.print-empty-line {
+  background: #f7f8f7;
+  border: 1px dashed #cccccc;
+  border-radius: 12px;
+  color: #555555;
+  font-size: 13px;
+  padding: 12px;
+}
+
+.print-split-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 12px;
+}
+
+.print-split-card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+
+.print-split-card.topup {
+  border: 2px solid #00ce1b;
+  color: #000000;
+}
+
+.print-split-card.cashout {
+  border: 2px solid #111111;
+  color: #111111;
+}
+
+.print-split-card span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-split-card strong {
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.print-split-card small {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.print-currency-table {
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.print-currency-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr 1fr 1.4fr;
+  padding: 10px 12px;
+}
+
+.print-currency-row + .print-currency-row {
+  border-top: 1px solid #eeeeee;
+}
+
+.print-currency-header {
+  background: #f7f8f7;
+  color: #111111;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-currency-row span,
+.print-currency-row strong {
+  font-size: 13px;
+}
+
+.print-currency-row strong {
+  text-align: right;
+}
+
+.print-footer {
+  border-top: 1px solid #dddddd;
+  color: #666666;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 26px;
+  padding-top: 12px;
+}
+`;
 
 function formatInteger(value: number): string {
   return new Intl.NumberFormat('en-GB', {
