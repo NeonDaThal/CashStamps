@@ -806,7 +806,7 @@ const en = {
     },
     items: {
       home: 'Home',
-      sellVoucher: 'Sell Voucher',
+      sellVoucher: 'Top-up',
       cashOut: 'Cash-out',
       voucherHistory: 'Voucher History',
       merchantReports: 'Reports',

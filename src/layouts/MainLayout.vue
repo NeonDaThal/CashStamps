@@ -174,7 +174,7 @@
 
           <q-item clickable to="/sell-voucher" @click="closeDrawer">
             <q-item-section avatar>
-              <q-icon name="point_of_sale" />
+              <q-icon class="drawer-custom-icon" :name="topupDrawerIconName" />
             </q-item-section>
             <q-item-section>
               {{ t('layout.items.sellVoucher') }}
@@ -504,7 +504,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { openURL, useQuasar } from 'quasar';
 import type { SupportedLocale } from '../i18n';
@@ -513,6 +513,8 @@ import {
   checkForAppUpdate,
   type AppUpdateCheckResult,
 } from '../services/app-update';
+import topupDrawerIconUrl from 'src/assets/icons/topup-icon-black.svg';
+import topupDrawerIconActiveUrl from 'src/assets/icons/topup-icon-grey.svg';
 
 type SupportedCurrency = 'GBP' | 'USD' | 'EUR';
 
@@ -545,6 +547,7 @@ const currencyOptions: CurrencyOption[] = [
 const defaultCurrency: SupportedCurrency = 'GBP';
 
 const $router = useRouter();
+const $route = useRoute();
 const { locale, t } = useI18n({ useScope: 'global' });
 const $q = useQuasar();
 
@@ -614,6 +617,14 @@ const localeShortLabel = computed((): string => {
   }
 
   return 'EN';
+});
+
+const topupDrawerIconName = computed((): string => {
+  const isTopupRoute = $route.path.startsWith('/sell-voucher');
+
+  return isTopupRoute
+    ? `img:${topupDrawerIconActiveUrl}`
+    : `img:${topupDrawerIconUrl}`;
 });
 
 const updateDialogTitle = computed((): string => {
@@ -986,6 +997,12 @@ function handleOpenUpdateReleasePage(): void {
   border: 1px solid #dddddd;
   border-radius: 22px;
   overflow: hidden;
+}
+
+.drawer-custom-icon {
+  font-size: 28px;
+  height: 28px;
+  width: 28px;
 }
 
 .drawer-list :deep(.q-item) {

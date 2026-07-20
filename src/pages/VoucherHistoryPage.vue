@@ -13,7 +13,7 @@
         <q-btn
           class="primary-button"
           :label="t('historyPage.actions.sellVoucher')"
-          icon="point_of_sale"
+          :icon="topupIcon"
           to="/sell-voucher"
           unelevated
           no-caps
@@ -155,8 +155,10 @@ import {
 } from 'src/services/voucher-store';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import { detectVoucherRedemptionStatus } from 'src/services/voucher-redemption-detector';
+import topupIconUrl from 'src/assets/icons/topup-icon.svg';
 
 const { t } = useI18n({ useScope: 'global' });
+const topupIcon = `img:${topupIconUrl}`;
 
 const voucherRecords = ref<VoucherRecord[]>([]);
 const errorMessage = ref('');
@@ -457,7 +459,7 @@ h1 {
 
 .primary-button {
   background: #00ce1b;
-  color: #000000;
+  color: #ffffff;
 }
 
 .secondary-button {

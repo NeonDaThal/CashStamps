@@ -25,7 +25,7 @@
           <q-btn
             class="main-action-button"
             :label="t('home.sellVoucher')"
-            icon="point_of_sale"
+            :icon="topupIcon"
             to="/sell-voucher"
             unelevated
             no-caps
@@ -72,7 +72,10 @@
           <q-card flat bordered class="glance-stat">
             <q-card-section>
               <div class="glance-icon">
-                <q-icon name="add_card" />
+                <q-icon
+                  class="glance-topup-icon"
+                  :name="`img:${topupIcongreyUrl}`"
+                />
               </div>
 
               <div class="glance-content">
@@ -132,10 +135,14 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import bchLogoUrl from 'src/assets/bch-logo.png';
+import topupIconUrl from 'src/assets/icons/topup-icon.svg';
+import topupIcongreyUrl from 'src/assets/icons/topup-icon-grey.svg';
 import { getCashOutRecords } from 'src/services/cash-out-store';
 import { getVoucherRecords } from 'src/services/voucher-store';
 import type { CashOutRecord } from 'src/types/cash-out';
 import type { VoucherRecord } from 'src/types/voucher';
+
+const topupIcon = `img:${topupIconUrl}`;
 
 const { t } = useI18n({ useScope: 'global' });
 
@@ -348,7 +355,7 @@ h2 {
   background: #00ce1b;
   border-radius: 18px;
   box-shadow: 0 8px 16px rgba(0, 168, 22, 0.18);
-  color: #000000;
+  color: #ffffff;
   font-size: 19px;
   font-weight: 850;
   justify-content: flex-start;
@@ -356,8 +363,21 @@ h2 {
   padding: 0 16px;
 }
 
+.main-action-grid .main-action-button:first-child :deep(.q-icon) {
+  font-size: 34px;
+}
+
+.main-action-grid .main-action-button:nth-child(2) {
+  background: #111111;
+  color: #00ce1b;
+}
+
+.main-action-grid .main-action-button:nth-child(2) :deep(.q-icon) {
+  color: #00ce1b;
+}
+
 .main-action-button :deep(.q-btn__content) {
-  gap: 8px;
+  gap: 1px;
 }
 
 .main-action-button :deep(.q-icon) {
@@ -398,6 +418,10 @@ h2 {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(3, 1fr);
+}
+
+.glance-topup-icon {
+  font-size: 28px;
 }
 
 .glance-stat {
@@ -549,6 +573,10 @@ h2 {
     text-align: center;
   }
 
+  .main-action-grid .main-action-button:first-child :deep(.q-icon) {
+    font-size: 30px;
+  }
+
   .main-action-grid .main-action-button:first-child :deep(.q-btn__content) {
     gap: 1px;
   }
@@ -596,6 +624,10 @@ h2 {
     font-size: 22px;
     height: 35px;
     width: 35px;
+  }
+
+  .glance-topup-icon {
+    font-size: 24px;
   }
 
   .glance-label {

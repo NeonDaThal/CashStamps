@@ -23,7 +23,7 @@
           <q-btn
             class="primary-button"
             :label="t('merchantReportsPage.actions.sellVoucher')"
-            icon="point_of_sale"
+            :icon="topupIcon"
             to="/sell-voucher"
             unelevated
             no-caps
@@ -114,6 +114,7 @@
           class="summary-card"
           :class="[
             `summary-theme-${card.theme ?? 'neutral'}`,
+            `summary-card-${card.key}`,
             { 'summary-card-highlight': card.highlight },
           ]"
         >
@@ -500,6 +501,9 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import topupIconUrl from 'src/assets/icons/topup-icon.svg';
+import topupIconGreenUrl from 'src/assets/icons/topup-icon-green.svg';
+
 import MerchantReportPrintPreview from 'src/components/MerchantReportPrintPreview.vue';
 import { getMerchantReport } from 'src/services/merchant-reports';
 import type {
@@ -510,6 +514,9 @@ import type { MerchantReportPrintMovementTracker } from 'src/components/Merchant
 
 const SATS_PER_BCH = 100_000_000;
 const DEFAULT_CURRENCY = 'GBP';
+
+const topupIcon = `img:${topupIconUrl}`;
+const topupIconGreen = `img:${topupIconGreenUrl}`;
 
 type PrintPreviewMode = 'print' | 'pdf';
 
@@ -634,7 +641,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
   return [
     {
       key: 'total-topups',
-      icon: 'add_card',
+      icon: topupIconGreen,
       label: t('merchantReportsPage.summary.totalTopups'),
       value: formatInteger(voucherTotals?.count ?? 0),
       caption: t('merchantReportsPage.summary.totalTopupsCaption'),
@@ -1061,7 +1068,11 @@ h1 {
 
 .primary-button {
   background: #00ce1b;
-  color: #000000;
+  color: #ffffff;
+}
+
+.primary-button :deep(.q-icon) {
+  font-size: 28px;
 }
 
 .secondary-button,
@@ -1197,6 +1208,16 @@ h1 {
   height: 42px;
   justify-content: center;
   width: 42px;
+}
+
+.summary-card-total-topups .summary-icon :deep(.q-icon),
+.summary-card-total-topups .summary-icon :deep(.q-icon img) {
+  height: 30px;
+  width: 30px;
+}
+
+.summary-card-total-topups .summary-icon :deep(.q-icon) {
+  font-size: 30px;
 }
 
 .summary-status-badge {
