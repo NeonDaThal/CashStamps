@@ -75,7 +75,7 @@ const en = {
     voucherValueBeforeQuote: 'Customer receives (minus fees)',
     quoteSource: 'Quote',
     lockedAfterReview: 'Locked after review',
-    reviewVoucher: 'Review Voucher',
+    reviewVoucher: 'Review Topup',
     viewHistory: 'View History',
   },
 
@@ -186,12 +186,12 @@ const en = {
       eyebrow: 'Cash-out BCH',
       title: 'Cash-out BCH',
       intro:
-        'Enter the cash amount the customer wants to receive. The app will calculate how much BCH they must send to the merchant treasury.',
+        'Enter the cash amount the customer wants to receive. The app will calculate how much BCH they must send to your Treasury Wallet. Once payment is confirmed in your wallet, you can hand over the Cashout amount.',
     },
     actions: {
       treasuryWallet: 'Treasury wallet',
       voucherHistory: 'Voucher history',
-      reviewCashOut: 'Review Cash-out',
+      reviewCashOut: 'Review Cashout',
     },
     form: {
       cashAmountLabel: 'Cash amount to pay out',
@@ -202,9 +202,9 @@ const en = {
       title: 'Cash-out Preview',
       subtitle: 'Final BCH amount is locked after review.',
       customerReceivesCash: 'Customer receives cash',
-      serviceFeeSpread: 'Service fee / spread',
-      customerSendsValue: 'Customer sends value',
-      quoteSource: 'Quote source',
+      serviceFeeSpread: 'Fees',
+      customerSendsValue: 'Customer sends in BCH',
+      quoteSource: 'Quote',
       lockedAfterReview: 'Locked after review',
     },
     paymentUri: {

@@ -45,120 +45,121 @@
           {{ t('cashOutPage.hero.intro') }}
         </p>
 
-        <q-form
-          class="cash-out-form q-mt-lg"
-          @submit.prevent="handleReviewCashOut"
-        >
-          <q-input
-            v-model="cashAmountInput"
-            outlined
-            inputmode="decimal"
-            type="number"
-            min="0.01"
-            step="0.01"
-            :label="t('cashOutPage.form.cashAmountLabel')"
-            prefix="£"
-            :disable="isSubmitting"
-            class="amount-input"
-          />
-
-          <q-card flat bordered class="pricing-card">
-            <q-card-section>
-              <div class="pricing-header">
-                <div>
-                  <div class="text-subtitle1 text-weight-bold">
-                    {{ t('cashOutPage.preview.title') }}
-                  </div>
-                  <div class="text-caption text-grey-7">
-                    {{ t('cashOutPage.preview.subtitle') }}
-                  </div>
-                </div>
-
-                <div class="pricing-logo-wrap" aria-hidden="true">
-                  <img :src="bchLogoUrl" alt="" class="pricing-logo" />
-                </div>
+        <div class="hero-form-wrap">
+          <q-form class="cash-out-form" @submit.prevent="handleReviewCashOut">
+            <div class="amount-field">
+              <div class="amount-field-label">
+                {{ t('cashOutPage.form.cashAmountLabel') }}
               </div>
 
-              <div class="preview-grid">
-                <div class="preview-item highlight">
-                  <div class="preview-label">
-                    {{ t('cashOutPage.preview.customerReceivesCash') }}
+              <q-input
+                v-model="cashAmountInput"
+                type="number"
+                inputmode="decimal"
+                min="0.01"
+                step="0.01"
+                :aria-label="t('cashOutPage.form.cashAmountLabel')"
+                prefix="£"
+                borderless
+                :disable="isSubmitting"
+                class="amount-input"
+              />
+            </div>
+
+            <q-card flat bordered class="pricing-card">
+              <q-card-section>
+                <div class="pricing-header">
+                  <div>
+                    <div class="text-subtitle1 text-weight-bold">
+                      {{ t('cashOutPage.preview.title') }}
+                    </div>
+                    <div class="text-caption text-grey-7">
+                      {{ t('cashOutPage.preview.subtitle') }}
+                    </div>
                   </div>
-                  <div class="preview-value">
-                    {{
-                      formatFiatAmount(
-                        previewPricing.fiatAmountMinor,
-                        previewPricing.fiatCurrency
-                      )
-                    }}
+
+                  <div class="pricing-logo-wrap" aria-hidden="true">
+                    <img :src="bchLogoUrl" alt="" class="pricing-logo" />
                   </div>
                 </div>
 
-                <div class="preview-item">
-                  <div class="preview-label">
-                    {{ t('cashOutPage.preview.serviceFeeSpread') }}
+                <div class="preview-breakdown">
+                  <div class="preview-line preview-line--primary">
+                    <div class="preview-label">
+                      {{ t('cashOutPage.preview.customerReceivesCash') }}
+                    </div>
+
+                    <div class="preview-value">
+                      {{
+                        formatFiatAmount(
+                          previewPricing.fiatAmountMinor,
+                          previewPricing.fiatCurrency
+                        )
+                      }}
+                    </div>
                   </div>
-                  <div class="preview-value">
-                    {{
-                      formatPercent(previewPricing.totalServiceFeeBasisPoints)
-                    }}
-                    —
-                    {{
-                      formatFiatAmount(
-                        previewPricing.totalServiceFeeAmountMinor,
-                        previewPricing.fiatCurrency
-                      )
-                    }}
+
+                  <div class="preview-line preview-line--subtle">
+                    <div class="preview-label">
+                      {{ t('cashOutPage.preview.serviceFeeSpread') }}
+                    </div>
+
+                    <div class="preview-value">
+                      {{
+                        formatPercent(previewPricing.totalServiceFeeBasisPoints)
+                      }}
+                      —
+                      {{
+                        formatFiatAmount(
+                          previewPricing.totalServiceFeeAmountMinor,
+                          previewPricing.fiatCurrency
+                        )
+                      }}
+                    </div>
+                  </div>
+
+                  <div class="preview-line">
+                    <div class="preview-label">
+                      {{ t('cashOutPage.preview.customerSendsValue') }}
+                    </div>
+
+                    <div class="preview-value">
+                      {{
+                        formatFiatAmount(
+                          previewPricing.customerSendsFiatEquivalentMinor,
+                          previewPricing.fiatCurrency
+                        )
+                      }}
+                    </div>
+                  </div>
+
+                  <div class="preview-line preview-line--quote">
+                    <div class="preview-label">
+                      {{ t('cashOutPage.preview.quoteSource') }}
+                    </div>
+
+                    <div class="preview-value">
+                      {{ t('cashOutPage.preview.lockedAfterReview') }}
+                    </div>
                   </div>
                 </div>
+              </q-card-section>
+            </q-card>
 
-                <div class="preview-item">
-                  <div class="preview-label">
-                    {{ t('cashOutPage.preview.customerSendsValue') }}
-                  </div>
-                  <div class="preview-value">
-                    {{
-                      formatFiatAmount(
-                        previewPricing.customerSendsFiatEquivalentMinor,
-                        previewPricing.fiatCurrency
-                      )
-                    }}
-                  </div>
-                </div>
-
-                <div class="preview-item">
-                  <div class="preview-label">
-                    {{ t('cashOutPage.preview.quoteSource') }}
-                  </div>
-                  <div class="preview-value">
-                    {{ t('cashOutPage.preview.lockedAfterReview') }}
-                  </div>
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
-
-          <q-banner class="bg-grey-2 text-grey-9" rounded>
-            <template #avatar>
-              <q-icon name="info" />
-            </template>
-
-            {{ t('cashOutPage.form.paymentQrNotice') }}
-          </q-banner>
-
-          <div class="form-actions">
-            <q-btn
-              class="primary-button"
-              type="submit"
-              :label="t('cashOutPage.actions.reviewCashOut')"
-              icon="fact_check"
-              no-caps
-              unelevated
-              :loading="isSubmitting"
-              :disable="!canReviewCashOut"
-            />
-          </div>
-        </q-form>
+            <div class="form-actions">
+              <q-btn
+                class="cash-out-primary-button"
+                type="submit"
+                :label="t('cashOutPage.actions.reviewCashOut')"
+                icon="fact_check"
+                no-caps
+                unelevated
+                :loading="isSubmitting"
+                :disable="!canReviewCashOut"
+              />
+            </div>
+          </q-form>
+        </div>
       </section>
 
       <q-banner v-if="successMessage" class="bg-green-1 text-green-9" rounded>
@@ -765,14 +766,58 @@ h1 {
   padding: 18px 22px;
 }
 
+.hero-form-wrap {
+  margin-top: 20px;
+}
+
 .cash-out-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+.amount-field {
+  background: #ffffff;
+  border: 2px solid #00ce1b;
+  border-radius: 20px;
+  padding: 7px 16px 8px;
+}
+
+.amount-field-label {
+  color: #555555;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.1;
+  margin-bottom: 0;
+}
+
 .amount-input :deep(.q-field__control) {
-  border-radius: 16px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.amount-input :deep(.q-field__control-container) {
+  padding-top: 0;
+}
+
+.amount-input :deep(.q-field__native),
+.amount-input :deep(.q-field__prefix) {
+  color: #111111;
+  font-size: 30px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.amount-input :deep(.q-field__prefix) {
+  align-items: center;
+  display: flex;
+  padding-bottom: 0;
+  padding-right: 5px;
+  transform: translateY(-3px);
+}
+
+.amount-input :deep(.q-field__native) {
+  padding: 0;
 }
 
 .amount-input :deep(input[type='number']) {
@@ -824,43 +869,94 @@ h1 {
   width: 82%;
 }
 
-.preview-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.preview-item {
+.preview-breakdown {
   background: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 16px;
-  padding: 14px;
+  overflow: hidden;
+  padding: 2px 14px;
 }
 
-.preview-item.highlight {
-  border-color: rgba(0, 206, 27, 0.55);
-  box-shadow: 0 0 0 3px rgba(0, 206, 27, 0.12);
+.preview-line {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.preview-line + .preview-line {
+  border-top: 1px solid #eeeeee;
+}
+
+.preview-line--primary {
+  padding-top: 13px;
+}
+
+.preview-line--subtle {
+  color: #777777;
+  padding: 9px 0;
+}
+
+.preview-line--quote {
+  background: transparent;
 }
 
 .preview-label {
   color: #666666;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  margin-bottom: 6px;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.2;
+  min-width: 0;
 }
 
 .preview-value {
   color: #111111;
-  font-size: 16px;
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.preview-line--primary .preview-value {
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.preview-line--subtle .preview-label,
+.preview-line--subtle .preview-value {
+  color: #777777;
+  font-size: 12px;
   font-weight: 800;
-  line-height: 1.25;
+}
+
+.preview-line--quote .preview-label,
+.preview-line--quote .preview-value {
+  color: #777777;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.cash-out-primary-button {
+  background: #111111;
+  border-radius: 14px;
+  color: #00ce1b;
+  font-size: 17px;
+  font-weight: 850;
+  min-height: 48px;
+  overflow: hidden;
+  padding: 0 22px;
+}
+
+.cash-out-primary-button :deep(.q-focus-helper) {
+  border-radius: inherit;
 }
 
 .quick-action-status-ready,
@@ -888,19 +984,6 @@ h1 {
   gap: 14px;
 }
 
-.primary-button {
-  background: #00ce1b;
-  border-radius: 14px;
-  color: #ffffff;
-  font-weight: 800;
-  min-height: 48px;
-  overflow: hidden;
-  padding: 0 22px;
-}
-
-.primary-button :deep(.q-focus-helper) {
-  border-radius: inherit;
-}
 
 @media (max-width: 640px) {
   .cash-out-hero {
@@ -915,8 +998,51 @@ h1 {
     padding-top: 2px;
   }
 
-  .preview-grid {
-    grid-template-columns: 1fr;
+  .amount-field {
+    border-radius: 18px;
+    padding: 5px 14px 5px;
+  }
+
+  .amount-field-label {
+    font-size: 12px;
+    line-height: 1;
+    margin-bottom: 0;
+    padding-top: 8px;
+  }
+
+  .amount-input :deep(.q-field__control) {
+    min-height: 28px;
+  }
+
+  .amount-input :deep(.q-field__native),
+  .amount-input :deep(.q-field__prefix) {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .amount-input :deep(.q-field__prefix) {
+    transform: translateY(-2px);
+  }
+
+  .preview-breakdown {
+    padding: 2px 12px;
+  }
+
+  .preview-line {
+    gap: 12px;
+    padding: 11px 0;
+  }
+
+  .preview-label {
+    font-size: 12px;
+  }
+
+  .preview-value {
+    font-size: 14px;
+  }
+
+  .preview-line--primary .preview-value {
+    font-size: 16px;
   }
 
   .form-actions {
