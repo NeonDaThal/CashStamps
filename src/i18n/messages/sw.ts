@@ -1051,7 +1051,7 @@ const sw = {
         'Imeundwa ndani ya kifaa kutoka kwenye rekodi zilizohifadhiwa kwenye kifaa hiki. Hakuna data ya ripoti inayotumwa kwenye seva.',
     },
     connectedNotice:
-      'Reports are now connected to local topup and cash-out records for this device.',
+      'Ripoti sasa zimeunganishwa na rekodi za ndani za recharge na kutoa fedha kwenye kifaa hiki.',
   },
 
   receiptPreview: {

@@ -1034,7 +1034,7 @@ const neNP = {
         'यस उपकरणमा सेभ गरिएका रेकर्डहरूबाट स्थानीय रूपमा सिर्जना गरिएको। कुनै रिपोर्ट डाटा सर्भरमा पठाइँदैन।',
     },
     connectedNotice:
-      'Reports are now connected to local topup and cash-out records for this device.',
+      'रिपोर्टहरू अब यस उपकरणका स्थानीय रिचार्ज र क्यास-आउट रेकर्डहरूसँग जोडिएका छन्।',
   },
 
   receiptPreview: {

@@ -1056,7 +1056,7 @@ const pt = {
         'Gerado localmente a partir de registos guardados neste dispositivo. Nenhum dado do relatório é enviado para um servidor.',
     },
     connectedNotice:
-      'Reports are now connected to local topup and cash-out records for this device.',
+      'Os relatórios estão agora ligados aos registos locais de recargas e retiradas deste dispositivo.',
   },
 
   receiptPreview: {

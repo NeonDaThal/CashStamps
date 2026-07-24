@@ -1053,7 +1053,7 @@ const es = {
         'Generado localmente a partir de registros guardados en este dispositivo. No se envían datos del informe a ningún servidor.',
     },
     connectedNotice:
-      'Reports are now connected to local topup and cash-out records for this device.',
+      'Los informes ahora están conectados a los registros locales de recargas y retiros de este dispositivo.',
   },
 
   receiptPreview: {

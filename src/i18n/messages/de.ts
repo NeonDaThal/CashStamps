@@ -1061,7 +1061,7 @@ const de = {
         'Lokal aus Datensätzen erstellt, die auf diesem Gerät gespeichert sind. Es werden keine Berichtsdaten an einen Server gesendet.',
     },
     connectedNotice:
-      'Reports are now connected to local topup and cash-out records for this device.',
+      'Berichte sind jetzt mit den lokalen Aufladungs- und Auszahlungsdatensätzen auf diesem Gerät verbunden.',
   },
 
   receiptPreview: {

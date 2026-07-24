@@ -1048,7 +1048,7 @@ const svSE = {
         'Skapad lokalt från register som sparats på den här enheten. Inga rapportdata skickas till någon server.',
     },
     connectedNotice:
-      'Reports are now connected to local topup and cash-out records for this device.',
+      'Rapporter är nu anslutna till lokala laddnings- och kontantuttagsregister på den här enheten.',
   },
 
   receiptPreview: {

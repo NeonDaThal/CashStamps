@@ -998,8 +998,7 @@ const zhHK = {
       localNotice:
         '根據此裝置儲存的記錄在本機產生。沒有報告資料會傳送到伺服器。',
     },
-    connectedNotice:
-      'Reports are now connected to local topup and cash-out records for this device.',
+    connectedNotice: '報告現已連接到此裝置上的本機增值和兌現記錄。',
   },
 
   receiptPreview: {
