@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(BluetoothEscPosPrinterPlugin.class);
         registerPlugin(AndroidReportPrinterPlugin.class);
+        registerPlugin(AndroidImageSaverPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

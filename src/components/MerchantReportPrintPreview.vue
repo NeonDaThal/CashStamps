@@ -1,6 +1,39 @@
 <template>
   <q-dialog v-model="isDialogOpen" class="merchant-report-print-dialog">
     <q-card class="print-preview-card">
+      <Transition name="image-save-toast">
+        <div
+          v-if="saveToast"
+          class="image-save-toast"
+          :class="`image-save-toast--${saveToast.type}`"
+        >
+          <q-icon
+            :name="saveToast.type === 'success' ? 'check_circle' : 'error'"
+            size="22px"
+            class="image-save-toast-icon"
+          />
+
+          <div class="image-save-toast-copy">
+            <div class="image-save-toast-title">
+              {{ saveToast.message }}
+            </div>
+            <div class="image-save-toast-caption">
+              {{ saveToast.caption }}
+            </div>
+          </div>
+
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            size="sm"
+            class="image-save-toast-close"
+            @click="dismissSaveToast"
+          />
+        </div>
+      </Transition>
+
       <div class="print-preview-toolbar no-print">
         <div>
           <div class="print-preview-title">
@@ -23,239 +56,262 @@
           <q-btn
             unelevated
             no-caps
-            icon="print"
+            :icon="primaryActionIcon"
             class="primary-button"
             :label="primaryActionLabel"
+            :loading="showImageSaveButtonBusy"
+            :disable="showImageSaveButtonBusy"
             @click="handlePrintPreview"
           />
         </div>
       </div>
 
       <q-card-section class="print-preview-scroll">
-        <div class="print-page-scale-frame">
-          <article class="report-print-document">
-            <header class="print-header">
-              <div class="print-brand-row">
-                <img
-                  :src="printLogoSrc"
-                  alt="Bitcoin Cash Topups"
-                  class="print-brand-logo"
-                />
+        <div class="print-preview-page-wrapper">
+          <div v-if="showImageSaveOverlay" class="image-save-overlay" />
 
-                <div>
-                  <div class="print-brand-title">Bitcoin Cash Topups</div>
-                  <div class="print-report-title">
-                    {{ t('merchantReportsPage.printPreview.reportTitle') }}
+          <div class="print-page-scale-frame">
+            <article class="report-print-document">
+              <header class="print-header">
+                <div class="print-brand-row">
+                  <img
+                    :src="printLogoSrc"
+                    alt="Bitcoin Cash Topups"
+                    class="print-brand-logo"
+                  />
+
+                  <div>
+                    <div class="print-brand-title">Bitcoin Cash Topups</div>
+                    <div class="print-report-title">
+                      {{ t('merchantReportsPage.printPreview.reportTitle') }}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="print-meta">
-                <div>
-                  <span>
-                    {{ t('merchantReportsPage.printPreview.selectedRange') }}
-                  </span>
-                  <strong>{{ currentPeriodLabel }}</strong>
+                <div class="print-meta">
+                  <div>
+                    <span>
+                      {{ t('merchantReportsPage.printPreview.selectedRange') }}
+                    </span>
+                    <strong>{{ currentPeriodLabel }}</strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      {{ t('merchantReportsPage.printPreview.generated') }}
+                    </span>
+                    <strong>{{ generatedAtLabel }}</strong>
+                  </div>
                 </div>
+              </header>
 
-                <div>
-                  <span>{{
-                    t('merchantReportsPage.printPreview.generated')
-                  }}</span>
-                  <strong>{{ generatedAtLabel }}</strong>
+              <section class="print-section">
+                <h2>{{ t('merchantReportsPage.printPreview.atAGlance') }}</h2>
+
+                <div class="print-summary-grid">
+                  <div class="print-summary-tile topup-print-tile">
+                    <span>
+                      {{ t('merchantReportsPage.summary.totalTopups') }}
+                    </span>
+                    <strong>
+                      {{ formatInteger(report?.current.vouchers.count ?? 0) }}
+                    </strong>
+                  </div>
+
+                  <div class="print-summary-tile cashout-print-tile">
+                    <span>
+                      {{ t('merchantReportsPage.summary.cashOutsCompleted') }}
+                    </span>
+                    <strong>
+                      {{ formatInteger(report?.current.cashOuts.count ?? 0) }}
+                    </strong>
+                  </div>
+
+                  <div class="print-summary-tile">
+                    <span>
+                      {{ t('merchantReportsPage.summary.grossFiat') }}
+                    </span>
+                    <strong>
+                      {{
+                        formatFiatAmount(
+                          report?.current.overall.grossFiatMovementMinor ?? 0,
+                          primaryCurrency
+                        )
+                      }}
+                    </strong>
+                  </div>
+
+                  <div class="print-summary-tile">
+                    <span>
+                      {{ t('merchantReportsPage.summary.netFiat') }}
+                    </span>
+                    <strong>
+                      {{
+                        formatFiatAmount(
+                          report?.current.overall.netFiatMovementMinor ?? 0,
+                          primaryCurrency
+                        )
+                      }}
+                    </strong>
+                  </div>
+
+                  <div class="print-summary-tile">
+                    <span>
+                      {{ t('merchantReportsPage.summary.bchLoaded') }}
+                    </span>
+                    <strong>
+                      {{
+                        formatBchSats(
+                          report?.current.vouchers.finalBchSats ?? 0
+                        )
+                      }}
+                    </strong>
+                  </div>
+
+                  <div class="print-summary-tile">
+                    <span>
+                      {{
+                        t('merchantReportsPage.summary.bchBoughtFromCustomers')
+                      }}
+                    </span>
+                    <strong>
+                      {{
+                        formatBchSats(
+                          report?.current.cashOuts.bchSatsRequired ?? 0
+                        )
+                      }}
+                    </strong>
+                  </div>
+
+                  <div class="print-summary-tile wide">
+                    <span>
+                      {{ t('merchantReportsPage.summary.totalBchMovement') }}
+                    </span>
+                    <strong>
+                      {{
+                        formatBchSats(
+                          report?.current.overall.totalBchMovementSats ?? 0
+                        )
+                      }}
+                    </strong>
+                  </div>
                 </div>
-              </div>
-            </header>
+              </section>
 
-            <section class="print-section">
-              <h2>{{ t('merchantReportsPage.printPreview.atAGlance') }}</h2>
-
-              <div class="print-summary-grid">
-                <div class="print-summary-tile topup-print-tile">
-                  <span>{{
-                    t('merchantReportsPage.summary.totalTopups')
-                  }}</span>
-                  <strong>{{
-                    formatInteger(report?.current.vouchers.count ?? 0)
-                  }}</strong>
-                </div>
-
-                <div class="print-summary-tile cashout-print-tile">
-                  <span>
-                    {{ t('merchantReportsPage.summary.cashOutsCompleted') }}
-                  </span>
-                  <strong>{{
-                    formatInteger(report?.current.cashOuts.count ?? 0)
-                  }}</strong>
-                </div>
-
-                <div class="print-summary-tile">
-                  <span>{{ t('merchantReportsPage.summary.grossFiat') }}</span>
-                  <strong>
-                    {{
-                      formatFiatAmount(
-                        report?.current.overall.grossFiatMovementMinor ?? 0,
-                        primaryCurrency
-                      )
-                    }}
-                  </strong>
-                </div>
-
-                <div class="print-summary-tile">
-                  <span>{{ t('merchantReportsPage.summary.netFiat') }}</span>
-                  <strong>
-                    {{
-                      formatFiatAmount(
-                        report?.current.overall.netFiatMovementMinor ?? 0,
-                        primaryCurrency
-                      )
-                    }}
-                  </strong>
-                </div>
-
-                <div class="print-summary-tile">
-                  <span>{{ t('merchantReportsPage.summary.bchLoaded') }}</span>
-                  <strong>
-                    {{
-                      formatBchSats(report?.current.vouchers.finalBchSats ?? 0)
-                    }}
-                  </strong>
-                </div>
-
-                <div class="print-summary-tile">
-                  <span>
-                    {{
-                      t('merchantReportsPage.summary.bchBoughtFromCustomers')
-                    }}
-                  </span>
-                  <strong>
-                    {{
-                      formatBchSats(
-                        report?.current.cashOuts.bchSatsRequired ?? 0
-                      )
-                    }}
-                  </strong>
-                </div>
-
-                <div class="print-summary-tile wide">
-                  <span>{{
-                    t('merchantReportsPage.summary.totalBchMovement')
-                  }}</span>
-                  <strong>
-                    {{
-                      formatBchSats(
-                        report?.current.overall.totalBchMovementSats ?? 0
-                      )
-                    }}
-                  </strong>
-                </div>
-              </div>
-            </section>
-
-            <section class="print-section">
-              <h2>
-                {{ t('merchantReportsPage.printPreview.topupsVsCashOuts') }}
-              </h2>
-
-              <div
-                v-if="movementTracker.totalTransactionCount > 0"
-                class="print-tracker-bar"
-                aria-hidden="true"
-              >
-                <div
-                  class="print-tracker-topup"
-                  :style="{ width: movementTracker.topupFiatWidth }"
-                />
-                <div
-                  class="print-tracker-cashout"
-                  :style="{ width: movementTracker.cashOutFiatWidth }"
-                />
-              </div>
-
-              <div v-else class="print-empty-line">
-                {{ t('merchantReportsPage.tracker.emptyState') }}
-              </div>
-
-              <div class="print-split-grid">
-                <div class="print-split-card topup">
-                  <span>{{ t('merchantReportsPage.tracker.topups') }}</span>
-                  <strong>
-                    {{
-                      formatFiatAmount(
-                        movementTracker.topupFiatMinor,
-                        primaryCurrency
-                      )
-                    }}
-                  </strong>
-                  <small>{{ movementTracker.topupFiatPercent }}</small>
-                </div>
-
-                <div class="print-split-card cashout">
-                  <span>{{ t('merchantReportsPage.tracker.cashOuts') }}</span>
-                  <strong>
-                    {{
-                      formatFiatAmount(
-                        movementTracker.cashOutFiatMinor,
-                        primaryCurrency
-                      )
-                    }}
-                  </strong>
-                  <small>{{ movementTracker.cashOutFiatPercent }}</small>
-                </div>
-              </div>
-            </section>
-
-            <section class="print-section">
-              <h2>
-                {{ t('merchantReportsPage.printPreview.currencyBreakdown') }}
-              </h2>
-
-              <div v-if="currencyRows.length === 0" class="print-empty-line">
-                {{ t('merchantReportsPage.printPreview.noCurrencyData') }}
-              </div>
-
-              <div v-else class="print-currency-table">
-                <div class="print-currency-row print-currency-header">
-                  <span>{{
-                    t('merchantReportsPage.printPreview.currency')
-                  }}</span>
-                  <span>{{
-                    t('merchantReportsPage.printPreview.topups')
-                  }}</span>
-                  <span>{{
-                    t('merchantReportsPage.printPreview.cashOuts')
-                  }}</span>
-                  <span>{{
-                    t('merchantReportsPage.printPreview.totalFiat')
-                  }}</span>
-                </div>
+              <section class="print-section">
+                <h2>
+                  {{ t('merchantReportsPage.printPreview.topupsVsCashOuts') }}
+                </h2>
 
                 <div
-                  v-for="currency in currencyRows"
-                  :key="currency.currency"
-                  class="print-currency-row"
+                  v-if="movementTracker.totalTransactionCount > 0"
+                  class="print-tracker-bar"
+                  aria-hidden="true"
                 >
-                  <span>{{ currency.currency }}</span>
-                  <span>{{ currency.voucherCount }}</span>
-                  <span>{{ currency.cashOutCount }}</span>
-                  <strong>
-                    {{
-                      formatFiatAmount(
-                        currency.grossFiatMovementMinor,
-                        currency.currency
-                      )
-                    }}
-                  </strong>
+                  <div
+                    class="print-tracker-topup"
+                    :style="{ width: movementTracker.topupFiatWidth }"
+                  />
+                  <div
+                    class="print-tracker-cashout"
+                    :style="{ width: movementTracker.cashOutFiatWidth }"
+                  />
                 </div>
-              </div>
-            </section>
 
-            <footer class="print-footer">
-              <span>{{
-                t('merchantReportsPage.printPreview.localNotice')
-              }}</span>
-            </footer>
-          </article>
+                <div v-else class="print-empty-line">
+                  {{ t('merchantReportsPage.tracker.emptyState') }}
+                </div>
+
+                <div class="print-split-grid">
+                  <div class="print-split-card topup">
+                    <span>{{ t('merchantReportsPage.tracker.topups') }}</span>
+                    <strong>
+                      {{
+                        formatFiatAmount(
+                          movementTracker.topupFiatMinor,
+                          primaryCurrency
+                        )
+                      }}
+                    </strong>
+                    <small>{{ movementTracker.topupFiatPercent }}</small>
+                  </div>
+
+                  <div class="print-split-card cashout">
+                    <span>
+                      {{ t('merchantReportsPage.tracker.cashOuts') }}
+                    </span>
+                    <strong>
+                      {{
+                        formatFiatAmount(
+                          movementTracker.cashOutFiatMinor,
+                          primaryCurrency
+                        )
+                      }}
+                    </strong>
+                    <small>{{ movementTracker.cashOutFiatPercent }}</small>
+                  </div>
+                </div>
+              </section>
+
+              <section class="print-section">
+                <h2>
+                  {{ t('merchantReportsPage.printPreview.currencyBreakdown') }}
+                </h2>
+
+                <div v-if="currencyRows.length === 0" class="print-empty-line">
+                  {{ t('merchantReportsPage.printPreview.noCurrencyData') }}
+                </div>
+
+                <div v-else class="print-currency-table">
+                  <div class="print-currency-row print-currency-header">
+                    <span>
+                      {{ t('merchantReportsPage.printPreview.currency') }}
+                    </span>
+                    <span>
+                      {{ t('merchantReportsPage.printPreview.topups') }}
+                    </span>
+                    <span>
+                      {{ t('merchantReportsPage.printPreview.cashOuts') }}
+                    </span>
+                    <span>
+                      {{ t('merchantReportsPage.printPreview.totalFiat') }}
+                    </span>
+                  </div>
+
+                  <div
+                    v-for="currency in currencyRows"
+                    :key="currency.currency"
+                    class="print-currency-row"
+                  >
+                    <span>{{ currency.currency }}</span>
+                    <span>{{ currency.voucherCount }}</span>
+                    <span>{{ currency.cashOutCount }}</span>
+                    <strong>
+                      {{
+                        formatFiatAmount(
+                          currency.grossFiatMovementMinor,
+                          currency.currency
+                        )
+                      }}
+                    </strong>
+                  </div>
+                </div>
+              </section>
+
+              <footer class="print-footer">
+                <span>
+                  {{ t('merchantReportsPage.printPreview.localNotice') }}
+                </span>
+
+                <span
+                  v-if="imageExportSavedAtLabel"
+                  class="image-export-saved-at"
+                >
+                  {{ imageExportSavedAtLabel }}
+                </span>
+              </footer>
+            </article>
+          </div>
         </div>
       </q-card-section>
     </q-card>
@@ -263,12 +319,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { toPng } from 'html-to-image';
+
 import {
   isAndroidReportPrinterAvailable,
   printAndroidReportHtml,
 } from 'src/services/android-report-printer';
+import {
+  isAndroidImageSaverAvailable,
+  saveAndroidPngImage,
+} from 'src/services/android-image-saver';
 
 import type {
   MerchantReport,
@@ -298,7 +360,7 @@ export interface MerchantReportPrintMovementTracker {
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
-    mode: 'print' | 'pdf';
+    mode: 'print' | 'pdf' | 'image';
     report: MerchantReport | null;
     currentPeriodLabel: string;
     generatedAtLabel: string;
@@ -339,6 +401,16 @@ const emit = defineEmits<{
 const { t } = useI18n({ useScope: 'global' });
 
 const printLogoDataUrl = ref('');
+const isSavingImage = ref(false);
+const imageExportSavedAtLabel = ref('');
+
+const saveToast = ref<{
+  type: 'success' | 'error';
+  message: string;
+  caption: string;
+} | null>(null);
+
+let saveToastTimeout: number | undefined;
 
 const isDialogOpen = computed({
   get: () => props.modelValue,
@@ -352,24 +424,61 @@ const printLogoSrc = computed(() => {
 });
 
 const previewTitle = computed(() => {
+  if (props.mode === 'image') {
+    return t('merchantReportsPage.printPreview.imageTitle');
+  }
+
   return props.mode === 'pdf'
     ? t('merchantReportsPage.printPreview.pdfTitle')
     : t('merchantReportsPage.printPreview.title');
 });
 
 const previewSubtitle = computed(() => {
+  if (props.mode === 'image') {
+    return t('merchantReportsPage.printPreview.imageSubtitle');
+  }
+
   return props.mode === 'pdf'
     ? t('merchantReportsPage.printPreview.pdfSubtitle')
     : t('merchantReportsPage.printPreview.subtitle');
 });
 
 const primaryActionLabel = computed(() => {
+  if (props.mode === 'image') {
+    return t('merchantReportsPage.printPreview.saveImage');
+  }
+
   return props.mode === 'pdf'
     ? t('merchantReportsPage.printPreview.savePdf')
     : t('merchantReportsPage.printPreview.print');
 });
 
+const primaryActionIcon = computed(() => {
+  if (props.mode === 'image') {
+    return 'image';
+  }
+
+  return 'print';
+});
+
+const shouldUseNativeImageSaveFeedback = computed(() => {
+  return props.mode === 'image' && isAndroidImageSaverAvailable();
+});
+
+const showImageSaveOverlay = computed(() => {
+  return shouldUseNativeImageSaveFeedback.value && isSavingImage.value;
+});
+
+const showImageSaveButtonBusy = computed(() => {
+  return shouldUseNativeImageSaveFeedback.value && isSavingImage.value;
+});
+
 async function handlePrintPreview(): Promise<void> {
+  if (props.mode === 'image') {
+    await handleSaveImage();
+    return;
+  }
+
   const originalTitle = document.title;
   const reportTitle =
     props.mode === 'pdf'
@@ -408,6 +517,137 @@ async function handlePrintPreview(): Promise<void> {
       document.title = originalTitle;
     }, 500);
   }, 100);
+}
+
+async function handleSaveImage(): Promise<void> {
+  const reportElement = document.querySelector('.report-print-document');
+
+  if (!(reportElement instanceof HTMLElement) || isSavingImage.value) {
+    return;
+  }
+
+  isSavingImage.value = true;
+  dismissSaveToast();
+
+  try {
+    imageExportSavedAtLabel.value = buildImageExportSavedAtLabel();
+
+    await nextTick();
+    await ensurePrintLogoDataUrl();
+    await nextTick();
+
+    const dataUrl = await toPng(reportElement, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: '#ffffff',
+      width: reportElement.scrollWidth,
+      height: reportElement.scrollHeight,
+      style: {
+        boxShadow: 'none',
+        margin: '0',
+        transform: 'none',
+      },
+    });
+
+    const fileName = buildReportImageFilename();
+
+    if (isAndroidImageSaverAvailable()) {
+      await saveAndroidPngImage({
+        dataUrl,
+        fileName,
+        albumName: 'Bitcoin Cash Topups',
+      });
+
+      showSaveToast({
+        type: 'success',
+        message: t('merchantReportsPage.printPreview.imageSaved'),
+        caption: t('merchantReportsPage.printPreview.imageSavedAndroidCaption'),
+      });
+
+      return;
+    }
+
+    const downloadLink = document.createElement('a');
+    downloadLink.href = dataUrl;
+    downloadLink.download = fileName;
+    downloadLink.click();
+  } catch (error) {
+    console.error('Could not save merchant report image.', error);
+
+    showSaveToast({
+      type: 'error',
+      message: t('merchantReportsPage.printPreview.imageSaveFailed'),
+      caption: t('merchantReportsPage.printPreview.imageSaveFailedCaption'),
+    });
+  } finally {
+    imageExportSavedAtLabel.value = '';
+    isSavingImage.value = false;
+  }
+}
+
+function showSaveToast(options: {
+  type: 'success' | 'error';
+  message: string;
+  caption: string;
+}): void {
+  saveToast.value = options;
+
+  if (saveToastTimeout) {
+    window.clearTimeout(saveToastTimeout);
+  }
+
+  saveToastTimeout = window.setTimeout(
+    () => {
+      saveToast.value = null;
+      saveToastTimeout = undefined;
+    },
+    options.type === 'success' ? 1900 : 4500
+  );
+}
+
+function dismissSaveToast(): void {
+  if (saveToastTimeout) {
+    window.clearTimeout(saveToastTimeout);
+    saveToastTimeout = undefined;
+  }
+
+  saveToast.value = null;
+}
+
+function buildReportImageFilename(): string {
+  const now = new Date();
+
+  const timestampLabel = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0'),
+    String(now.getMilliseconds()).padStart(3, '0'),
+  ].join('-');
+
+  const uniqueSuffix = Math.random().toString(36).slice(2, 7);
+
+  return `bitcoin-cash-topups-report-${timestampLabel}-${uniqueSuffix}.png`;
+}
+
+function buildImageExportSavedAtLabel(): string {
+  const now = new Date();
+
+  const dateLabel = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  const timeLabel = [
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0'),
+  ].join(':');
+
+  return `Saved ${dateLabel} ${timeLabel}`;
 }
 
 async function ensurePrintLogoDataUrl(): Promise<void> {
@@ -766,6 +1006,8 @@ function formatBchSats(sats: number): string {
   height: min(92vh, 940px);
   max-width: 980px;
   min-height: 0;
+  overflow: hidden;
+  position: relative;
   width: min(94vw, 980px);
 }
 
@@ -828,6 +1070,105 @@ function formatBchSats(sats: number): string {
   flex: 1;
   overflow: auto;
   padding: 24px;
+}
+
+.print-preview-page-wrapper {
+  position: relative;
+}
+
+.image-save-overlay {
+  animation: image-save-dip 420ms ease;
+  background: rgba(3, 7, 5, 0.34);
+  border-radius: 8px;
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 8;
+}
+
+.image-save-toast {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(0, 206, 27, 0.26);
+  border-radius: 22px;
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.2);
+  display: flex;
+  gap: 12px;
+  left: 50%;
+  max-width: min(420px, calc(100% - 32px));
+  padding: 14px 14px 14px 16px;
+  position: absolute;
+  top: 76px;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 30;
+}
+
+.image-save-toast--success {
+  border-color: rgba(0, 206, 27, 0.38);
+}
+
+.image-save-toast--error {
+  border-color: rgba(193, 0, 21, 0.28);
+}
+
+.image-save-toast-icon {
+  color: #00a816;
+  flex: 0 0 auto;
+}
+
+.image-save-toast--error .image-save-toast-icon {
+  color: #c10015;
+}
+
+.image-save-toast-copy {
+  min-width: 0;
+}
+
+.image-save-toast-title {
+  color: #111111;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.image-save-toast-caption {
+  color: #5f6661;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
+.image-save-toast-close {
+  color: #667069;
+  flex: 0 0 auto;
+  margin-left: 2px;
+}
+
+.image-save-toast-enter-active,
+.image-save-toast-leave-active {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.image-save-toast-enter-from,
+.image-save-toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -8px);
+}
+
+@keyframes image-save-dip {
+  0% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.78;
+  }
 }
 
 .print-page-scale-frame {
@@ -1092,11 +1433,22 @@ function formatBchSats(sats: number): string {
 .print-footer {
   border-top: 1px solid #dddddd;
   color: #666666;
+  display: flex;
   font-size: 11px;
   font-weight: 700;
+  gap: 12px;
+  justify-content: space-between;
   line-height: 1.4;
   margin-top: 26px;
   padding-top: 12px;
+}
+
+.image-export-saved-at {
+  color: #999999;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 750;
+  text-align: right;
 }
 
 @media (max-width: 900px) {

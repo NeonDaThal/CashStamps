@@ -27,6 +27,7 @@
     "easyqrcodejs": "^4.6.1",
     "electrum-cash": "2.0.10-development.3428777728",
     "events": "^3.3.0",
+    "html-to-image": "^1.11.13",
     "idb-keyval": "^6.2.1",
     "jsqr": "^1.4.0",
     "luxon": "^3.4.4",
