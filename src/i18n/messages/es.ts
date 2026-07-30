@@ -1079,6 +1079,7 @@ const es = {
       'Solo vista previa de desarrollo. Este recibo contiene un QR de clave privada barrible. Cualquier persona que lo escanee o copie puede barrer los fondos del vale.',
     loading: 'Construyendo vista previa del recibo...',
     receiptTitle: 'Vale BCH',
+    printerSubtitle: 'Topup Voucher',
     receiptSubtitle: 'Recibo de vale BCH barrible',
     voucherValueLoaded: 'Valor cargado en el vale',
     scanToSweep: 'Escanear para barrer',

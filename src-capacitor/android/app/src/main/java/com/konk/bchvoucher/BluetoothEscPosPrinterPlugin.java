@@ -6,13 +6,16 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Build;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.util.Base64;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
@@ -27,6 +30,7 @@ import org.json.JSONArray;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Set;
@@ -58,6 +62,11 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     private static final int MAX_PRINT_ATTEMPTS = 3;
     private static final long PRINT_RETRY_DELAY_MS = 650L;
     private static final long POST_FLUSH_SETTLE_DELAY_MS = 180L;
+
+    private static final int RECEIPT_WIDTH_PX = 384;
+    private static final int RECEIPT_TEXT_DARK_THRESHOLD = 155;
+    private static final String RECEIPT_BRAND_TITLE = "Bitcoin Cash";
+    private static final String RECEIPT_WEBSITE = "www.bchtopups.com";
 
     @PluginMethod
     public void getPairedDevices(PluginCall call) {
@@ -357,6 +366,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         final String printerName = call.getString("name", DEFAULT_PRINTER_NAME);
 
         final String title = safeString(call.getString("title", "BCH Voucher"));
+        final String printerSubtitle = safeString(call.getString("printerSubtitle", ""));
         final String serial = safeString(call.getString("serial", "UNKNOWN"));
         final String issuedAtLabel = safeString(call.getString("issuedAtLabel", ""));
         final String customerPaidLabel = safeString(call.getString("customerPaidLabel", ""));
@@ -364,6 +374,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         final String bchAmountLabel = safeString(call.getString("bchAmountLabel", ""));
         final String voucherAddress = safeString(call.getString("voucherAddress", ""));
         final String qrPayload = safeString(call.getString("qrPayload", ""));
+        final String qrImageDataUrl = safeString(call.getString("qrImageDataUrl", ""));
         final String redemptionInstruction = safeString(call.getString("redemptionInstruction", ""));
         final String cashWarning = safeString(call.getString("cashWarning", ""));
         final String supportNote = safeString(call.getString("supportNote", ""));
@@ -413,6 +424,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
             try {
                 byte[] bytes = buildVoucherReceiptBytes(
                     title,
+                    printerSubtitle,
                     serial,
                     issuedAtLabel,
                     customerPaidLabel,
@@ -420,6 +432,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
                     bchAmountLabel,
                     voucherAddress,
                     qrPayload,
+                    qrImageDataUrl,
                     redemptionInstruction,
                     cashWarning,
                     supportNote,
@@ -606,6 +619,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     private byte[] buildVoucherReceiptTestBytes() throws IOException {
         return buildVoucherReceiptBytes(
             "BCH Voucher",
+            "Topup Voucher",
             "TEST-0001",
             "TEST MODE",
             "GBP 11.00",
@@ -613,6 +627,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
             "0.01234567 BCH",
             "bitcoincash:qptestvoucheraddress000000000000000000000000000",
             "BCH_VOUCHER_TEST_ONLY_REFERENCE_TEST-0001",
+            "",
             "This QR is test-only. It does not contain a voucher key.",
             "WARNING: TREAT A REAL VOUCHER LIKE CASH.",
             "Keep the receipt safe until the voucher is redeemed.",
@@ -796,6 +811,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
     private byte[] buildVoucherReceiptBytes(
         String title,
+        String printerSubtitle,
         String serial,
         String issuedAtLabel,
         String customerPaidLabel,
@@ -803,6 +819,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         String bchAmountLabel,
         String voucherAddress,
         String qrPayload,
+        String qrImageDataUrl,
         String redemptionInstruction,
         String cashWarning,
         String supportNote,
@@ -818,34 +835,57 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
         writeInitialize(output);
 
+        writeBrandHeaderBlock(output, title, printerSubtitle, serial);
+        writeCompactDivider(output);
+
+        writeValueLoadedBlock(
+            output,
+            valueLoadedLabel,
+            loadedFiatLabel,
+            bchAmountLabel
+        );
+        writeCompactDivider(output);
+
         writeRasterTextBlock(
             output,
-            buildHeaderText(title, serial),
-            30,
-            false
+            scanToRedeemLabel,
+            25,
+            false,
+            Layout.Alignment.ALIGN_CENTER,
+            10,
+            0
         );
 
-        writeDivider(output);
+        writeRasterSpacer(output, 4);
 
-        writeRasterTextBlock(
-            output,
-            buildValueLoadedText(valueLoadedLabel, loadedFiatLabel, bchAmountLabel),
-            32,
-            false
-        );
+        Bitmap qrBitmap = decodeQrImageDataUrl(qrImageDataUrl);
 
-        writeDivider(output);
-
-        writeRasterTextBlock(output, scanToRedeemLabel, 28, false);
-        writeFeedLines(output, 1);
-        writeQrCode(output, qrPayload, 6);
-        writeFeedLines(output, 1);
-
-        if (hasText(redemptionInstruction)) {
-            writeRasterTextBlock(output, redemptionInstruction, 26, false);
+        if (qrBitmap != null) {
+            try {
+                writeQrImageBlock(output, qrBitmap);
+            } finally {
+                qrBitmap.recycle();
+            }
+        } else {
+            writeFeedLines(output, 1);
+            writeQrCode(output, qrPayload, 6);
+            writeFeedLines(output, 1);
         }
 
-        writeDivider(output);
+        if (hasText(redemptionInstruction)) {
+            writeRasterTextBlock(
+                output,
+                redemptionInstruction,
+                22,
+                false,
+                Layout.Alignment.ALIGN_CENTER,
+                10,
+                0
+            );
+            writeRasterSpacer(output, 4);
+        }
+
+        writeCompactDivider(output);
 
         writeRasterTextBlock(
             output,
@@ -861,57 +901,484 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
                 voucherAddressLabel,
                 voucherAddress
             ),
-            25,
-            false
+            24,
+            false,
+            Layout.Alignment.ALIGN_NORMAL,
+            10,
+            0
         );
 
-        if (hasText(cashWarning)) {
-            writeDivider(output);
-            writeRasterTextBlock(output, cashWarning, 26, false);
+        writeRasterSpacer(output, 4);
+
+        String bottomWarning = buildBottomWarningText(cashWarning, supportNote);
+
+        if (hasText(bottomWarning)) {
+            writeCompactDivider(output);
+            writeRasterSpacer(output, 8);
+            writeBorderedRasterTextBlock(output, bottomWarning, 21);
         }
 
-        if (hasText(supportNote)) {
-            writeFeedLines(output, 1);
-            writeRasterTextBlock(output, supportNote, 25, false);
-        }
+        writeRasterTextBlock(
+            output,
+            RECEIPT_WEBSITE,
+            23,
+            false,
+            Layout.Alignment.ALIGN_CENTER,
+            8,
+            0
+        );
 
-        writeFeedLines(output, 4);
+        writeFeedLines(output, 3);
 
         return output.toByteArray();
     }
 
-    private String buildHeaderText(String title, String serial) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("BITCOIN CASH");
+    private void writeBrandHeaderBlock(
+        ByteArrayOutputStream output,
+        String title,
+        String printerSubtitle,
+        String serial
+    ) throws IOException {
+        String subtitle = buildTopupVoucherSubtitle(title, printerSubtitle);
+        boolean isTestReceipt = hasText(serial) && serial.startsWith("TEST");
 
-        if (hasText(title)) {
-            builder.append("\n").append(title);
+        int widthPx = RECEIPT_WIDTH_PX;
+        int logoSizePx = 34;
+        int iconGapPx = 8;
+        int topPaddingPx = 8;
+        int titleTextSizePx = 32;
+        int subtitleTextSizePx = 23;
+        int testTextSizePx = 20;
+        int titleLineHeightPx = 42;
+        int subtitleLineHeightPx = 31;
+        int testLineHeightPx = isTestReceipt ? 26 : 0;
+        int bottomPaddingPx = 6;
+
+        int heightPx =
+            topPaddingPx +
+            titleLineHeightPx +
+            subtitleLineHeightPx +
+            testLineHeightPx +
+            bottomPaddingPx;
+
+        Bitmap bitmap = Bitmap.createBitmap(
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+
+        Paint titlePaint = new Paint(
+            Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+        );
+        titlePaint.setColor(Color.BLACK);
+        titlePaint.setTextSize(titleTextSizePx);
+        titlePaint.setTypeface(getUbuntuTypeface(false));
+
+        float titleTextWidth = titlePaint.measureText(RECEIPT_BRAND_TITLE);
+        float titleGroupWidth = logoSizePx + iconGapPx + titleTextWidth;
+        float titleStartX = Math.max(0, (widthPx - titleGroupWidth) / 2.0f);
+
+        Paint.FontMetrics titleMetrics = titlePaint.getFontMetrics();
+        float titleBaseline =
+            topPaddingPx +
+            ((titleLineHeightPx - titleMetrics.bottom + titleMetrics.top) / 2.0f)
+                - titleMetrics.top;
+
+        int logoTop = Math.max(
+            0,
+            Math.round(titleBaseline - logoSizePx + 4)
+        );
+
+        drawBchLogo(canvas, Math.round(titleStartX), logoTop, logoSizePx);
+        canvas.drawText(
+            RECEIPT_BRAND_TITLE,
+            titleStartX + logoSizePx + iconGapPx,
+            titleBaseline,
+            titlePaint
+        );
+
+        Paint subtitlePaint = new Paint(
+            Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+        );
+        subtitlePaint.setColor(Color.BLACK);
+        subtitlePaint.setTextSize(subtitleTextSizePx);
+        subtitlePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+        subtitlePaint.setTextAlign(Paint.Align.CENTER);
+
+        Paint.FontMetrics subtitleMetrics = subtitlePaint.getFontMetrics();
+        float subtitleTop = topPaddingPx + titleLineHeightPx;
+        float subtitleBaseline =
+            subtitleTop +
+            ((subtitleLineHeightPx - subtitleMetrics.bottom + subtitleMetrics.top) / 2.0f)
+                - subtitleMetrics.top;
+
+        canvas.drawText(subtitle, widthPx / 2.0f, subtitleBaseline, subtitlePaint);
+
+        if (isTestReceipt) {
+            Paint testPaint = new Paint(
+                Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+            );
+            testPaint.setColor(Color.BLACK);
+            testPaint.setTextSize(testTextSizePx);
+            testPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+            testPaint.setTextAlign(Paint.Align.CENTER);
+
+            Paint.FontMetrics testMetrics = testPaint.getFontMetrics();
+            float testTop = subtitleTop + subtitleLineHeightPx;
+            float testBaseline =
+                testTop +
+                ((testLineHeightPx - testMetrics.bottom + testMetrics.top) / 2.0f)
+                    - testMetrics.top;
+
+            canvas.drawText(
+                "TEST RECEIPT - NOT REAL",
+                widthPx / 2.0f,
+                testBaseline,
+                testPaint
+            );
         }
 
-        if (hasText(serial) && serial.startsWith("TEST")) {
-            builder.append("\nTEST RECEIPT - NOT REAL");
+        try {
+            writeAlignCenter(output);
+            writeRasterBitmap(output, bitmap);
+        } finally {
+            bitmap.recycle();
         }
-
-        return builder.toString();
     }
 
-    private String buildValueLoadedText(
+    private String buildTopupVoucherSubtitle(
+        String title,
+        String printerSubtitle
+    ) {
+        if (hasText(printerSubtitle)) {
+            return printerSubtitle;
+        }
+
+        String rawTitle = safeString(title);
+
+        if (!hasText(rawTitle)) {
+            return "Topup Voucher";
+        }
+
+        String subtitle = rawTitle
+            .replaceAll("(?i)bitcoin\\s*cash", "")
+            .replaceAll("(?i)\\bbch\\b", "")
+            .trim();
+
+        subtitle = subtitle
+            .replaceAll("\\s{2,}", " ")
+            .replaceAll("^[-–—:|/]+", "")
+            .replaceAll("[-–—:|/]+$", "")
+            .trim();
+
+        if (
+            !hasText(subtitle)
+                || subtitle.equalsIgnoreCase("voucher")
+                || rawTitle.equalsIgnoreCase("BCH Voucher")
+        ) {
+            return "Topup Voucher";
+        }
+
+        return subtitle;
+    }
+
+    private void writeValueLoadedBlock(
+        ByteArrayOutputStream output,
         String valueLoadedLabel,
         String loadedFiatLabel,
         String bchAmountLabel
-    ) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(valueLoadedLabel);
+    ) throws IOException {
+        int widthPx = RECEIPT_WIDTH_PX;
+        int textSizePx = 25;
+        int lineHeightPx = 33;
+        int topPaddingPx = 7;
+        int bottomPaddingPx = 7;
+        int lineCount =
+            1 +
+            (hasText(loadedFiatLabel) ? 1 : 0) +
+            (hasText(bchAmountLabel) ? 1 : 0);
+
+        int heightPx = topPaddingPx + (lineCount * lineHeightPx) + bottomPaddingPx;
+
+        Bitmap bitmap = Bitmap.createBitmap(
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+
+        Paint textPaint = new Paint(
+            Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+        );
+        textPaint.setColor(Color.BLACK);
+        textPaint.setTextSize(textSizePx);
+        textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+        textPaint.setTextAlign(Paint.Align.CENTER);
+
+        int currentLine = 0;
+
+        drawCenteredTextLine(
+            canvas,
+            safeString(valueLoadedLabel),
+            textPaint,
+            topPaddingPx,
+            lineHeightPx,
+            currentLine
+        );
+        currentLine += 1;
 
         if (hasText(loadedFiatLabel)) {
-            builder.append("\n").append(loadedFiatLabel);
+            drawCenteredTextLine(
+                canvas,
+                loadedFiatLabel,
+                textPaint,
+                topPaddingPx,
+                lineHeightPx,
+                currentLine
+            );
+            currentLine += 1;
         }
 
         if (hasText(bchAmountLabel)) {
-            builder.append("\n").append(bchAmountLabel);
+            drawBchAmountLine(
+                canvas,
+                bchAmountLabel,
+                textPaint,
+                topPaddingPx,
+                lineHeightPx,
+                currentLine
+            );
         }
 
-        return builder.toString();
+        try {
+            writeAlignCenter(output);
+            writeRasterBitmap(output, bitmap);
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    private void drawCenteredTextLine(
+        Canvas canvas,
+        String text,
+        Paint paint,
+        int topPaddingPx,
+        int lineHeightPx,
+        int lineIndex
+    ) {
+        Paint.FontMetrics metrics = paint.getFontMetrics();
+        float lineTop = topPaddingPx + (lineIndex * lineHeightPx);
+        float baseline =
+            lineTop +
+            ((lineHeightPx - metrics.bottom + metrics.top) / 2.0f)
+                - metrics.top;
+
+        canvas.drawText(text, RECEIPT_WIDTH_PX / 2.0f, baseline, paint);
+    }
+
+    private void drawBchAmountLine(
+        Canvas canvas,
+        String text,
+        Paint paint,
+        int topPaddingPx,
+        int lineHeightPx,
+        int lineIndex
+    ) {
+        int logoSizePx = 20;
+        int iconGapPx = 5;
+        float textWidth = paint.measureText(text);
+        float groupWidth = logoSizePx + iconGapPx + textWidth;
+        float startX = Math.max(0, (RECEIPT_WIDTH_PX - groupWidth) / 2.0f);
+
+        Paint.FontMetrics metrics = paint.getFontMetrics();
+        float lineTop = topPaddingPx + (lineIndex * lineHeightPx);
+        float baseline =
+            lineTop +
+            ((lineHeightPx - metrics.bottom + metrics.top) / 2.0f)
+                - metrics.top;
+
+        int logoTop = Math.round(baseline - logoSizePx + 3);
+        drawBchLogo(canvas, Math.round(startX), logoTop, logoSizePx);
+
+        Paint leftAlignedPaint = new Paint(paint);
+        leftAlignedPaint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText(text, startX + logoSizePx + iconGapPx, baseline, leftAlignedPaint);
+    }
+
+    private void writeQrImageBlock(
+        ByteArrayOutputStream output,
+        Bitmap qrBitmap
+    ) throws IOException {
+        int widthPx = RECEIPT_WIDTH_PX;
+        int borderSizePx = 292;
+        int qrSizePx = 244;
+        int topPaddingPx = 8;
+        int bottomPaddingPx = 9;
+        int heightPx = borderSizePx + topPaddingPx + bottomPaddingPx;
+        int borderLeftPx = (widthPx - borderSizePx) / 2;
+        int borderTopPx = topPaddingPx;
+        int qrLeftPx = borderLeftPx + ((borderSizePx - qrSizePx) / 2);
+        int qrTopPx = borderTopPx + ((borderSizePx - qrSizePx) / 2);
+
+        Bitmap bitmap = Bitmap.createBitmap(
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+
+        Paint imagePaint = new Paint();
+        imagePaint.setFilterBitmap(false);
+        imagePaint.setDither(false);
+
+        Rect destination = new Rect(
+            qrLeftPx,
+            qrTopPx,
+            qrLeftPx + qrSizePx,
+            qrTopPx + qrSizePx
+        );
+        canvas.drawBitmap(qrBitmap, null, destination, imagePaint);
+
+        Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        borderPaint.setColor(Color.BLACK);
+        borderPaint.setStyle(Paint.Style.STROKE);
+        borderPaint.setStrokeWidth(2.0f);
+
+        Rect borderRect = new Rect(
+            borderLeftPx,
+            borderTopPx,
+            borderLeftPx + borderSizePx,
+            borderTopPx + borderSizePx
+        );
+        canvas.drawRect(borderRect, borderPaint);
+
+        try {
+            writeAlignCenter(output);
+            writeRasterBitmap(output, bitmap);
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    private Bitmap decodeQrImageDataUrl(String qrImageDataUrl) {
+        if (!hasText(qrImageDataUrl)) {
+            return null;
+        }
+
+        String data = qrImageDataUrl.trim();
+        int commaIndex = data.indexOf(',');
+
+        if (commaIndex >= 0 && commaIndex + 1 < data.length()) {
+            data = data.substring(commaIndex + 1);
+        }
+
+        try {
+            byte[] bytes = Base64.decode(data, Base64.DEFAULT);
+            return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void writeBorderedRasterTextBlock(
+        ByteArrayOutputStream output,
+        String text,
+        int textSizePx
+    ) throws IOException {
+        int widthPx = RECEIPT_WIDTH_PX;
+        int outerPaddingPx = 12;
+        int borderPaddingPx = 10;
+        int contentWidthPx = widthPx - (outerPaddingPx * 2) - (borderPaddingPx * 2);
+
+        TextPaint textPaint = new TextPaint(
+            Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+        );
+        textPaint.setColor(Color.BLACK);
+        textPaint.setTextSize(textSizePx);
+        textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+
+        StaticLayout layout = new StaticLayout(
+            text,
+            textPaint,
+            contentWidthPx,
+            Layout.Alignment.ALIGN_CENTER,
+            1.12f,
+            0.0f,
+            false
+        );
+
+        int heightPx =
+            layout.getHeight() +
+            (outerPaddingPx * 2) +
+            (borderPaddingPx * 2);
+
+        Bitmap bitmap = Bitmap.createBitmap(
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+
+        Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        borderPaint.setColor(Color.BLACK);
+        borderPaint.setStyle(Paint.Style.STROKE);
+        borderPaint.setStrokeWidth(2.0f);
+
+        Rect borderRect = new Rect(
+            outerPaddingPx,
+            2,
+            widthPx - outerPaddingPx,
+            heightPx - 3
+        );
+        canvas.drawRect(borderRect, borderPaint);
+
+        canvas.save();
+        canvas.translate(
+            outerPaddingPx + borderPaddingPx,
+            outerPaddingPx + borderPaddingPx
+        );
+        layout.draw(canvas);
+        canvas.restore();
+
+        try {
+            writeAlignCenter(output);
+            writeRasterBitmap(output, bitmap);
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    private String buildBottomWarningText(String cashWarning, String supportNote) {
+        String safeCashWarning = safeString(cashWarning);
+        String safeSupportNote = safeString(supportNote);
+
+        if (
+            safeCashWarning.toLowerCase().contains("anyone with this qr code can sweep")
+                || safeSupportNote.toLowerCase().contains("swept into your own wallet")
+        ) {
+            return "Keep this voucher safe until the BCH has been swept into your wallet. Anyone with this QR code can sweep the funds.";
+        }
+
+        StringBuilder builder = new StringBuilder();
+
+        if (hasText(safeSupportNote)) {
+            builder.append(safeSupportNote);
+        }
+
+        if (hasText(safeCashWarning)) {
+            if (builder.length() > 0) {
+                builder.append(" ");
+            }
+
+            builder.append(safeCashWarning);
+        }
+
+        return builder.toString().trim();
     }
 
     private String buildReceiptDetailsText(
@@ -1018,12 +1485,42 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         int textSizePx,
         boolean bold
     ) throws IOException {
-        Bitmap bitmap = renderTextBlockBitmap(text, 384, textSizePx, bold);
+        writeRasterTextBlock(
+            output,
+            text,
+            textSizePx,
+            bold,
+            Layout.Alignment.ALIGN_NORMAL,
+            10,
+            1
+        );
+    }
+
+    private void writeRasterTextBlock(
+        ByteArrayOutputStream output,
+        String text,
+        int textSizePx,
+        boolean bold,
+        Layout.Alignment alignment,
+        int verticalPaddingPx,
+        int feedLinesAfter
+    ) throws IOException {
+        Bitmap bitmap = renderTextBlockBitmap(
+            text,
+            RECEIPT_WIDTH_PX,
+            textSizePx,
+            bold,
+            alignment,
+            verticalPaddingPx
+        );
 
         try {
             writeAlignCenter(output);
             writeRasterBitmap(output, bitmap);
-            writeFeedLines(output, 1);
+
+            if (feedLinesAfter > 0) {
+                writeFeedLines(output, feedLinesAfter);
+            }
         } finally {
             bitmap.recycle();
         }
@@ -1033,10 +1530,11 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         String text,
         int widthPx,
         int textSizePx,
-        boolean bold
+        boolean bold,
+        Layout.Alignment alignment,
+        int verticalPaddingPx
     ) {
         int horizontalPaddingPx = 12;
-        int verticalPaddingPx = 10;
         int contentWidthPx = widthPx - (horizontalPaddingPx * 2);
 
         TextPaint textPaint = new TextPaint(
@@ -1051,11 +1549,11 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         );
 
         StaticLayout layout = new StaticLayout(
-            text,
+            safeString(text),
             textPaint,
             contentWidthPx,
-            Layout.Alignment.ALIGN_NORMAL,
-            1.15f,
+            alignment,
+            1.12f,
             0.0f,
             false
         );
@@ -1076,6 +1574,108 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         layout.draw(canvas);
 
         return bitmap;
+    }
+
+    private Typeface getUbuntuTypeface(boolean bold) {
+        String[] assetPaths = new String[] {
+            "fonts/Ubuntu-Bold.ttf",
+            "fonts/Ubuntu-Regular.ttf",
+            "public/fonts/Ubuntu-Bold.ttf",
+            "public/fonts/Ubuntu-Regular.ttf",
+            "public/assets/Ubuntu-Bold.ttf",
+            "public/assets/Ubuntu-Regular.ttf",
+            "assets/Ubuntu-Bold.ttf",
+            "assets/Ubuntu-Regular.ttf"
+        };
+
+        for (String assetPath : assetPaths) {
+            try {
+                if (!bold && assetPath.toLowerCase().contains("bold")) {
+                    continue;
+                }
+
+                if (bold && assetPath.toLowerCase().contains("regular")) {
+                    continue;
+                }
+
+                return Typeface.createFromAsset(getContext().getAssets(), assetPath);
+            } catch (Exception ignored) {
+                // Try the next likely asset location.
+            }
+        }
+
+        return Typeface.create(
+            "sans-serif",
+            bold ? Typeface.BOLD : Typeface.NORMAL
+        );
+    }
+
+    private void drawBchLogo(Canvas canvas, int leftPx, int topPx, int sizePx) {
+        Bitmap sourceLogo = loadBchLogoBitmap(sizePx);
+
+        if (sourceLogo != null) {
+            try {
+                Rect destination = new Rect(
+                    leftPx,
+                    topPx,
+                    leftPx + sizePx,
+                    topPx + sizePx
+                );
+                canvas.drawBitmap(sourceLogo, null, destination, null);
+                return;
+            } finally {
+                sourceLogo.recycle();
+            }
+        }
+
+        Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        circlePaint.setColor(Color.BLACK);
+        circlePaint.setStyle(Paint.Style.FILL);
+
+        float radius = sizePx / 2.0f;
+        canvas.drawCircle(leftPx + radius, topPx + radius, radius, circlePaint);
+
+        Paint textPaint = new Paint(
+            Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+        );
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(sizePx * 0.68f);
+        textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        textPaint.setTextAlign(Paint.Align.CENTER);
+
+        Paint.FontMetrics metrics = textPaint.getFontMetrics();
+        float baseline =
+            topPx +
+            radius -
+            ((metrics.ascent + metrics.descent) / 2.0f);
+
+        canvas.drawText("B", leftPx + radius, baseline, textPaint);
+    }
+
+    private Bitmap loadBchLogoBitmap(int sizePx) {
+        String[] assetPaths = new String[] {
+            "bch-logo.png",
+            "assets/bch-logo.png",
+            "public/assets/bch-logo.png",
+            "public/bch-logo.png",
+            "www/assets/bch-logo.png"
+        };
+
+        for (String assetPath : assetPaths) {
+            try (InputStream inputStream = getContext().getAssets().open(assetPath)) {
+                Bitmap decoded = BitmapFactory.decodeStream(inputStream);
+
+                if (decoded == null) {
+                    continue;
+                }
+
+                return Bitmap.createScaledBitmap(decoded, sizePx, sizePx, true);
+            } catch (Exception ignored) {
+                // Try the next likely asset location.
+            }
+        }
+
+        return null;
     }
 
     private void writeRasterBitmap(
@@ -1123,7 +1723,7 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         }
 
         int luminance = (red * 299 + green * 587 + blue * 114) / 1000;
-        return luminance < 180;
+        return luminance < RECEIPT_TEXT_DARK_THRESHOLD;
     }
 
     private void writeInitialize(ByteArrayOutputStream output) {
@@ -1216,6 +1816,56 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         writeFeedLines(output, 1);
     }
 
+    private void writeCompactDivider(ByteArrayOutputStream output) throws IOException {
+        int widthPx = RECEIPT_WIDTH_PX;
+        int heightPx = 14;
+
+        Bitmap bitmap = Bitmap.createBitmap(
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(Color.BLACK);
+        paint.setStrokeWidth(1.6f);
+
+        canvas.drawLine(12, heightPx / 2.0f, widthPx - 12, heightPx / 2.0f, paint);
+
+        try {
+            writeAlignCenter(output);
+            writeRasterBitmap(output, bitmap);
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    private void writeRasterSpacer(
+        ByteArrayOutputStream output,
+        int heightPx
+    ) throws IOException {
+        if (heightPx <= 0) {
+            return;
+        }
+
+        Bitmap bitmap = Bitmap.createBitmap(
+            RECEIPT_WIDTH_PX,
+            heightPx,
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+
+        try {
+            writeAlignCenter(output);
+            writeRasterBitmap(output, bitmap);
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
     private void writeFeedLines(ByteArrayOutputStream output, int lines) {
         for (int index = 0; index < lines; index += 1) {
             output.write(0x0A);
@@ -1229,11 +1879,9 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     ) throws IOException {
         byte[] data = payload.getBytes(Charset.forName("US-ASCII"));
 
-        // QR model 2.
-        output.write(new byte[] {
-            0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00
-        });
-
+        // The printer defaults to QR model 2. We intentionally avoid sending
+        // the model-selection command here because this JK-5803P-compatible
+        // printer can print the command's model byte as a stray "2" above the QR.
         // QR module size.
         output.write(new byte[] {
             0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, (byte) moduleSize

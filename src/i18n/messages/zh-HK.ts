@@ -1024,6 +1024,7 @@ const zhHK = {
       '僅供開發預覽。此收據包含可轉入資金的私鑰 QR。任何人掃描或複製它，都可以轉走增值券資金。',
     loading: '正在建立收據預覽...',
     receiptTitle: 'BCH 增值券',
+    printerSubtitle: 'Topup Voucher',
     receiptSubtitle: '可轉入 BCH 的增值券收據',
     voucherValueLoaded: '已載入增值券價值',
     scanToSweep: '掃描以轉入',

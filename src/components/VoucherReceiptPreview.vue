@@ -185,7 +185,7 @@ const props = withDefaults(
 );
 
 const $q = useQuasar();
-const { locale, t } = useI18n({ useScope: 'global' });
+const { locale, t, te } = useI18n({ useScope: 'global' });
 
 const receiptData = ref<VoucherReceiptData | null>(null);
 const qrCodeDataUrl = ref('');
@@ -198,6 +198,31 @@ const isPrinterBridgeAvailable = computed(() =>
   isAndroidPrinterBridgeAvailable()
 );
 
+const PRINTER_SUBTITLE_KEY = 'receiptPreview.printerSubtitle';
+
+function buildFallbackPrinterSubtitle(receiptTitle: string): string {
+  const strippedTitle = receiptTitle
+    .replace(/bitcoin\s*cash/gi, '')
+    .replace(/\bbch\b/gi, '')
+    .replace(/^[\s\-–—:|/]+|[\s\-–—:|/]+$/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  if (!strippedTitle || strippedTitle.toLowerCase() === 'voucher') {
+    return 'Topup Voucher';
+  }
+
+  return strippedTitle;
+}
+
+function getReceiptPrinterSubtitle(): string {
+  if (te(PRINTER_SUBTITLE_KEY)) {
+    return t(PRINTER_SUBTITLE_KEY);
+  }
+
+  return buildFallbackPrinterSubtitle(t('receiptPreview.receiptTitle'));
+}
+
 async function buildReceiptPreview(): Promise<void> {
   isLoading.value = true;
   errorMessage.value = '';
@@ -207,6 +232,7 @@ async function buildReceiptPreview(): Promise<void> {
   try {
     const builtReceiptData = await buildVoucherReceiptData(props.voucher, {
       title: t('receiptPreview.receiptTitle'),
+      printerSubtitle: getReceiptPrinterSubtitle(),
       redemptionInstruction: t('receiptPreview.redemptionInstruction'),
       cashWarning: t('receiptPreview.cashWarning'),
       supportNote: t('receiptPreview.supportNote'),
@@ -266,7 +292,9 @@ async function handlePrintReceipt(): Promise<void> {
   printStatusMessage.value = 'Connecting to printer and sending receipt...';
 
   try {
-    const result = await printBluetoothVoucherReceipt(receiptData.value);
+    const result = await printBluetoothVoucherReceipt(receiptData.value, {
+      qrImageDataUrl: qrCodeDataUrl.value,
+    });
 
     printStatusMessage.value = 'Receipt sent to printer.';
 

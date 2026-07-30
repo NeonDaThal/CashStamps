@@ -15,6 +15,7 @@ export interface VoucherReceiptPrintLabels {
 
 export interface VoucherReceiptData {
   title: string;
+  printerSubtitle: string;
   serial: string;
 
   issuedAt: string;
@@ -67,6 +68,7 @@ export interface VoucherReceiptErrorMessages {
 
 export interface BuildVoucherReceiptDataOptions {
   title?: string;
+  printerSubtitle?: string;
   redemptionInstruction?: string;
   cashWarning?: string;
   supportNote?: string;
@@ -75,6 +77,8 @@ export interface BuildVoucherReceiptDataOptions {
 }
 
 const DEFAULT_RECEIPT_TITLE = 'BCH Voucher';
+
+const DEFAULT_PRINTER_SUBTITLE = 'Topup Voucher';
 
 const DEFAULT_REDEMPTION_INSTRUCTION =
   'Scan this QR code with a Bitcoin Cash wallet that supports private key sweeping.';
@@ -197,6 +201,7 @@ export async function buildVoucherReceiptData(
 
   return {
     title: options.title ?? DEFAULT_RECEIPT_TITLE,
+    printerSubtitle: options.printerSubtitle ?? DEFAULT_PRINTER_SUBTITLE,
     serial: voucher.serial,
 
     issuedAt,

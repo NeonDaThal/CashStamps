@@ -51,6 +51,7 @@ interface BluetoothEscPosPrinterPlugin {
     name?: string;
     address?: string;
     title: string;
+    printerSubtitle: string;
     serial: string;
     issuedAtLabel: string;
     customerPaidLabel: string;
@@ -58,6 +59,7 @@ interface BluetoothEscPosPrinterPlugin {
     bchAmountLabel: string;
     voucherAddress: string;
     qrPayload: string;
+    qrImageDataUrl?: string;
     redemptionInstruction: string;
     cashWarning: string;
     supportNote: string;
@@ -79,6 +81,8 @@ export const DEFAULT_JK_5803P_PRINTER = {
 const BluetoothEscPosPrinter = registerPlugin<BluetoothEscPosPrinterPlugin>(
   'BluetoothEscPosPrinter'
 );
+
+const DEFAULT_PRINTER_SUBTITLE = 'Topup Voucher';
 
 const DEFAULT_PRINT_LABELS = {
   valueLoaded: 'Value loaded',
@@ -194,6 +198,7 @@ export async function printBluetoothVoucherReceipt(
   options?: {
     name?: string;
     address?: string;
+    qrImageDataUrl?: string;
   }
 ): Promise<AndroidPrinterResult> {
   if (!isAndroidPrinterBridgeAvailable()) {
@@ -215,6 +220,7 @@ export async function printBluetoothVoucherReceipt(
     name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
     address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
     title: receiptData.title,
+    printerSubtitle: receiptData.printerSubtitle || DEFAULT_PRINTER_SUBTITLE,
     serial: receiptData.serial,
     issuedAtLabel: receiptData.issuedAtLabel,
     customerPaidLabel: receiptData.customerPaidLabel,
@@ -222,6 +228,7 @@ export async function printBluetoothVoucherReceipt(
     bchAmountLabel: receiptData.bchAmountLabel,
     voucherAddress: receiptData.address,
     qrPayload: receiptData.qrPayload,
+    qrImageDataUrl: options?.qrImageDataUrl,
     redemptionInstruction: receiptData.redemptionInstruction,
     cashWarning: receiptData.cashWarning,
     supportNote: receiptData.supportNote,

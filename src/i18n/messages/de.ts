@@ -1087,6 +1087,7 @@ const de = {
       'Nur Entwicklungsvorschau. Dieser Beleg enthält einen QR-Code mit einem übertragbaren privaten Schlüssel. Jede Person, die ihn scannt oder kopiert, kann die Voucher-Gelder übertragen.',
     loading: 'Belegvorschau wird erstellt...',
     receiptTitle: 'BCH-Voucher',
+    printerSubtitle: 'Topup Voucher',
     receiptSubtitle: 'Übertragbarer BCH-Voucher-Beleg',
     voucherValueLoaded: 'Geladener Voucher-Wert',
     scanToSweep: 'Zum Übertragen scannen',

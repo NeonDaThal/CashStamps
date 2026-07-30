@@ -1082,6 +1082,7 @@ const pt = {
       'Apenas pré-visualização de desenvolvimento. Este recibo contém um QR com uma chave privada transferível. Qualquer pessoa que o digitalize ou copie pode transferir os fundos do vale.',
     loading: 'A construir pré-visualização do recibo...',
     receiptTitle: 'Vale BCH',
+    printerSubtitle: 'Topup Voucher',
     receiptSubtitle: 'Recibo de vale BCH transferível',
     voucherValueLoaded: 'Valor carregado no vale',
     scanToSweep: 'Digitalizar para transferir',

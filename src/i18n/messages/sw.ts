@@ -1077,6 +1077,7 @@ const sw = {
       'Muonekano wa maendeleo pekee. Risiti hii ina QR ya private key inayoweza kuhamisha fedha. Mtu yeyote anayeiscan au kuinakili anaweza kuhamisha fedha za vocha.',
     loading: 'Inatengeneza muonekano wa risiti...',
     receiptTitle: 'Vocha ya Kurecharge BCH',
+    printerSubtitle: 'Topup Voucher',
     receiptSubtitle: 'Risiti ya vocha ya BCH inayoweza kuhamishwa',
     voucherValueLoaded: 'Thamani ya vocha imepakiwa',
     scanToSweep: 'Scan ili kuhamisha',

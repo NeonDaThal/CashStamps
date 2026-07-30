@@ -1055,6 +1055,7 @@ const en = {
       'Development preview only. This receipt contains a sweepable private key QR. Anyone who scans or copies it can sweep the voucher funds.',
     loading: 'Building receipt preview...',
     receiptTitle: 'BCH Voucher',
+    printerSubtitle: 'Topup Voucher',
     receiptSubtitle: 'Sweepable BCH voucher receipt',
     voucherValueLoaded: 'Voucher value loaded',
     scanToSweep: 'Scan to sweep',

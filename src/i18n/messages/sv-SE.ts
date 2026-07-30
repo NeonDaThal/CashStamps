@@ -1074,6 +1074,7 @@ const svSE = {
       'Endast utvecklingsvisning. Det här kvittot innehåller en QR-kod med en överförbar privat nyckel. Alla som skannar eller kopierar den kan föra över värdekodens medel.',
     loading: 'Bygger kvittovisning...',
     receiptTitle: 'BCH-värdekod',
+    printerSubtitle: 'Topup Voucher',
     receiptSubtitle: 'Överförbart BCH-värdekodskvitto',
     voucherValueLoaded: 'Värdekodsvärde laddat',
     scanToSweep: 'Skanna för att överföra',
