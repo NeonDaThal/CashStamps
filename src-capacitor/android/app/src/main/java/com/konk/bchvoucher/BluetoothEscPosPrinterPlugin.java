@@ -5,6 +5,14 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Build;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
@@ -144,6 +152,25 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         }
 
         doPrintCharacterEncodingTest(call);
+    }
+
+    @PluginMethod
+    public void printRasterTextTest(PluginCall call) {
+        if (!ensureBluetoothPrinterPermission(call, "printRasterTextTestPermissionCallback")) {
+            return;
+        }
+
+        doPrintRasterTextTest(call);
+    }
+
+    @PermissionCallback
+    private void printRasterTextTestPermissionCallback(PluginCall call) {
+        if (!hasBluetoothPrinterPermission()) {
+            call.reject("Bluetooth permission was not granted.");
+            return;
+        }
+
+        doPrintRasterTextTest(call);
     }
 
     @PluginMethod
@@ -296,6 +323,29 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
                 call.resolve(result);
             } catch (Exception error) {
                 call.reject("Character encoding test print failed: " + error.getMessage());
+            }
+        }).start();
+    }
+
+    private void doPrintRasterTextTest(PluginCall call) {
+        final String address = normalisePrinterAddress(
+            call.getString("address", DEFAULT_PRINTER_ADDRESS)
+        );
+        final String printerName = call.getString("name", DEFAULT_PRINTER_NAME);
+
+        new Thread(() -> {
+            try {
+                byte[] bytes = buildRasterTextTestBytes();
+                sendBytesToPrinter(address, bytes);
+
+                JSObject result = new JSObject();
+                result.put("success", true);
+                result.put("printerName", printerName);
+                result.put("address", address);
+                result.put("message", "Raster text test sent to printer.");
+                call.resolve(result);
+            } catch (Exception error) {
+                call.reject("Raster text test print failed: " + error.getMessage());
             }
         }).start();
     }
@@ -681,6 +731,69 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         return output.toByteArray();
     }
 
+    private byte[] buildRasterTextTestBytes() throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        writeInitialize(output);
+        writeAlignCenter(output);
+        writeBold(output, true);
+        writeTextLine(output, "RASTER TEXT TEST");
+        writeBold(output, false);
+        writeTextLine(output, "Android bitmap rendering");
+        writeFeedLines(output, 1);
+
+        writeAlignLeft(output);
+        writeWrappedText(
+            output,
+            "This test prints Android-rendered text as ESC/POS raster images. It is separate from the live voucher receipt.",
+            32
+        );
+        writeDivider(output);
+
+        writeRasterTextBlock(
+            output,
+            "Nepali sample\n" +
+                "BCH रिचार्ज भौचर\n" +
+                "लोड गरिएको मूल्य: GBP 10.00\n" +
+                "रिडिम गर्न स्क्यान गर्नुहोस्\n" +
+                "यो रसिदलाई नगद जस्तै व्यवहार गर्नुहोस्।",
+            28,
+            false
+        );
+
+        writeDivider(output);
+
+        writeRasterTextBlock(
+            output,
+            "Hong Kong Cantonese sample\n" +
+                "BCH 增值券\n" +
+                "已載入價值：GBP 10.00\n" +
+                "掃描以兌換\n" +
+                "請將此收據當作現金處理。",
+            28,
+            false
+        );
+
+        writeDivider(output);
+
+        writeRasterTextBlock(
+            output,
+            "Arabic sample\n" +
+                "قسيمة شحن BCH\n" +
+                "القيمة المحملة: GBP 10.00\n" +
+                "امسح للاسترداد\n" +
+                "عامل هذا الإيصال مثل النقود.",
+            28,
+            false
+        );
+
+        writeDivider(output);
+        writeTextLine(output, "END OF RASTER TEST");
+        writeFeedLines(output, 4);
+
+        return output.toByteArray();
+    }
+
     private byte[] buildVoucherReceiptBytes(
         String title,
         String serial,
@@ -705,78 +818,150 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
 
         writeInitialize(output);
 
-        writeAlignCenter(output);
-        writeBold(output, true);
-        writeTextLine(output, "BITCOIN CASH");
-        writeTextLine(output, title.toUpperCase());
-        writeBold(output, false);
-
-        if (serial.startsWith("TEST")) {
-            writeTextLine(output, "TEST RECEIPT - NOT REAL");
-        }
+        writeRasterTextBlock(
+            output,
+            buildHeaderText(title, serial),
+            30,
+            false
+        );
 
         writeDivider(output);
 
-        writeTextLine(output, valueLoadedLabel);
-        writeBold(output, true);
-        writeTextLine(output, loadedFiatLabel);
-        writeBold(output, false);
-
-        if (hasText(bchAmountLabel)) {
-            writeTextLine(output, bchAmountLabel);
-        }
+        writeRasterTextBlock(
+            output,
+            buildValueLoadedText(valueLoadedLabel, loadedFiatLabel, bchAmountLabel),
+            32,
+            false
+        );
 
         writeDivider(output);
 
-        writeTextLine(output, scanToRedeemLabel);
+        writeRasterTextBlock(output, scanToRedeemLabel, 28, false);
         writeFeedLines(output, 1);
         writeQrCode(output, qrPayload, 6);
         writeFeedLines(output, 1);
 
         if (hasText(redemptionInstruction)) {
-            writeWrappedText(output, redemptionInstruction, 32);
+            writeRasterTextBlock(output, redemptionInstruction, 26, false);
         }
 
         writeDivider(output);
 
-        writeAlignLeft(output);
-        writeKeyValueLine(output, referenceLabel, serial);
-
-        if (hasText(issuedAtLabel)) {
-            writeKeyValueLine(output, issuedLabel, issuedAtLabel);
-        }
-
-        if (hasText(customerPaidLabel)) {
-            writeKeyValueLine(output, customerPaidFieldLabel, customerPaidLabel);
-        }
-
-        if (hasText(loadedFiatLabel)) {
-            writeKeyValueLine(output, loadedFieldLabel, loadedFiatLabel);
-        }
-
-        if (hasText(voucherAddress)) {
-            writeFeedLines(output, 1);
-            writeTextLine(output, voucherAddressLabel + ":");
-            writeWrappedText(output, voucherAddress, 32);
-        }
+        writeRasterTextBlock(
+            output,
+            buildReceiptDetailsText(
+                referenceLabel,
+                serial,
+                issuedLabel,
+                issuedAtLabel,
+                customerPaidFieldLabel,
+                customerPaidLabel,
+                loadedFieldLabel,
+                loadedFiatLabel,
+                voucherAddressLabel,
+                voucherAddress
+            ),
+            25,
+            false
+        );
 
         if (hasText(cashWarning)) {
             writeDivider(output);
-            writeAlignCenter(output);
-            writeBold(output, true);
-            writeWrappedText(output, cashWarning, 32);
-            writeBold(output, false);
+            writeRasterTextBlock(output, cashWarning, 26, false);
         }
 
         if (hasText(supportNote)) {
             writeFeedLines(output, 1);
-            writeAlignCenter(output);
-            writeWrappedText(output, supportNote, 32);
+            writeRasterTextBlock(output, supportNote, 25, false);
         }
 
         writeFeedLines(output, 4);
 
         return output.toByteArray();
+    }
+
+    private String buildHeaderText(String title, String serial) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("BITCOIN CASH");
+
+        if (hasText(title)) {
+            builder.append("\n").append(title);
+        }
+
+        if (hasText(serial) && serial.startsWith("TEST")) {
+            builder.append("\nTEST RECEIPT - NOT REAL");
+        }
+
+        return builder.toString();
+    }
+
+    private String buildValueLoadedText(
+        String valueLoadedLabel,
+        String loadedFiatLabel,
+        String bchAmountLabel
+    ) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(valueLoadedLabel);
+
+        if (hasText(loadedFiatLabel)) {
+            builder.append("\n").append(loadedFiatLabel);
+        }
+
+        if (hasText(bchAmountLabel)) {
+            builder.append("\n").append(bchAmountLabel);
+        }
+
+        return builder.toString();
+    }
+
+    private String buildReceiptDetailsText(
+        String referenceLabel,
+        String serial,
+        String issuedLabel,
+        String issuedAtLabel,
+        String customerPaidFieldLabel,
+        String customerPaidLabel,
+        String loadedFieldLabel,
+        String loadedFiatLabel,
+        String voucherAddressLabel,
+        String voucherAddress
+    ) {
+        StringBuilder builder = new StringBuilder();
+
+        appendLabelValue(builder, referenceLabel, serial);
+        appendLabelValue(builder, issuedLabel, issuedAtLabel);
+        appendLabelValue(builder, customerPaidFieldLabel, customerPaidLabel);
+        appendLabelValue(builder, loadedFieldLabel, loadedFiatLabel);
+
+        if (hasText(voucherAddress)) {
+            appendBlankLine(builder);
+            builder.append(voucherAddressLabel).append(":\n");
+            builder.append(voucherAddress);
+        }
+
+        return builder.toString();
+    }
+
+    private void appendLabelValue(
+        StringBuilder builder,
+        String label,
+        String value
+    ) {
+        if (!hasText(label) || !hasText(value)) {
+            return;
+        }
+
+        if (builder.length() > 0) {
+            builder.append("\n");
+        }
+
+        builder.append(label).append(": ").append(value);
+    }
+
+    private void appendBlankLine(StringBuilder builder) {
+        if (builder.length() > 0) {
+            builder.append("\n\n");
+        }
     }
 
     private void writeEncodingTestSection(
@@ -825,6 +1010,120 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     ) {
         output.write(0x1C);
         output.write(enabled ? 0x26 : 0x2E);
+    }
+
+    private void writeRasterTextBlock(
+        ByteArrayOutputStream output,
+        String text,
+        int textSizePx,
+        boolean bold
+    ) throws IOException {
+        Bitmap bitmap = renderTextBlockBitmap(text, 384, textSizePx, bold);
+
+        try {
+            writeAlignCenter(output);
+            writeRasterBitmap(output, bitmap);
+            writeFeedLines(output, 1);
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    private Bitmap renderTextBlockBitmap(
+        String text,
+        int widthPx,
+        int textSizePx,
+        boolean bold
+    ) {
+        int horizontalPaddingPx = 12;
+        int verticalPaddingPx = 10;
+        int contentWidthPx = widthPx - (horizontalPaddingPx * 2);
+
+        TextPaint textPaint = new TextPaint(
+            Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+        );
+        textPaint.setColor(Color.BLACK);
+        textPaint.setTextSize(textSizePx);
+        textPaint.setTypeface(
+            bold
+                ? Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                : Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        );
+
+        StaticLayout layout = new StaticLayout(
+            text,
+            textPaint,
+            contentWidthPx,
+            Layout.Alignment.ALIGN_NORMAL,
+            1.15f,
+            0.0f,
+            false
+        );
+
+        int heightPx = Math.max(
+            1,
+            layout.getHeight() + (verticalPaddingPx * 2)
+        );
+
+        Bitmap bitmap = Bitmap.createBitmap(
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+        canvas.translate(horizontalPaddingPx, verticalPaddingPx);
+        layout.draw(canvas);
+
+        return bitmap;
+    }
+
+    private void writeRasterBitmap(
+        ByteArrayOutputStream output,
+        Bitmap bitmap
+    ) throws IOException {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int widthBytes = (width + 7) / 8;
+
+        output.write(0x1D);
+        output.write(0x76);
+        output.write(0x30);
+        output.write(0x00);
+        output.write(widthBytes & 0xFF);
+        output.write((widthBytes >> 8) & 0xFF);
+        output.write(height & 0xFF);
+        output.write((height >> 8) & 0xFF);
+
+        for (int y = 0; y < height; y += 1) {
+            for (int xByte = 0; xByte < widthBytes; xByte += 1) {
+                int value = 0;
+
+                for (int bit = 0; bit < 8; bit += 1) {
+                    int x = (xByte * 8) + bit;
+
+                    if (x < width && isDarkPixel(bitmap.getPixel(x, y))) {
+                        value |= 0x80 >> bit;
+                    }
+                }
+
+                output.write(value);
+            }
+        }
+    }
+
+    private boolean isDarkPixel(int pixel) {
+        int red = Color.red(pixel);
+        int green = Color.green(pixel);
+        int blue = Color.blue(pixel);
+        int alpha = Color.alpha(pixel);
+
+        if (alpha < 128) {
+            return false;
+        }
+
+        int luminance = (red * 299 + green * 587 + blue * 114) / 1000;
+        return luminance < 180;
     }
 
     private void writeInitialize(ByteArrayOutputStream output) {

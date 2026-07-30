@@ -208,6 +208,16 @@
               :loading="isPrintingCharacterTest"
               @click="handlePrintCharacterEncodingTest"
             />
+
+
+            <q-btn
+              color="deep-purple"
+              icon="image"
+              label="Print raster text test"
+              :disable="!isBridgeAvailable"
+              :loading="isPrintingRasterTextTest"
+              @click="handlePrintRasterTextTest"
+            />
           </div>
 
           <q-banner rounded class="warning-banner">
@@ -237,6 +247,7 @@ import {
   isAndroidPrinterBridgeAvailable,
   printBluetoothCharacterEncodingTest,
   printBluetoothQrTest,
+  printBluetoothRasterTextTest,
   printBluetoothTextTest,
   printBluetoothVoucherReceipt,
   printBluetoothVoucherReceiptTest,
@@ -260,6 +271,7 @@ const isPrintingQr = ref(false);
 const isPrintingVoucherReceipt = ref(false);
 const isPrintingAppSideReceipt = ref(false);
 const isPrintingCharacterTest = ref(false);
+const isPrintingRasterTextTest = ref(false);
 
 const isBridgeAvailable = computed(() => isAndroidPrinterBridgeAvailable());
 const platformLabel = computed(() => Capacitor.getPlatform());
@@ -494,6 +506,35 @@ async function handlePrintCharacterEncodingTest(): Promise<void> {
     });
   } finally {
     isPrintingCharacterTest.value = false;
+  }
+}
+
+
+async function handlePrintRasterTextTest(): Promise<void> {
+  isPrintingRasterTextTest.value = true;
+
+  try {
+    const result = await printBluetoothRasterTextTest({
+      name: printerName.value,
+      address: printerAddress.value,
+    });
+
+    $q.notify({
+      type: 'positive',
+      message: result.message || 'Raster text test sent to printer.',
+    });
+  } catch (error) {
+    console.error(error);
+
+    $q.notify({
+      type: 'negative',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Raster text test print failed.',
+    });
+  } finally {
+    isPrintingRasterTextTest.value = false;
   }
 }
 </script>
