@@ -183,7 +183,10 @@
 
           <q-item clickable to="/cash-out" @click="closeDrawer">
             <q-item-section avatar>
-              <q-icon name="currency_exchange" />
+              <q-icon
+                class="drawer-custom-icon"
+                :name="cashoutDrawerIconName"
+              />
             </q-item-section>
             <q-item-section>
               {{ t('layout.items.cashOut') }}
@@ -514,7 +517,9 @@ import {
   type AppUpdateCheckResult,
 } from '../services/app-update';
 import topupDrawerIconUrl from 'src/assets/icons/topup-icon-black.svg';
-import topupDrawerIconActiveUrl from 'src/assets/icons/topup-icon-grey.svg';
+import topupDrawerIconActiveUrl from 'src/assets/icons/topup-iconActive.svg';
+import cashoutDrawerIconUrl from 'src/assets/icons/cashout-iconBlack.svg';
+import cashoutDrawerIconActiveUrl from 'src/assets/icons/cashout-iconActive.svg';
 
 type SupportedCurrency = 'GBP' | 'USD' | 'EUR';
 
@@ -625,6 +630,14 @@ const topupDrawerIconName = computed((): string => {
   return isTopupRoute
     ? `img:${topupDrawerIconActiveUrl}`
     : `img:${topupDrawerIconUrl}`;
+});
+
+const cashoutDrawerIconName = computed((): string => {
+  const isCashoutRoute = $route.path.startsWith('/cash-out');
+
+  return isCashoutRoute
+    ? `img:${cashoutDrawerIconActiveUrl}`
+    : `img:${cashoutDrawerIconUrl}`;
 });
 
 const updateDialogTitle = computed((): string => {
@@ -1025,7 +1038,7 @@ function handleOpenUpdateReleasePage(): void {
 }
 
 .drawer-list :deep(.q-router-link--active) {
-  background: rgba(0, 206, 27, 0.14);
+  background: #00ce1b24;
   color: #111111;
   font-weight: 850;
 }

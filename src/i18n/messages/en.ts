@@ -38,7 +38,7 @@ const en = {
     actionTitle: 'What would you like to do?',
     actionSubtitle: 'Choose the next customer action.',
     sellVoucher: 'Topup',
-    cashOutBch: 'Cash-out',
+    cashOutBch: 'Cashout',
     voucherHistory: 'History',
     treasuryWallet: 'Treasury',
     receiptPreview: 'Receipt Preview',

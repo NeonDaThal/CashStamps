@@ -23,7 +23,7 @@
               flat
               dense
               round
-              icon="currency_exchange"
+              :icon="cashoutIcon"
               class="treasury-action-button treasury-action-button--cashout"
               :aria-label="t('home.cashOutBch')"
               to="/cash-out"
@@ -1228,6 +1228,7 @@ import TreasurySendQrTools from 'src/components/TreasurySendQrTools.vue';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import topupIconUrl from 'src/assets/icons/topup-icon.svg';
+import cashoutIconUrl from 'src/assets/icons/cashout-icon4.svg';
 import type { CashOnHandState } from 'src/types/cash-on-hand';
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
@@ -1268,6 +1269,7 @@ import {
 const $q = useQuasar();
 const { t } = useI18n({ useScope: 'global' });
 const topupIcon = `img:${topupIconUrl}`;
+const cashoutIcon = `img:${cashoutIconUrl}`;
 
 const SATS_PER_BCH = 100_000_000;
 const treasuryFiatCurrency = 'GBP';
@@ -2353,6 +2355,7 @@ onMounted(() => {
 .treasury-action-button--cashout {
   background: #111111;
   color: #00ce1b;
+  font-size: 16px;
 }
 
 .eyebrow {

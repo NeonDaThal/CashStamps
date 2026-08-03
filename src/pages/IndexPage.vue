@@ -34,7 +34,7 @@
           <q-btn
             class="main-action-button"
             :label="t('home.cashOutBch')"
-            icon="currency_exchange"
+            :icon="cashoutIcon"
             to="/cash-out"
             unelevated
             no-caps
@@ -93,7 +93,10 @@
           <q-card flat bordered class="glance-stat">
             <q-card-section>
               <div class="glance-icon">
-                <q-icon name="currency_exchange" />
+                <q-icon
+                  class="glance-topup-icon"
+                  :name="`img:${cashoutIcongreyUrl}`"
+                />
               </div>
 
               <div class="glance-content">
@@ -137,12 +140,15 @@ import { useI18n } from 'vue-i18n';
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import topupIconUrl from 'src/assets/icons/topup-icon.svg';
 import topupIcongreyUrl from 'src/assets/icons/topup-icon-grey.svg';
+import cashoutIconUrl from 'src/assets/icons/cashout-icon4.svg';
+import cashoutIcongreyUrl from 'src/assets/icons/cashout-iconGrey.svg';
 import { getCashOutRecords } from 'src/services/cash-out-store';
 import { getVoucherRecords } from 'src/services/voucher-store';
 import type { CashOutRecord } from 'src/types/cash-out';
 import type { VoucherRecord } from 'src/types/voucher';
 
 const topupIcon = `img:${topupIconUrl}`;
+const cashoutIcon = `img:${cashoutIconUrl}`;
 
 const { t } = useI18n({ useScope: 'global' });
 
@@ -374,6 +380,7 @@ h2 {
 
 .main-action-grid .main-action-button:nth-child(2) :deep(.q-icon) {
   color: #00ce1b;
+  font-size: 34px;
 }
 
 .main-action-button :deep(.q-btn__content) {
@@ -457,7 +464,7 @@ h2 {
 }
 
 .glance-stat.total .glance-icon {
-  background: rgba(255, 255, 255, 0.12);
+  background: #ffffff1f;
   color: #00e31e;
 }
 
@@ -588,6 +595,7 @@ h2 {
 
   .main-action-grid .main-action-button:nth-child(2) :deep(.q-icon) {
     color: #00ce1b;
+    font-size: 30px;
   }
 
   .secondary-action-grid {
