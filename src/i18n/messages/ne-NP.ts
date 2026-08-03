@@ -785,6 +785,85 @@ const neNP = {
     uriCopied: 'ट्रेजरी भुक्तानी URI प्रतिलिपि भयो।',
     copyFailed: 'क्लिपबोर्डमा प्रतिलिपि गर्न सकिएन।',
   },
+  pinLock: {
+    brand: {
+      title: 'Bitcoin Cash Topup',
+      subtitle: 'Secure merchant access',
+      logoAlt: 'Bitcoin Cash logo',
+    },
+    initializing: {
+      title: 'Opening securely',
+      message: 'Checking the app access lock on this device.',
+    },
+    privacy: {
+      message: 'App content is hidden while inactive.',
+    },
+    setup: {
+      eyebrow: 'First-time setup',
+      title: 'Set your PIN',
+      message:
+        'Please choose a memorable PIN. This will be used to open the app.',
+      lengthLabel: 'Choose PIN length',
+      lengthHelp: 'Choose a 4, 5, or 6-digit PIN that you can remember.',
+      inputLabel: 'Enter your new PIN',
+      confirmEyebrow: 'Confirm PIN',
+      confirmTitle: 'Enter it again',
+      confirmMessage:
+        'Enter the same PIN again to make sure it was entered correctly.',
+      confirmInputLabel: 'Confirm your new PIN',
+      continue: 'Continue',
+      setPin: 'Set PIN',
+      chooseAgain: 'Choose a different PIN',
+    },
+    success: {
+      eyebrow: 'Setup complete',
+      title: 'Your PIN has been set up.',
+      message: 'Bitcoin Cash Topup is ready to open.',
+      openApp: 'Open App',
+    },
+    unlock: {
+      eyebrow: 'Merchant access',
+      title: 'Welcome back',
+      message: 'Enter your PIN to open Bitcoin Cash Topup.',
+      timeoutMessage:
+        'The app was inactive for three hours or more. Enter your PIN to continue.',
+      inputLabel: 'Enter your {length}-digit PIN',
+      openApp: 'Open App',
+    },
+    errors: {
+      invalidFormat: 'Enter the full PIN using numbers only.',
+      pinMismatch: 'The PINs do not match. Please try again.',
+      incorrectPin: 'That PIN is not correct. Please try again.',
+      alreadyConfigured: 'A PIN is already configured on this device.',
+      cooldown: 'Too many incorrect attempts. Try again in {seconds} seconds.',
+    },
+    forgotten: {
+      show: 'Forgotten your PIN?',
+      hide: 'Hide PIN help',
+      title: 'There is no PIN recovery for this version.',
+      message:
+        'Clearing the app data or reinstalling may reset the PIN, but it can also remove the local Treasury Wallet, history, and other app data. Make sure wallet recovery information is backed up before taking that action.',
+    },
+    storageError: {
+      eyebrow: 'Secure access unavailable',
+      title: 'The app could not read its PIN information',
+      message:
+        'Restart the app and try again. Access remains blocked while the secure PIN record cannot be checked.',
+      warning:
+        'Do not clear the app data unless the Treasury Wallet and other important local information have been safely backed up.',
+      debugTitle: 'Debug details',
+      reload: 'Restart App',
+    },
+    preview: {
+      badge: 'Design preview',
+      message:
+        'This is a display-only preview. It does not change or replace the PIN already saved on this device.',
+      open: 'Preview first-time PIN screen',
+      close: 'Close setup preview',
+      disabledAction: 'Preview only',
+    },
+    footer: 'Practical protection for merchant access on this device.',
+  },
 
   layout: {
     brand: {
