@@ -913,6 +913,7 @@ const svSE = {
       appSettings: 'Appinställningar',
       checkForUpdates: 'Check for Updates',
       checkForUpdatesCaption: 'App version and download status',
+      updateAvailable: 'Update Available',
       howToSellVoucher: 'Så säljer du en värdekod',
       howToCashOut: 'How to Cash-out',
       howCustomersRedeem: 'Så löser kunder in',
@@ -932,6 +933,16 @@ const svSE = {
       updateAvailableTitle: 'Update available',
       updateAvailableMessage:
         'A newer Bitcoin Cash Topup release is ready to download.',
+      newBadge: 'New',
+      downloadUpdate: 'Download Update',
+      installationTitle: 'Installation notes',
+      installationStepOpen: 'The download page will open in your browser.',
+      installationStepAsset:
+        'Download the latest Android APK from the Assets section.',
+      installationStepWarning:
+        'Android may show a safety warning because BCH Topups is installed outside Google Play.',
+      installationStepConfirm:
+        'Only continue if the page is the official Bitcoin Cash Topup release page.',
       installedNewerTitle: 'Newer test build installed',
       installedNewerMessage:
         'This device is running a newer local/test build than the latest public release.',

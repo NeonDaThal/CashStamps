@@ -898,6 +898,7 @@ const en = {
       printerSetup: 'Printer Setup',
       appSettings: 'App Settings',
       checkForUpdates: 'Check for Updates',
+      updateAvailable: 'Update Available',
       checkForUpdatesCaption: 'App version',
       howToSellVoucher: 'How to Top-up',
       howToCashOut: 'How to Cash-out',
@@ -913,6 +914,7 @@ const en = {
     },
     update: {
       checking: 'Checking for updates...',
+      newBadge: 'New',
       upToDateTitle: 'You are up to date',
       upToDateMessage: 'This device is running the latest public release.',
       updateAvailableTitle: 'Update available',
@@ -933,8 +935,17 @@ const en = {
       safetyTitle: 'Before updating',
       safetyMessage:
         'This is a non-production alpha release. Back up important wallet recovery information before updating or reinstalling.',
+      installationTitle: 'Installation notes',
+      installationStepOpen: 'The download page will open in your browser.',
+      installationStepAsset:
+        'Download the latest Android APK from the Assets section.',
+      installationStepWarning:
+        'Android may show a safety warning because BCH Topups is installed outside Google Play.',
+      installationStepConfirm:
+        'Only continue if the page is the official Bitcoin Cash Topup release page.',
       verificationHash: 'Verification SHA-256',
       openReleasePage: 'Open Download Page',
+      downloadUpdate: 'Download Update',
       openFailed: 'Could not open the download page.',
       close: 'Close',
     },

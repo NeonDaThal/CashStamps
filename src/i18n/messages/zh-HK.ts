@@ -865,6 +865,7 @@ const zhHK = {
       appSettings: '應用程式設定',
       checkForUpdates: 'Check for Updates',
       checkForUpdatesCaption: 'App version',
+      updateAvailable: 'Update Available',
       howToSellVoucher: '如何出售增值券',
       howToCashOut: 'How to Cash-out',
       howCustomersRedeem: '顧客如何兌換',
@@ -884,6 +885,16 @@ const zhHK = {
       updateAvailableTitle: 'Update available',
       updateAvailableMessage:
         'A newer Bitcoin Cash Topup release is ready to download.',
+      newBadge: 'New',
+      downloadUpdate: 'Download Update',
+      installationTitle: 'Installation notes',
+      installationStepOpen: 'The download page will open in your browser.',
+      installationStepAsset:
+        'Download the latest Android APK from the Assets section.',
+      installationStepWarning:
+        'Android may show a safety warning because BCH Topups is installed outside Google Play.',
+      installationStepConfirm:
+        'Only continue if the page is the official Bitcoin Cash Topup release page.',
       installedNewerTitle: 'Newer test build installed',
       installedNewerMessage:
         'This device is running a newer local/test build than the latest public release.',

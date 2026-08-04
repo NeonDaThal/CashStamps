@@ -4,6 +4,12 @@ export const appUpdateMetadataUrl =
   'https://raw.githubusercontent.com/NeonDaThal/bitcoin-cash-topup-releases/refs/heads/main/update.json';
 
 const expectedAndroidPackageName = 'app.bitcoincashtopup.android';
+const oneDayInMilliseconds = 24 * 60 * 60 * 1000;
+const lastAutomaticCheckStorageKey = 'bch-topup-app-update-last-auto-check-at';
+const lastInstalledVersionCodeStorageKey =
+  'bch-topup-app-update-last-installed-version-code';
+const cachedAvailableUpdateStorageKey =
+  'bch-topup-app-update-cached-available-result';
 
 type NativeAppInfo = {
   name: string;
@@ -71,6 +77,40 @@ export type AppUpdateCheckResult = {
   errorMessage?: string;
 };
 
+function getStorage(): Storage | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch (error) {
+    return null;
+  }
+}
+
+function readStoredNumber(storageKey: string): number | null {
+  const storage = getStorage();
+
+  if (!storage) {
+    return null;
+  }
+
+  const storedValue = storage.getItem(storageKey);
+
+  if (!storedValue) {
+    return null;
+  }
+
+  const parsedValue = Number.parseInt(storedValue, 10);
+
+  if (!Number.isFinite(parsedValue)) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
 function parseVersionCode(build: string): number {
   const parsedBuildNumber = Number.parseInt(build, 10);
 
@@ -101,6 +141,66 @@ function validateUpdateMetadata(
   }
 
   return metadata;
+}
+
+function saveAvailableUpdateResult(result: AppUpdateCheckResult): void {
+  const storage = getStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  if (result.status === 'update_available') {
+    storage.setItem(cachedAvailableUpdateStorageKey, JSON.stringify(result));
+    return;
+  }
+
+  storage.removeItem(cachedAvailableUpdateStorageKey);
+}
+
+function recordUpdateCheckResult(result: AppUpdateCheckResult): void {
+  const storage = getStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  storage.setItem(lastAutomaticCheckStorageKey, Date.now().toString());
+  storage.setItem(
+    lastInstalledVersionCodeStorageKey,
+    result.installed.versionCode.toString()
+  );
+
+  saveAvailableUpdateResult(result);
+}
+
+export function readCachedAppUpdateResult(): AppUpdateCheckResult | null {
+  const storage = getStorage();
+
+  if (!storage) {
+    return null;
+  }
+
+  const storedValue = storage.getItem(cachedAvailableUpdateStorageKey);
+
+  if (!storedValue) {
+    return null;
+  }
+
+  try {
+    const parsedResult = JSON.parse(storedValue) as AppUpdateCheckResult;
+
+    if (
+      parsedResult.status === 'update_available' &&
+      parsedResult.latest?.releasePageUrl
+    ) {
+      return parsedResult;
+    }
+  } catch (error) {
+    storage.removeItem(cachedAvailableUpdateStorageKey);
+  }
+
+  return null;
 }
 
 async function getInstalledAppVersion(): Promise<InstalledAppVersion> {
@@ -150,9 +250,9 @@ async function fetchUpdateMetadata(): Promise<AppUpdateMetadata> {
   return validateUpdateMetadata(metadata);
 }
 
-export async function checkForAppUpdate(): Promise<AppUpdateCheckResult> {
-  const installed = await getInstalledAppVersion();
-
+async function checkForAppUpdateWithInstalledVersion(
+  installed: InstalledAppVersion
+): Promise<AppUpdateCheckResult> {
   try {
     const metadata = await fetchUpdateMetadata();
     const latest = metadata.latest;
@@ -210,4 +310,40 @@ export async function checkForAppUpdate(): Promise<AppUpdateCheckResult> {
         error instanceof Error ? error.message : 'Could not check for updates.',
     };
   }
+}
+
+export async function checkForAppUpdate(): Promise<AppUpdateCheckResult> {
+  const installed = await getInstalledAppVersion();
+  const result = await checkForAppUpdateWithInstalledVersion(installed);
+
+  recordUpdateCheckResult(result);
+
+  return result;
+}
+
+export async function runAutomaticAppUpdateCheck(): Promise<AppUpdateCheckResult | null> {
+  const installed = await getInstalledAppVersion();
+  const lastAutomaticCheckAt = readStoredNumber(lastAutomaticCheckStorageKey);
+  const lastInstalledVersionCode = readStoredNumber(
+    lastInstalledVersionCodeStorageKey
+  );
+  const now = Date.now();
+
+  const hasNeverChecked = lastAutomaticCheckAt === null;
+  const isDailyCheckDue =
+    lastAutomaticCheckAt === null ||
+    now - lastAutomaticCheckAt >= oneDayInMilliseconds;
+  const installedVersionChanged =
+    lastInstalledVersionCode !== null &&
+    lastInstalledVersionCode !== installed.versionCode;
+
+  if (!hasNeverChecked && !isDailyCheckDue && !installedVersionChanged) {
+    return null;
+  }
+
+  const result = await checkForAppUpdateWithInstalledVersion(installed);
+
+  recordUpdateCheckResult(result);
+
+  return result;
 }

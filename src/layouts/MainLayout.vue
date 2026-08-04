@@ -250,21 +250,28 @@
           <q-item
             clickable
             class="update-check-item"
+            :class="{ 'update-check-item--available': hasAvailableUpdate }"
             :disable="isCheckingForUpdates"
             @click="handleCheckForUpdates"
           >
             <q-item-section avatar>
-              <q-icon name="system_update" />
+              <q-icon :name="updateDrawerIcon" />
             </q-item-section>
 
             <q-item-section>
               <q-item-label>
-                {{ t('layout.items.checkForUpdates') }}
+                {{ updateDrawerLabel }}
               </q-item-label>
             </q-item-section>
 
             <q-item-section v-if="isCheckingForUpdates" side>
               <q-spinner size="18px" />
+            </q-item-section>
+
+            <q-item-section v-else-if="hasAvailableUpdate" side>
+              <q-badge class="update-available-badge">
+                {{ t('layout.update.newBadge') }}
+              </q-badge>
             </q-item-section>
           </q-item>
 
@@ -467,6 +474,18 @@
             </div>
           </div>
 
+          <div v-if="showUpdateInstallationNotes" class="update-install-notes">
+            <div class="update-section-title">
+              {{ t('layout.update.installationTitle') }}
+            </div>
+            <ol>
+              <li>{{ t('layout.update.installationStepOpen') }}</li>
+              <li>{{ t('layout.update.installationStepAsset') }}</li>
+              <li>{{ t('layout.update.installationStepWarning') }}</li>
+              <li>{{ t('layout.update.installationStepConfirm') }}</li>
+            </ol>
+          </div>
+
           <div
             v-if="updateCheckResult?.latest?.apkSha256"
             class="update-hash-box"
@@ -486,7 +505,7 @@
             unelevated
             rounded
             class="update-primary-action"
-            :label="t('layout.update.openReleasePage')"
+            :label="t('layout.update.downloadUpdate')"
             @click="handleOpenUpdateReleasePage"
           />
         </q-card-actions>
@@ -506,7 +525,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { openURL, useQuasar } from 'quasar';
@@ -514,6 +533,8 @@ import type { SupportedLocale } from '../i18n';
 import { saveStoredLocale } from '../i18n/locale-storage';
 import {
   checkForAppUpdate,
+  readCachedAppUpdateResult,
+  runAutomaticAppUpdateCheck,
   type AppUpdateCheckResult,
 } from '../services/app-update';
 import topupDrawerIconUrl from 'src/assets/icons/topup-icon-black.svg';
@@ -560,6 +581,9 @@ const isDrawerOpen = ref(false);
 const isCheckingForUpdates = ref(false);
 const isUpdateDialogOpen = ref(false);
 const updateCheckResult = ref<AppUpdateCheckResult | null>(null);
+const availableUpdateResult = ref<AppUpdateCheckResult | null>(
+  readCachedAppUpdateResult()
+);
 
 function readStoredCurrency(): SupportedCurrency {
   if (typeof window === 'undefined') {
@@ -638,6 +662,26 @@ const cashoutDrawerIconName = computed((): string => {
   return isCashoutRoute
     ? `img:${cashoutDrawerIconActiveUrl}`
     : `img:${cashoutDrawerIconUrl}`;
+});
+
+const hasAvailableUpdate = computed((): boolean => {
+  return availableUpdateResult.value?.status === 'update_available';
+});
+
+const updateDrawerLabel = computed((): string => {
+  if (hasAvailableUpdate.value) {
+    return t('layout.items.updateAvailable');
+  }
+
+  return t('layout.items.checkForUpdates');
+});
+
+const updateDrawerIcon = computed((): string => {
+  if (hasAvailableUpdate.value) {
+    return 'new_releases';
+  }
+
+  return 'system_update';
 });
 
 const updateDialogTitle = computed((): string => {
@@ -739,6 +783,16 @@ const showUpdateSafetyNotice = computed((): boolean => {
   return updateCheckResult.value?.status === 'update_available';
 });
 
+const showUpdateInstallationNotes = computed((): boolean => {
+  return updateCheckResult.value?.status === 'update_available';
+});
+
+onMounted(() => {
+  window.setTimeout(() => {
+    void handleAutomaticUpdateCheck();
+  }, 1200);
+});
+
 const setLocale = (newLocale: SupportedLocale) => {
   locale.value = newLocale;
   saveStoredLocale(newLocale);
@@ -756,12 +810,42 @@ function closeDrawer(): void {
   isDrawerOpen.value = false;
 }
 
+function syncAvailableUpdateResult(result: AppUpdateCheckResult): void {
+  if (result.status === 'update_available') {
+    availableUpdateResult.value = result;
+    return;
+  }
+
+  if (result.status !== 'check_failed') {
+    availableUpdateResult.value = null;
+  }
+}
+
+async function handleAutomaticUpdateCheck(): Promise<void> {
+  try {
+    const automaticCheckResult = await runAutomaticAppUpdateCheck();
+
+    if (automaticCheckResult) {
+      syncAvailableUpdateResult(automaticCheckResult);
+    }
+  } catch (error) {
+    console.warn('Automatic update check failed', error);
+  }
+}
+
 async function handleCheckForUpdates(): Promise<void> {
   if (isCheckingForUpdates.value) {
     return;
   }
 
   closeDrawer();
+
+  if (availableUpdateResult.value?.status === 'update_available') {
+    updateCheckResult.value = availableUpdateResult.value;
+    isUpdateDialogOpen.value = true;
+    return;
+  }
+
   isCheckingForUpdates.value = true;
 
   $q.loading.show({
@@ -769,7 +853,9 @@ async function handleCheckForUpdates(): Promise<void> {
   });
 
   try {
-    updateCheckResult.value = await checkForAppUpdate();
+    const manualCheckResult = await checkForAppUpdate();
+    updateCheckResult.value = manualCheckResult;
+    syncAvailableUpdateResult(manualCheckResult);
     isUpdateDialogOpen.value = true;
   } finally {
     isCheckingForUpdates.value = false;
@@ -1051,16 +1137,34 @@ function handleOpenUpdateReleasePage(): void {
   opacity: 0.62;
 }
 
-.update-check-item {
-  border: 1px solid rgba(0, 206, 27, 0.18);
-}
-
 .update-check-item :deep(.q-icon) {
   color: #00a816;
 }
 
+.update-check-item--available {
+  background: rgba(0, 206, 27, 0.14);
+  font-weight: 850;
+}
+
+.update-check-item--available :deep(.q-icon) {
+  color: #111111;
+}
+
+.update-available-badge {
+  background: #111111;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+
 .update-dialog-card {
   border-radius: 26px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
   max-width: 430px;
   overflow: hidden;
   width: calc(100vw - 32px);
@@ -1070,6 +1174,7 @@ function handleOpenUpdateReleasePage(): void {
   align-items: center;
   color: #111111;
   display: flex;
+  flex: 0 0 auto;
   gap: 14px;
   padding: 20px;
 }
@@ -1123,6 +1228,9 @@ function handleOpenUpdateReleasePage(): void {
 }
 
 .update-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: 18px 20px 4px;
 }
 
@@ -1164,6 +1272,7 @@ function handleOpenUpdateReleasePage(): void {
 
 .update-release-notes,
 .update-safety-notice,
+.update-install-notes,
 .update-hash-box {
   border-radius: 18px;
   margin-top: 12px;
@@ -1197,6 +1306,24 @@ function handleOpenUpdateReleasePage(): void {
   line-height: 1.35;
 }
 
+.update-install-notes {
+  background: #ffffff;
+  border: 1px solid #e2e2e2;
+  color: #333333;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.update-install-notes ol {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.update-install-notes li {
+  margin-bottom: 5px;
+}
+
 .update-hash-box {
   background: #111111;
   color: #ffffff;
@@ -1219,6 +1346,7 @@ function handleOpenUpdateReleasePage(): void {
 }
 
 .update-dialog-actions {
+  flex: 0 0 auto;
   padding: 12px 16px 18px;
 }
 
