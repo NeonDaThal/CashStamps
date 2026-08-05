@@ -1228,7 +1228,7 @@ import TreasurySendQrTools from 'src/components/TreasurySendQrTools.vue';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import { topupIcon } from 'src/icons/custom-icons';
-import cashoutIconUrl from 'src/assets/icons/cashout-icon4.svg';
+import { cashoutIcon } from 'src/icons/custom-icons';
 import type { CashOnHandState } from 'src/types/cash-on-hand';
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
 import type {
@@ -1268,7 +1268,6 @@ import {
 
 const $q = useQuasar();
 const { t } = useI18n({ useScope: 'global' });
-const cashoutIcon = `img:${cashoutIconUrl}`;
 
 const SATS_PER_BCH = 100_000_000;
 const treasuryFiatCurrency = 'GBP';

@@ -502,6 +502,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { topupIcon } from 'src/icons/custom-icons';
+import { cashoutIcon } from 'src/icons/custom-icons';
 import topupIconGreenUrl from 'src/assets/icons/topup-icon-green.svg';
 
 import MerchantReportPrintPreview from 'src/components/MerchantReportPrintPreview.vue';
@@ -650,7 +651,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
     },
     {
       key: 'cash-outs-completed',
-      icon: 'currency_exchange',
+      icon: cashoutIcon,
       label: t('merchantReportsPage.summary.cashOutsCompleted'),
       value: formatInteger(cashOutTotals?.count ?? 0),
       caption: t('merchantReportsPage.summary.cashOutsCompletedCaption'),
@@ -1189,6 +1190,7 @@ h1 {
 .summary-theme-cashout .summary-icon {
   background: rgba(0, 206, 27, 0.16);
   color: #00ce1b;
+  font-size: 30px;
 }
 
 .summary-theme-cashout .summary-status-badge {

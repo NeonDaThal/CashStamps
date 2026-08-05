@@ -90,10 +90,7 @@
           <q-card flat bordered class="glance-stat">
             <q-card-section>
               <div class="glance-icon">
-                <q-icon
-                  class="glance-topup-icon"
-                  :name="`img:${cashoutIcongreyUrl}`"
-                />
+                <q-icon class="glance-topup-icon" :name="cashoutIcon" />
               </div>
 
               <div class="glance-content">
@@ -136,15 +133,11 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import { topupIcon } from 'src/icons/custom-icons';
-import topupIcongreyUrl from 'src/assets/icons/topup-icon-grey.svg';
-import cashoutIconUrl from 'src/assets/icons/cashout-icon4.svg';
-import cashoutIcongreyUrl from 'src/assets/icons/cashout-iconGrey.svg';
+import { cashoutIcon } from 'src/icons/custom-icons';
 import { getCashOutRecords } from 'src/services/cash-out-store';
 import { getVoucherRecords } from 'src/services/voucher-store';
 import type { CashOutRecord } from 'src/types/cash-out';
 import type { VoucherRecord } from 'src/types/voucher';
-
-const cashoutIcon = `img:${cashoutIconUrl}`;
 
 const { t } = useI18n({ useScope: 'global' });
 
@@ -451,7 +444,7 @@ h2 {
   align-items: center;
   background: #f0f0f0;
   border-radius: 14px;
-  color: #00CE1B;
+  color: #00ce1b;
   display: flex;
   font-size: 24px;
   height: 42px;

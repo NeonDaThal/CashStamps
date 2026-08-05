@@ -174,7 +174,7 @@
 
           <q-item clickable to="/sell-voucher" @click="closeDrawer">
             <q-item-section avatar>
-              <q-icon class="drawer-custom-icon" :name="topupDrawerIconName" />
+              <q-icon class="drawer-custom-icon" :name="topupIcon" />
             </q-item-section>
             <q-item-section>
               {{ t('layout.items.sellVoucher') }}
@@ -183,10 +183,7 @@
 
           <q-item clickable to="/cash-out" @click="closeDrawer">
             <q-item-section avatar>
-              <q-icon
-                class="drawer-custom-icon"
-                :name="cashoutDrawerIconName"
-              />
+              <q-icon class="drawer-custom-icon" :name="cashoutIcon" />
             </q-item-section>
             <q-item-section>
               {{ t('layout.items.cashOut') }}
@@ -526,7 +523,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { openURL, useQuasar } from 'quasar';
 import type { SupportedLocale } from '../i18n';
@@ -538,10 +535,7 @@ import {
   type AppUpdateCheckResult,
 } from '../services/app-update';
 import { preparePinLockExternalNavigation } from '../services/pin-lock-session';
-import topupDrawerIconUrl from 'src/assets/icons/topup-icon-black.svg';
-import topupDrawerIconActiveUrl from 'src/assets/icons/topup-iconActive.svg';
-import cashoutDrawerIconUrl from 'src/assets/icons/cashout-iconBlack.svg';
-import cashoutDrawerIconActiveUrl from 'src/assets/icons/cashout-iconActive.svg';
+import { cashoutIcon, topupIcon } from 'src/icons/custom-icons';
 
 type SupportedCurrency = 'GBP' | 'USD' | 'EUR';
 
@@ -574,7 +568,6 @@ const currencyOptions: CurrencyOption[] = [
 const defaultCurrency: SupportedCurrency = 'GBP';
 
 const $router = useRouter();
-const $route = useRoute();
 const { locale, t } = useI18n({ useScope: 'global' });
 const $q = useQuasar();
 
@@ -647,22 +640,6 @@ const localeShortLabel = computed((): string => {
   }
 
   return 'EN';
-});
-
-const topupDrawerIconName = computed((): string => {
-  const isTopupRoute = $route.path.startsWith('/sell-voucher');
-
-  return isTopupRoute
-    ? `img:${topupDrawerIconActiveUrl}`
-    : `img:${topupDrawerIconUrl}`;
-});
-
-const cashoutDrawerIconName = computed((): string => {
-  const isCashoutRoute = $route.path.startsWith('/cash-out');
-
-  return isCashoutRoute
-    ? `img:${cashoutDrawerIconActiveUrl}`
-    : `img:${cashoutDrawerIconUrl}`;
 });
 
 const hasAvailableUpdate = computed((): boolean => {
