@@ -537,6 +537,7 @@ import {
   runAutomaticAppUpdateCheck,
   type AppUpdateCheckResult,
 } from '../services/app-update';
+import { preparePinLockExternalNavigation } from '../services/pin-lock-session';
 import topupDrawerIconUrl from 'src/assets/icons/topup-icon-black.svg';
 import topupDrawerIconActiveUrl from 'src/assets/icons/topup-iconActive.svg';
 import cashoutDrawerIconUrl from 'src/assets/icons/cashout-iconBlack.svg';
@@ -678,7 +679,7 @@ const updateDrawerLabel = computed((): string => {
 
 const updateDrawerIcon = computed((): string => {
   if (hasAvailableUpdate.value) {
-    return 'new_releases';
+    return 'system_update_alt';
   }
 
   return 'system_update';
@@ -871,6 +872,7 @@ function handleOpenUpdateReleasePage(): void {
   }
 
   try {
+    preparePinLockExternalNavigation();
     openURL(releasePageUrl);
   } catch (error) {
     $q.notify({
@@ -1137,26 +1139,38 @@ function handleOpenUpdateReleasePage(): void {
   opacity: 0.62;
 }
 
+.update-check-item {
+  border: 1px solid transparent;
+}
+
 .update-check-item :deep(.q-icon) {
   color: #00a816;
 }
 
 .update-check-item--available {
-  background: rgba(0, 206, 27, 0.14);
-  font-weight: 850;
+  background: #ffffff;
+  border-color: #00ce1b;
+  box-shadow: 0 6px 14px rgba(0, 206, 27, 0.12);
+  color: #00a816;
+  font-weight: 900;
 }
 
 .update-check-item--available :deep(.q-icon) {
-  color: #111111;
+  color: #00a816;
+}
+
+.update-check-item--available :deep(.q-item__label) {
+  color: #00a816;
+  font-weight: 950;
 }
 
 .update-available-badge {
-  background: #111111;
+  background: #00ce1b;
   border-radius: 999px;
   color: #ffffff;
   font-size: 10px;
-  font-weight: 900;
-  padding: 4px 7px;
+  font-weight: 950;
+  padding: 4px 8px;
   text-transform: uppercase;
 }
 
@@ -1351,9 +1365,11 @@ function handleOpenUpdateReleasePage(): void {
 }
 
 .update-primary-action {
-  background: #111111;
+  background: #00ce1b;
   color: #ffffff;
-  font-weight: 900;
+  font-weight: 950;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 @media (max-width: 430px) {

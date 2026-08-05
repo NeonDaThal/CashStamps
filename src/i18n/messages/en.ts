@@ -781,7 +781,7 @@ const en = {
     uriCopied: 'Treasury payment URI copied.',
     copyFailed: 'Could not copy to clipboard.',
   },
-    pinLock: {
+  pinLock: {
     brand: {
       title: 'Bitcoin Cash Topup',
       subtitle: 'Secure merchant access',
@@ -800,8 +800,7 @@ const en = {
       message:
         'Please choose a memorable PIN. This will be used to open the app.',
       lengthLabel: 'Choose PIN length',
-      lengthHelp:
-        'Choose a 4, 5, or 6-digit PIN that you can remember.',
+      lengthHelp: 'Choose a 4, 5, or 6-digit PIN that you can remember.',
       inputLabel: 'Enter your new PIN',
       confirmEyebrow: 'Confirm PIN',
       confirmTitle: 'Enter it again',
@@ -831,10 +830,8 @@ const en = {
       invalidFormat: 'Enter the full PIN using numbers only.',
       pinMismatch: 'The PINs do not match. Please try again.',
       incorrectPin: 'That PIN is not correct. Please try again.',
-      alreadyConfigured:
-        'A PIN is already configured on this device.',
-      cooldown:
-        'Too many incorrect attempts. Try again in {seconds} seconds.',
+      alreadyConfigured: 'A PIN is already configured on this device.',
+      cooldown: 'Too many incorrect attempts. Try again in {seconds} seconds.',
     },
     forgotten: {
       show: 'Forgotten your PIN?',
@@ -861,8 +858,7 @@ const en = {
       close: 'Close setup preview',
       disabledAction: 'Preview only',
     },
-    footer:
-      'Practical protection for merchant access on this device.',
+    footer: 'Practical protection for merchant access on this device.',
   },
 
   layout: {
@@ -938,7 +934,7 @@ const en = {
       installationTitle: 'Installation notes',
       installationStepOpen: 'The download page will open in your browser.',
       installationStepAsset:
-        'Download the latest Android APK from the Assets section.',
+        'Download the latest Android APK from the Assets section(at bottom of page).',
       installationStepWarning:
         'Android may show a safety warning because BCH Topups is installed outside Google Play.',
       installationStepConfirm:
