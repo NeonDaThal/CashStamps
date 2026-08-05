@@ -501,7 +501,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import topupIconUrl from 'src/assets/icons/topup-icon.svg';
+import { topupIcon } from 'src/icons/custom-icons';
 import topupIconGreenUrl from 'src/assets/icons/topup-icon-green.svg';
 
 import MerchantReportPrintPreview from 'src/components/MerchantReportPrintPreview.vue';
@@ -515,7 +515,6 @@ import type { MerchantReportPrintMovementTracker } from 'src/components/Merchant
 const SATS_PER_BCH = 100_000_000;
 const DEFAULT_CURRENCY = 'GBP';
 
-const topupIcon = `img:${topupIconUrl}`;
 const topupIconGreen = `img:${topupIconGreenUrl}`;
 
 type PrintPreviewMode = 'print' | 'pdf' | 'image';

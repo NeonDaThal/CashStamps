@@ -1227,7 +1227,7 @@ import CashOnHandMovementDialog from 'src/components/CashOnHandMovementDialog.vu
 import TreasurySendQrTools from 'src/components/TreasurySendQrTools.vue';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
-import topupIconUrl from 'src/assets/icons/topup-icon.svg';
+import { topupIcon } from 'src/icons/custom-icons';
 import cashoutIconUrl from 'src/assets/icons/cashout-icon4.svg';
 import type { CashOnHandState } from 'src/types/cash-on-hand';
 import type { FeeAddressConfigStatus } from 'src/types/fee-address-config';
@@ -1268,7 +1268,6 @@ import {
 
 const $q = useQuasar();
 const { t } = useI18n({ useScope: 'global' });
-const topupIcon = `img:${topupIconUrl}`;
 const cashoutIcon = `img:${cashoutIconUrl}`;
 
 const SATS_PER_BCH = 100_000_000;
@@ -2348,7 +2347,7 @@ onMounted(() => {
 
 .treasury-action-button--topup {
   background: #00ce1b;
-  color: #000000;
+  color: #ffffff;
   font-size: 16px;
 }
 

@@ -155,10 +155,9 @@ import {
 } from 'src/services/voucher-store';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import { detectVoucherRedemptionStatus } from 'src/services/voucher-redemption-detector';
-import topupIconUrl from 'src/assets/icons/topup-icon.svg';
+import { topupIcon } from 'src/icons/custom-icons';
 
 const { t } = useI18n({ useScope: 'global' });
-const topupIcon = `img:${topupIconUrl}`;
 
 const voucherRecords = ref<VoucherRecord[]>([]);
 const errorMessage = ref('');
