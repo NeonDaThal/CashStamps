@@ -64,6 +64,7 @@ const intentionalExternalNavigationGraceMs = 3000;
 const privacyCoverLockRevealDelayMs = 100;
 
 let privacyCoverBypassUntil = 0;
+let nativeSharePrivacyBypassActive = false;
 let privacyCoverRestoreTimer: ReturnType<typeof setTimeout> | null = null;
 let privacyCoverLockRevealTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -201,13 +202,26 @@ export function preparePinLockExternalNavigation(): void {
   schedulePrivacyCoverRestore();
 }
 
+export function preparePinLockNativeShare(): void {
+  if (Capacitor.getPlatform() !== 'android') {
+    return;
+  }
+
+  nativeSharePrivacyBypassActive = true;
+}
+
+export function cancelPinLockNativeShare(): void {
+  nativeSharePrivacyBypassActive = false;
+}
+
 function handleAppInactive(): void {
   clearPrivacyCoverLockRevealTimer();
 
   const currentState = mutableSessionState.value;
   const now = Date.now();
 
-  const shouldBypassPrivacyCover = isPrivacyCoverTemporarilyBypassed(now);
+  const shouldBypassPrivacyCover =
+    isPrivacyCoverTemporarilyBypassed(now) || nativeSharePrivacyBypassActive;
 
   const backgroundedAt =
     currentState.status === 'unlocked' && currentState.backgroundedAt === null
@@ -220,7 +234,10 @@ function handleAppInactive(): void {
     backgroundedAt,
   });
 
-  if (shouldBypassPrivacyCover) {
+  if (
+    isPrivacyCoverTemporarilyBypassed(now) &&
+    !nativeSharePrivacyBypassActive
+  ) {
     schedulePrivacyCoverRestore();
   }
 }
@@ -228,7 +245,9 @@ function handleAppInactive(): void {
 function handleAppActive(): void {
   clearPrivacyCoverRestoreTimer();
   clearPrivacyCoverLockRevealTimer();
+
   privacyCoverBypassUntil = 0;
+  nativeSharePrivacyBypassActive = false;
 
   const currentState = mutableSessionState.value;
   const now = Date.now();
@@ -554,6 +573,7 @@ export async function disposePinLockSession(): Promise<void> {
   clearPrivacyCoverLockRevealTimer();
 
   privacyCoverBypassUntil = 0;
+  nativeSharePrivacyBypassActive = false;
 
   if (appStateListener) {
     await appStateListener.remove();

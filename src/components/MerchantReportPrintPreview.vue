@@ -335,6 +335,10 @@ import {
   isAndroidReportSharerAvailable,
   shareAndroidPngReport,
 } from 'src/services/android-report-sharer';
+import {
+  cancelPinLockNativeShare,
+  preparePinLockNativeShare,
+} from 'src/services/pin-lock-session';
 
 import type {
   MerchantReport,
@@ -658,12 +662,19 @@ async function handleShareReport(): Promise<void> {
     const text = buildReportShareText();
 
     if (isAndroidReportSharerAvailable()) {
-      await shareAndroidPngReport({
-        dataUrl,
-        fileName,
-        title,
-        text,
-      });
+      preparePinLockNativeShare();
+
+      try {
+        await shareAndroidPngReport({
+          dataUrl,
+          fileName,
+          title,
+          text,
+        });
+      } catch (error) {
+        cancelPinLockNativeShare();
+        throw error;
+      }
 
       return;
     }
