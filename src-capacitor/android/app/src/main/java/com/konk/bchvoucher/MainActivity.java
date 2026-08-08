@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BluetoothEscPosPrinterPlugin.class);
         registerPlugin(AndroidReportPrinterPlugin.class);
         registerPlugin(AndroidImageSaverPlugin.class);
+        registerPlugin(AndroidReportSharerPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

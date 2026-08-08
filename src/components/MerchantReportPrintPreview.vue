@@ -331,6 +331,10 @@ import {
   isAndroidImageSaverAvailable,
   saveAndroidPngImage,
 } from 'src/services/android-image-saver';
+import {
+  isAndroidReportSharerAvailable,
+  shareAndroidPngReport,
+} from 'src/services/android-report-sharer';
 
 import type {
   MerchantReport,
@@ -360,7 +364,7 @@ export interface MerchantReportPrintMovementTracker {
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
-    mode: 'print' | 'pdf' | 'image';
+    mode: 'print' | 'pdf' | 'image' | 'share';
     report: MerchantReport | null;
     currentPeriodLabel: string;
     generatedAtLabel: string;
@@ -402,6 +406,7 @@ const { t } = useI18n({ useScope: 'global' });
 
 const printLogoDataUrl = ref('');
 const isSavingImage = ref(false);
+const isSharingReport = ref(false);
 const imageExportSavedAtLabel = ref('');
 
 const saveToast = ref<{
@@ -428,6 +433,10 @@ const previewTitle = computed(() => {
     return t('merchantReportsPage.printPreview.imageTitle');
   }
 
+  if (props.mode === 'share') {
+    return t('merchantReportsPage.printPreview.shareTitle');
+  }
+
   return props.mode === 'pdf'
     ? t('merchantReportsPage.printPreview.pdfTitle')
     : t('merchantReportsPage.printPreview.title');
@@ -436,6 +445,10 @@ const previewTitle = computed(() => {
 const previewSubtitle = computed(() => {
   if (props.mode === 'image') {
     return t('merchantReportsPage.printPreview.imageSubtitle');
+  }
+
+  if (props.mode === 'share') {
+    return t('merchantReportsPage.printPreview.shareSubtitle');
   }
 
   return props.mode === 'pdf'
@@ -448,6 +461,10 @@ const primaryActionLabel = computed(() => {
     return t('merchantReportsPage.printPreview.saveImage');
   }
 
+  if (props.mode === 'share') {
+    return t('merchantReportsPage.printPreview.share');
+  }
+
   return props.mode === 'pdf'
     ? t('merchantReportsPage.printPreview.savePdf')
     : t('merchantReportsPage.printPreview.print');
@@ -458,24 +475,47 @@ const primaryActionIcon = computed(() => {
     return 'image';
   }
 
+  if (props.mode === 'share') {
+    return 'ios_share';
+  }
+
   return 'print';
 });
 
-const shouldUseNativeImageSaveFeedback = computed(() => {
-  return props.mode === 'image' && isAndroidImageSaverAvailable();
+const shouldUseNativeReportActionFeedback = computed(() => {
+  if (props.mode === 'image') {
+    return isAndroidImageSaverAvailable();
+  }
+
+  if (props.mode === 'share') {
+    return isAndroidReportSharerAvailable();
+  }
+
+  return false;
 });
 
 const showImageSaveOverlay = computed(() => {
-  return shouldUseNativeImageSaveFeedback.value && isSavingImage.value;
+  return (
+    shouldUseNativeReportActionFeedback.value &&
+    (isSavingImage.value || isSharingReport.value)
+  );
 });
 
 const showImageSaveButtonBusy = computed(() => {
-  return shouldUseNativeImageSaveFeedback.value && isSavingImage.value;
+  return (
+    shouldUseNativeReportActionFeedback.value &&
+    (isSavingImage.value || isSharingReport.value)
+  );
 });
 
 async function handlePrintPreview(): Promise<void> {
   if (props.mode === 'image') {
     await handleSaveImage();
+    return;
+  }
+
+  if (props.mode === 'share') {
+    await handleShareReport();
     return;
   }
 
@@ -585,6 +625,68 @@ async function handleSaveImage(): Promise<void> {
   }
 }
 
+async function handleShareReport(): Promise<void> {
+  const reportElement = document.querySelector('.report-print-document');
+
+  if (!(reportElement instanceof HTMLElement) || isSharingReport.value) {
+    return;
+  }
+
+  isSharingReport.value = true;
+  dismissSaveToast();
+
+  try {
+    await nextTick();
+    await ensurePrintLogoDataUrl();
+    await nextTick();
+
+    const dataUrl = await toPng(reportElement, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: '#ffffff',
+      width: reportElement.scrollWidth,
+      height: reportElement.scrollHeight,
+      style: {
+        boxShadow: 'none',
+        margin: '0',
+        transform: 'none',
+      },
+    });
+
+    const fileName = buildReportImageFilename();
+    const title = t('merchantReportsPage.printPreview.shareSubject');
+    const text = buildReportShareText();
+
+    if (isAndroidReportSharerAvailable()) {
+      await shareAndroidPngReport({
+        dataUrl,
+        fileName,
+        title,
+        text,
+      });
+
+      return;
+    }
+
+    await shareReportImageInBrowser({
+      dataUrl,
+      fileName,
+      title,
+      text,
+    });
+  } catch (error) {
+    console.error('Could not share merchant report image.', error);
+
+    showSaveToast({
+      type: 'error',
+      message: t('merchantReportsPage.printPreview.shareFailed'),
+      caption: t('merchantReportsPage.printPreview.shareFailedCaption'),
+    });
+  } finally {
+    isSharingReport.value = false;
+  }
+}
+
 function showSaveToast(options: {
   type: 'success' | 'error';
   message: string;
@@ -630,6 +732,63 @@ function buildReportImageFilename(): string {
   const uniqueSuffix = Math.random().toString(36).slice(2, 7);
 
   return `bitcoin-cash-topups-report-${timestampLabel}-${uniqueSuffix}.png`;
+}
+
+async function shareReportImageInBrowser(options: {
+  dataUrl: string;
+  fileName: string;
+  title: string;
+  text: string;
+}): Promise<void> {
+  const imageBlob = dataUrlToBlob(options.dataUrl);
+  const imageFile = new File([imageBlob], options.fileName, {
+    type: 'image/png',
+  });
+
+  const shareData: ShareData = {
+    title: options.title,
+    text: options.text,
+    files: [imageFile],
+  };
+
+  if (
+    typeof navigator.share === 'function' &&
+    (!navigator.canShare || navigator.canShare(shareData))
+  ) {
+    await navigator.share(shareData);
+    return;
+  }
+
+  const downloadLink = document.createElement('a');
+  downloadLink.href = options.dataUrl;
+  downloadLink.download = options.fileName;
+  downloadLink.click();
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [metadata = '', base64Data = ''] = dataUrl.split(',');
+  const mimeMatch = metadata.match(/data:(.*?);base64/);
+  const mimeType = mimeMatch?.[1] ?? 'image/png';
+  const binaryString = window.atob(base64Data);
+  const byteNumbers = new Array<number>(binaryString.length);
+
+  for (let index = 0; index < binaryString.length; index += 1) {
+    byteNumbers[index] = binaryString.charCodeAt(index);
+  }
+
+  const byteArray = new Uint8Array(byteNumbers);
+  const arrayBuffer = byteArray.buffer.slice(
+    byteArray.byteOffset,
+    byteArray.byteOffset + byteArray.byteLength
+  );
+
+  return new Blob([arrayBuffer], { type: mimeType });
+}
+
+function buildReportShareText(): string {
+  return t('merchantReportsPage.printPreview.shareBody', {
+    period: props.currentPeriodLabel,
+  });
 }
 
 function buildImageExportSavedAtLabel(): string {

@@ -518,7 +518,7 @@ const DEFAULT_CURRENCY = 'GBP';
 
 const topupIconGreen = `img:${topupIconGreenUrl}`;
 
-type PrintPreviewMode = 'print' | 'pdf' | 'image';
+type PrintPreviewMode = 'print' | 'pdf' | 'image' | 'share';
 
 interface SummaryCard {
   key: string;
@@ -832,7 +832,7 @@ const reportActions = computed<ReportAction[]>(() => [
     key: 'share',
     icon: 'share',
     label: t('merchantReportsPage.actions.shareReport'),
-    disabled: true,
+    disabled: false,
   },
 ]);
 
@@ -868,6 +868,13 @@ async function handleReportAction(
   if (actionKey === 'image') {
     printPreviewMode.value = 'image';
     await openPrintPreview();
+    return;
+  }
+
+  if (actionKey === 'share') {
+    printPreviewMode.value = 'share';
+    await openPrintPreview();
+    return;
   }
 }
 
