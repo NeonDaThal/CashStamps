@@ -61,9 +61,11 @@ let appStateListener: PluginListenerHandle | null = null;
 let pauseListener: PluginListenerHandle | null = null;
 
 const intentionalExternalNavigationGraceMs = 3000;
+const privacyCoverLockRevealDelayMs = 100;
 
 let privacyCoverBypassUntil = 0;
 let privacyCoverRestoreTimer: ReturnType<typeof setTimeout> | null = null;
+let privacyCoverLockRevealTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const pinLockSessionState = readonly(mutableSessionState);
 
@@ -130,9 +132,6 @@ function shouldLockAfterBackground(
 
   const elapsedMs = now - backgroundedAt;
 
-  /**
-   * A backwards system-clock change is treated conservatively.
-   */
   if (elapsedMs < 0) {
     return true;
   }
@@ -148,6 +147,13 @@ function clearPrivacyCoverRestoreTimer(): void {
   if (privacyCoverRestoreTimer) {
     clearTimeout(privacyCoverRestoreTimer);
     privacyCoverRestoreTimer = null;
+  }
+}
+
+function clearPrivacyCoverLockRevealTimer(): void {
+  if (privacyCoverLockRevealTimer) {
+    clearTimeout(privacyCoverLockRevealTimer);
+    privacyCoverLockRevealTimer = null;
   }
 }
 
@@ -169,18 +175,38 @@ function schedulePrivacyCoverRestore(): void {
   }, delayMs);
 }
 
+function schedulePrivacyCoverLockReveal(): void {
+  clearPrivacyCoverLockRevealTimer();
+
+  privacyCoverLockRevealTimer = setTimeout(() => {
+    privacyCoverLockRevealTimer = null;
+
+    const currentState = mutableSessionState.value;
+
+    if (currentState.isAppActive && currentState.status === 'locked') {
+      patchSessionState({
+        showPrivacyCover: false,
+      });
+    }
+  }, privacyCoverLockRevealDelayMs);
+}
+
 export function preparePinLockExternalNavigation(): void {
   if (Capacitor.getPlatform() !== 'android') {
     return;
   }
 
   privacyCoverBypassUntil = Date.now() + intentionalExternalNavigationGraceMs;
+
   schedulePrivacyCoverRestore();
 }
 
 function handleAppInactive(): void {
+  clearPrivacyCoverLockRevealTimer();
+
   const currentState = mutableSessionState.value;
   const now = Date.now();
+
   const shouldBypassPrivacyCover = isPrivacyCoverTemporarilyBypassed(now);
 
   const backgroundedAt =
@@ -201,6 +227,7 @@ function handleAppInactive(): void {
 
 function handleAppActive(): void {
   clearPrivacyCoverRestoreTimer();
+  clearPrivacyCoverLockRevealTimer();
   privacyCoverBypassUntil = 0;
 
   const currentState = mutableSessionState.value;
@@ -222,10 +249,12 @@ function handleAppActive(): void {
       lockReason: 'background_timeout',
       backgroundedAt: null,
       isAppActive: true,
-      showPrivacyCover: false,
+      showPrivacyCover: true,
       errorCode: null,
       debugMessage: null,
     });
+
+    schedulePrivacyCoverLockReveal();
 
     return;
   }
@@ -522,7 +551,10 @@ export function lockPinSession(
 
 export async function disposePinLockSession(): Promise<void> {
   clearPrivacyCoverRestoreTimer();
+  clearPrivacyCoverLockRevealTimer();
+
   privacyCoverBypassUntil = 0;
+
   if (appStateListener) {
     await appStateListener.remove();
     appStateListener = null;
@@ -534,5 +566,6 @@ export async function disposePinLockSession(): Promise<void> {
   }
 
   initializationPromise = null;
+
   mutableSessionState.value = createInitialSessionState();
 }

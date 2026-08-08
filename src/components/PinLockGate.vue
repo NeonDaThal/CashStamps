@@ -1,485 +1,507 @@
 <template>
-  <div
-    v-if="sessionState.showPrivacyCover"
-    class="pin-lock-shell pin-lock-privacy"
-  >
-    <div class="privacy-brand">
-      <img
-        :src="bchLogoUrl"
-        :alt="t('pinLock.brand.logoAlt')"
-        class="privacy-logo"
-      />
+  <!-- Browser/web builds remain completely unaffected by Android PIN locking. -->
+  <slot v-if="!isAndroidPlatform" />
 
-      <div>
-        <div class="privacy-title">
-          {{ t('pinLock.brand.title') }}
+  <template v-else>
+    <!--
+      Once unlocked, keep the merchant application mounted even while the
+      Android privacy cover is displayed. This avoids reconstructing the
+      routed application every time the app is briefly backgrounded.
+    -->
+    <slot v-if="canRenderPinProtectedApp" />
+
+    <!--
+      PIN/setup/error surface.
+
+      During Android cold startup the native splash remains above this layer.
+      By the time the native splash is released, this surface is already
+      completely rendered underneath the transition cover.
+    -->
+    <main v-if="shouldRenderPinSurface" class="pin-lock-shell">
+      <div class="pin-lock-background-mark pin-lock-background-mark-one" />
+      <div class="pin-lock-background-mark pin-lock-background-mark-two" />
+
+      <section class="pin-lock-panel">
+        <div v-if="isSetupPreview" class="preview-toolbar">
+          <q-badge class="preview-badge">
+            {{ t('pinLock.preview.badge') }}
+          </q-badge>
+
+          <q-btn
+            flat
+            dense
+            round
+            icon="close"
+            :aria-label="t('pinLock.preview.close')"
+            class="preview-close-button"
+            @click="closeSetupPreview"
+          />
         </div>
-        <div class="privacy-subtitle">
-          {{ t('pinLock.privacy.message') }}
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <slot v-else-if="canRenderPinProtectedApp" />
-
-  <main v-else class="pin-lock-shell">
-    <div class="pin-lock-background-mark pin-lock-background-mark-one" />
-    <div class="pin-lock-background-mark pin-lock-background-mark-two" />
-
-    <section class="pin-lock-panel">
-      <div v-if="isSetupPreview" class="preview-toolbar">
-        <q-badge class="preview-badge">
-          {{ t('pinLock.preview.badge') }}
-        </q-badge>
-
-        <q-btn
-          flat
-          dense
-          round
-          icon="close"
-          :aria-label="t('pinLock.preview.close')"
-          class="preview-close-button"
-          @click="closeSetupPreview"
-        />
-      </div>
-
-      <header class="pin-lock-brand">
-        <div class="brand-logo-frame">
+        <header class="pin-lock-brand">
           <img
             :src="bchLogoUrl"
             :alt="t('pinLock.brand.logoAlt')"
             class="brand-logo"
           />
-        </div>
 
-        <div class="brand-copy">
-          <div class="brand-title">
-            {{ t('pinLock.brand.title') }}
+          <div class="brand-copy">
+            <div class="brand-title">
+              {{ t('pinLock.brand.title') }}
+            </div>
+
+            <div class="brand-subtitle">
+              {{ t('pinLock.brand.subtitle') }}
+            </div>
           </div>
-          <div class="brand-subtitle">
-            {{ t('pinLock.brand.subtitle') }}
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <div
-        v-if="sessionState.status === 'initializing'"
-        class="pin-lock-state pin-lock-state-centred"
-      >
-        <div class="state-icon state-icon-dark">
-          <q-spinner size="34px" color="white" />
-        </div>
-
-        <h1 class="pin-lock-title">
-          {{ t('pinLock.initializing.title') }}
-        </h1>
-
-        <p class="pin-lock-intro">
-          {{ t('pinLock.initializing.message') }}
-        </p>
-      </div>
-
-      <div
-        v-else-if="sessionState.status === 'storage_error'"
-        class="pin-lock-state"
-      >
-        <div class="state-icon state-icon-warning">
-          <q-icon name="lock_reset" />
-        </div>
-
-        <div class="pin-lock-eyebrow">
-          {{ t('pinLock.storageError.eyebrow') }}
-        </div>
-
-        <h1 class="pin-lock-title">
-          {{ t('pinLock.storageError.title') }}
-        </h1>
-
-        <p class="pin-lock-intro">
-          {{ t('pinLock.storageError.message') }}
-        </p>
-
-        <div class="pin-lock-notice pin-lock-notice-warning">
-          <q-icon name="warning_amber" />
-
-          <div>
-            {{ t('pinLock.storageError.warning') }}
-          </div>
-        </div>
-
+        <!-- Secure-storage / lifecycle error -->
         <div
-          v-if="isDebugBuild && sessionState.debugMessage"
-          class="debug-error-box"
+          v-if="sessionState.status === 'storage_error'"
+          class="pin-lock-state"
         >
-          <div class="debug-error-title">
-            {{ t('pinLock.storageError.debugTitle') }}
+          <div class="state-icon state-icon-warning">
+            <q-icon name="lock_reset" />
           </div>
 
-          <code>{{ sessionState.debugMessage }}</code>
+          <div class="pin-lock-eyebrow">
+            {{ t('pinLock.storageError.eyebrow') }}
+          </div>
+
+          <h1 class="pin-lock-title">
+            {{ t('pinLock.storageError.title') }}
+          </h1>
+
+          <p class="pin-lock-intro">
+            {{ t('pinLock.storageError.message') }}
+          </p>
+
+          <div class="pin-lock-notice pin-lock-notice-warning">
+            <q-icon name="warning_amber" />
+
+            <div>
+              {{ t('pinLock.storageError.warning') }}
+            </div>
+          </div>
+
+          <div
+            v-if="isDebugBuild && sessionState.debugMessage"
+            class="debug-error-box"
+          >
+            <div class="debug-error-title">
+              {{ t('pinLock.storageError.debugTitle') }}
+            </div>
+
+            <code>{{ sessionState.debugMessage }}</code>
+          </div>
+
+          <q-btn
+            unelevated
+            no-caps
+            rounded
+            class="pin-primary-button"
+            :label="t('pinLock.storageError.reload')"
+            @click="reloadApp"
+          />
         </div>
 
-        <q-btn
-          unelevated
-          no-caps
-          rounded
-          class="pin-primary-button"
-          :label="t('pinLock.storageError.reload')"
-          @click="reloadApp"
-        />
-      </div>
-
-      <div
-        v-else-if="sessionState.status === 'setup_success'"
-        class="pin-lock-state pin-lock-state-centred"
-      >
-        <div class="success-ring">
-          <q-icon name="check" />
-        </div>
-
-        <div class="pin-lock-eyebrow">
-          {{ t('pinLock.success.eyebrow') }}
-        </div>
-
-        <h1 class="pin-lock-title">
-          {{ t('pinLock.success.title') }}
-        </h1>
-
-        <p class="pin-lock-intro">
-          {{ t('pinLock.success.message') }}
-        </p>
-
-        <q-btn
-          unelevated
-          no-caps
-          rounded
-          class="pin-primary-button"
-          :label="t('pinLock.success.openApp')"
-          @click="finishSetupSuccess"
-        />
-      </div>
-
-      <div v-else-if="isSetupMode" class="pin-lock-state">
-        <div class="pin-lock-eyebrow">
-          {{
-            isConfirmingSetup
-              ? t('pinLock.setup.confirmEyebrow')
-              : t('pinLock.setup.eyebrow')
-          }}
-        </div>
-
-        <h1 class="pin-lock-title">
-          {{
-            isConfirmingSetup
-              ? t('pinLock.setup.confirmTitle')
-              : t('pinLock.setup.title')
-          }}
-        </h1>
-
-        <p class="pin-lock-intro">
-          {{
-            isConfirmingSetup
-              ? t('pinLock.setup.confirmMessage')
-              : t('pinLock.setup.message')
-          }}
-        </p>
-
+        <!-- First-time setup success -->
         <div
-          v-if="isSetupPreview"
-          class="pin-lock-notice pin-lock-notice-preview"
+          v-else-if="sessionState.status === 'setup_success'"
+          class="pin-lock-state pin-lock-state-centred"
         >
-          <q-icon name="visibility" />
-
-          <div>
-            {{ t('pinLock.preview.message') }}
+          <div class="success-ring">
+            <q-icon name="check" />
           </div>
+
+          <div class="pin-lock-eyebrow">
+            {{ t('pinLock.success.eyebrow') }}
+          </div>
+
+          <h1 class="pin-lock-title">
+            {{ t('pinLock.success.title') }}
+          </h1>
+
+          <p class="pin-lock-intro">
+            {{ t('pinLock.success.message') }}
+          </p>
+
+          <q-btn
+            unelevated
+            no-caps
+            rounded
+            class="pin-primary-button"
+            :label="t('pinLock.success.openApp')"
+            @click="finishSetupSuccess"
+          />
         </div>
 
-        <form class="pin-lock-form" @submit.prevent="handlePrimaryAction">
-          <div v-if="!isConfirmingSetup" class="pin-length-section">
-            <div class="pin-field-label">
-              {{ t('pinLock.setup.lengthLabel') }}
-            </div>
+        <!-- First-time setup / debug preview -->
+        <div v-else-if="isSetupMode" class="pin-lock-state">
+          <div class="pin-lock-eyebrow">
+            {{
+              isConfirmingSetup
+                ? t('pinLock.setup.confirmEyebrow')
+                : t('pinLock.setup.eyebrow')
+            }}
+          </div>
 
-            <q-btn-toggle
-              v-model="selectedPinLength"
-              no-caps
-              unelevated
-              spread
-              :disable="isSetupPreview || isSubmitting"
-              :options="pinLengthOptions"
-              class="pin-length-toggle"
-            />
+          <h1 class="pin-lock-title">
+            {{
+              isConfirmingSetup
+                ? t('pinLock.setup.confirmTitle')
+                : t('pinLock.setup.title')
+            }}
+          </h1>
 
-            <div class="pin-field-help">
-              {{ t('pinLock.setup.lengthHelp') }}
+          <p class="pin-lock-intro">
+            {{
+              isConfirmingSetup
+                ? t('pinLock.setup.confirmMessage')
+                : t('pinLock.setup.message')
+            }}
+          </p>
+
+          <div
+            v-if="isSetupPreview"
+            class="pin-lock-notice pin-lock-notice-preview"
+          >
+            <q-icon name="visibility" />
+
+            <div>
+              {{ t('pinLock.preview.message') }}
             </div>
           </div>
 
-          <div class="pin-input-section">
-            <div class="pin-field-label">
-              {{
-                isConfirmingSetup
-                  ? t('pinLock.setup.confirmInputLabel')
-                  : t('pinLock.setup.inputLabel')
-              }}
+          <form class="pin-lock-form" @submit.prevent="handlePrimaryAction">
+            <div v-if="!isConfirmingSetup" class="pin-length-section">
+              <div class="pin-field-label">
+                {{ t('pinLock.setup.lengthLabel') }}
+              </div>
+
+              <q-btn-toggle
+                v-model="selectedPinLength"
+                no-caps
+                unelevated
+                spread
+                :disable="isSetupPreview || isSubmitting"
+                :options="pinLengthOptions"
+                class="pin-length-toggle"
+              />
+
+              <div class="pin-field-help">
+                {{ t('pinLock.setup.lengthHelp') }}
+              </div>
             </div>
 
-            <div
-              class="pin-entry-area"
-              :class="{
-                'pin-entry-area-focused': isPinFocused,
-                'pin-entry-area-error': Boolean(displayFeedback),
-                'pin-entry-area-disabled': isInputDisabled,
-              }"
-              role="group"
-              :aria-label="
-                isConfirmingSetup
-                  ? t('pinLock.setup.confirmInputLabel')
-                  : t('pinLock.setup.inputLabel')
-              "
-              @click="focusPinInput"
-            >
-              <input
-                ref="pinInputRef"
-                v-model="pinValue"
-                class="pin-native-input"
-                type="tel"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                :autocomplete="
-                  isConfirmingSetup ? 'new-password' : 'new-password'
-                "
-                :maxlength="activePinLength"
-                :disabled="isInputDisabled"
+            <div class="pin-input-section">
+              <div class="pin-field-label">
+                {{
+                  isConfirmingSetup
+                    ? t('pinLock.setup.confirmInputLabel')
+                    : t('pinLock.setup.inputLabel')
+                }}
+              </div>
+
+              <div
+                class="pin-entry-area"
+                :class="{
+                  'pin-entry-area-focused': isPinFocused,
+                  'pin-entry-area-error': Boolean(displayFeedback),
+                  'pin-entry-area-disabled': isInputDisabled,
+                }"
+                role="group"
                 :aria-label="
                   isConfirmingSetup
                     ? t('pinLock.setup.confirmInputLabel')
                     : t('pinLock.setup.inputLabel')
                 "
-                @input="handlePinInput"
-                @focus="isPinFocused = true"
-                @blur="isPinFocused = false"
-                @keydown.enter.prevent="handlePrimaryAction"
-              />
+                @click="focusPinInput"
+              >
+                <input
+                  ref="pinInputRef"
+                  v-model="pinValue"
+                  class="pin-native-input"
+                  type="tel"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  autocomplete="new-password"
+                  :maxlength="activePinLength"
+                  :disabled="isInputDisabled"
+                  :aria-label="
+                    isConfirmingSetup
+                      ? t('pinLock.setup.confirmInputLabel')
+                      : t('pinLock.setup.inputLabel')
+                  "
+                  @input="handlePinInput"
+                  @focus="isPinFocused = true"
+                  @blur="isPinFocused = false"
+                  @keydown.enter.prevent="handlePrimaryAction"
+                />
 
-              <div class="pin-slots">
-                <div
-                  v-for="slotNumber in activePinLength"
-                  :key="slotNumber"
-                  class="pin-slot"
-                  :class="{
-                    'pin-slot-filled': slotNumber <= pinValue.length,
-                    'pin-slot-current':
-                      isPinFocused &&
-                      slotNumber === pinValue.length + 1 &&
-                      !isInputDisabled,
-                  }"
-                >
-                  <span v-if="slotNumber <= pinValue.length" class="pin-dot" />
+                <div class="pin-slots">
+                  <div
+                    v-for="slotNumber in activePinLength"
+                    :key="slotNumber"
+                    class="pin-slot"
+                    :class="{
+                      'pin-slot-filled': slotNumber <= pinValue.length,
+                      'pin-slot-current':
+                        isPinFocused &&
+                        slotNumber === pinValue.length + 1 &&
+                        !isInputDisabled,
+                    }"
+                  >
+                    <span
+                      v-if="slotNumber <= pinValue.length"
+                      class="pin-dot"
+                    />
+                  </div>
                 </div>
+              </div>
+
+              <div
+                class="pin-feedback"
+                :class="{
+                  'pin-feedback-visible': Boolean(displayFeedback),
+                }"
+                aria-live="polite"
+              >
+                {{ displayFeedback || '\u00A0' }}
               </div>
             </div>
 
             <div
-              class="pin-feedback"
-              :class="{ 'pin-feedback-visible': Boolean(displayFeedback) }"
-              aria-live="polite"
+              v-if="isConfirmingSetup && !isSetupPreview"
+              class="setup-back-row"
             >
-              {{ displayFeedback || '\u00A0' }}
+              <q-btn
+                flat
+                no-caps
+                icon="arrow_back"
+                :label="t('pinLock.setup.chooseAgain')"
+                class="pin-secondary-button"
+                :disable="isSubmitting"
+                @click="returnToPinChoice"
+              />
             </div>
-          </div>
 
-          <div
-            v-if="isConfirmingSetup && !isSetupPreview"
-            class="setup-back-row"
-          >
             <q-btn
-              flat
+              unelevated
               no-caps
-              icon="arrow_back"
-              :label="t('pinLock.setup.chooseAgain')"
-              class="pin-secondary-button"
-              :disable="isSubmitting"
-              @click="returnToPinChoice"
+              rounded
+              type="submit"
+              class="pin-primary-button"
+              :loading="isSubmitting"
+              :disable="isPrimaryActionDisabled"
+              :label="primaryActionLabel"
             />
+          </form>
+        </div>
+
+        <!-- Normal unlock -->
+        <div
+          v-else-if="sessionState.status === 'locked'"
+          class="pin-lock-state"
+        >
+          <div class="state-icon state-icon-green">
+            <q-icon name="lock" />
           </div>
 
-          <q-btn
-            unelevated
-            no-caps
-            rounded
-            type="submit"
-            class="pin-primary-button"
-            :loading="isSubmitting"
-            :disable="isPrimaryActionDisabled"
-            :label="primaryActionLabel"
-          />
-        </form>
-      </div>
+          <div class="pin-lock-eyebrow">
+            {{ t('pinLock.unlock.eyebrow') }}
+          </div>
 
-      <div v-else-if="sessionState.status === 'locked'" class="pin-lock-state">
-        <div class="state-icon state-icon-green">
-          <q-icon name="lock" />
-        </div>
+          <h1 class="pin-lock-title">
+            {{ t('pinLock.unlock.title') }}
+          </h1>
 
-        <div class="pin-lock-eyebrow">
-          {{ t('pinLock.unlock.eyebrow') }}
-        </div>
+          <p class="pin-lock-intro">
+            {{
+              sessionState.lockReason === 'background_timeout'
+                ? t('pinLock.unlock.timeoutMessage')
+                : t('pinLock.unlock.message')
+            }}
+          </p>
 
-        <h1 class="pin-lock-title">
-          {{ t('pinLock.unlock.title') }}
-        </h1>
+          <form
+            class="pin-lock-form pin-lock-form-unlock"
+            @submit.prevent="handlePrimaryAction"
+          >
+            <div class="pin-input-section">
+              <div class="pin-field-label">
+                {{
+                  t('pinLock.unlock.inputLabel', {
+                    length: activePinLength,
+                  })
+                }}
+              </div>
 
-        <p class="pin-lock-intro">
-          {{
-            sessionState.lockReason === 'background_timeout'
-              ? t('pinLock.unlock.timeoutMessage')
-              : t('pinLock.unlock.message')
-          }}
-        </p>
-
-        <form class="pin-lock-form" @submit.prevent="handlePrimaryAction">
-          <div class="pin-input-section">
-            <div class="pin-field-label">
-              {{
-                t('pinLock.unlock.inputLabel', {
-                  length: activePinLength,
-                })
-              }}
-            </div>
-
-            <div
-              class="pin-entry-area"
-              :class="{
-                'pin-entry-area-focused': isPinFocused,
-                'pin-entry-area-error': Boolean(displayFeedback),
-                'pin-entry-area-disabled': isInputDisabled,
-              }"
-              role="group"
-              :aria-label="
-                t('pinLock.unlock.inputLabel', {
-                  length: activePinLength,
-                })
-              "
-              @click="focusPinInput"
-            >
-              <input
-                ref="pinInputRef"
-                v-model="pinValue"
-                class="pin-native-input"
-                type="tel"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                autocomplete="current-password"
-                :maxlength="activePinLength"
-                :disabled="isInputDisabled"
+              <div
+                class="pin-entry-area"
+                :class="{
+                  'pin-entry-area-focused': isPinFocused,
+                  'pin-entry-area-error': Boolean(displayFeedback),
+                  'pin-entry-area-disabled': isInputDisabled,
+                }"
+                role="group"
                 :aria-label="
                   t('pinLock.unlock.inputLabel', {
                     length: activePinLength,
                   })
                 "
-                @input="handlePinInput"
-                @focus="isPinFocused = true"
-                @blur="isPinFocused = false"
-                @keydown.enter.prevent="handlePrimaryAction"
-              />
+                @click="focusPinInput"
+              >
+                <input
+                  ref="pinInputRef"
+                  v-model="pinValue"
+                  class="pin-native-input"
+                  type="tel"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  autocomplete="current-password"
+                  :maxlength="activePinLength"
+                  :disabled="isInputDisabled"
+                  :aria-label="
+                    t('pinLock.unlock.inputLabel', {
+                      length: activePinLength,
+                    })
+                  "
+                  @input="handlePinInput"
+                  @focus="isPinFocused = true"
+                  @blur="isPinFocused = false"
+                  @keydown.enter.prevent="handlePrimaryAction"
+                />
 
-              <div class="pin-slots">
-                <div
-                  v-for="slotNumber in activePinLength"
-                  :key="slotNumber"
-                  class="pin-slot"
-                  :class="{
-                    'pin-slot-filled': slotNumber <= pinValue.length,
-                    'pin-slot-current':
-                      isPinFocused &&
-                      slotNumber === pinValue.length + 1 &&
-                      !isInputDisabled,
-                  }"
-                >
-                  <span v-if="slotNumber <= pinValue.length" class="pin-dot" />
+                <div class="pin-slots">
+                  <div
+                    v-for="slotNumber in activePinLength"
+                    :key="slotNumber"
+                    class="pin-slot"
+                    :class="{
+                      'pin-slot-filled': slotNumber <= pinValue.length,
+                      'pin-slot-current':
+                        isPinFocused &&
+                        slotNumber === pinValue.length + 1 &&
+                        !isInputDisabled,
+                    }"
+                  >
+                    <span
+                      v-if="slotNumber <= pinValue.length"
+                      class="pin-dot"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="pin-feedback"
+                :class="{
+                  'pin-feedback-visible': Boolean(displayFeedback),
+                }"
+                aria-live="polite"
+              >
+                {{ displayFeedback || '\u00A0' }}
+              </div>
+            </div>
+          </form>
+
+          <div class="pin-lock-help">
+            <q-btn
+              flat
+              no-caps
+              :label="
+                isForgottenPinHelpOpen
+                  ? t('pinLock.forgotten.hide')
+                  : t('pinLock.forgotten.show')
+              "
+              class="pin-help-button"
+              @click="isForgottenPinHelpOpen = !isForgottenPinHelpOpen"
+            />
+
+            <div v-if="isForgottenPinHelpOpen" class="forgotten-pin-box">
+              <q-icon name="info_outline" />
+
+              <div>
+                <div class="forgotten-pin-title">
+                  {{ t('pinLock.forgotten.title') }}
+                </div>
+
+                <div class="forgotten-pin-message">
+                  {{ t('pinLock.forgotten.message') }}
                 </div>
               </div>
             </div>
 
-            <div
-              class="pin-feedback"
-              :class="{ 'pin-feedback-visible': Boolean(displayFeedback) }"
-              aria-live="polite"
-            >
-              {{ displayFeedback || '\u00A0' }}
+            <q-btn
+              v-if="isDebugBuild"
+              flat
+              no-caps
+              icon="visibility"
+              :label="t('pinLock.preview.open')"
+              class="pin-preview-button"
+              @click="openSetupPreview"
+            />
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!--
+      Background privacy cover.
+
+      This is now a fixed overlay rather than a replacement for the routed
+      application. Short background/foreground cycles therefore leave the
+      merchant page mounted underneath.
+    -->
+    <Transition name="privacy-cover">
+      <div v-if="sessionState.showPrivacyCover" class="pin-privacy-overlay">
+        <div class="privacy-brand">
+          <img
+            :src="bchLogoUrl"
+            :alt="t('pinLock.brand.logoAlt')"
+            class="privacy-logo"
+          />
+
+          <div>
+            <div class="privacy-title">
+              {{ t('pinLock.brand.title') }}
+            </div>
+
+            <div class="privacy-subtitle">
+              {{ t('pinLock.privacy.message') }}
             </div>
           </div>
-
-          <q-btn
-            unelevated
-            no-caps
-            rounded
-            type="submit"
-            class="pin-primary-button"
-            :loading="isSubmitting"
-            :disable="isPrimaryActionDisabled"
-            :label="t('pinLock.unlock.openApp')"
-          />
-        </form>
-
-        <div class="pin-lock-help">
-          <q-btn
-            flat
-            no-caps
-            :label="
-              isForgottenPinHelpOpen
-                ? t('pinLock.forgotten.hide')
-                : t('pinLock.forgotten.show')
-            "
-            class="pin-help-button"
-            @click="isForgottenPinHelpOpen = !isForgottenPinHelpOpen"
-          />
-
-          <div v-if="isForgottenPinHelpOpen" class="forgotten-pin-box">
-            <q-icon name="info_outline" />
-
-            <div>
-              <div class="forgotten-pin-title">
-                {{ t('pinLock.forgotten.title') }}
-              </div>
-
-              <div class="forgotten-pin-message">
-                {{ t('pinLock.forgotten.message') }}
-              </div>
-            </div>
-          </div>
-
-          <q-btn
-            v-if="isDebugBuild"
-            flat
-            no-caps
-            icon="visibility"
-            :label="t('pinLock.preview.open')"
-            class="pin-preview-button"
-            @click="openSetupPreview"
-          />
         </div>
       </div>
+    </Transition>
 
-      <div v-else class="pin-lock-state pin-lock-state-centred">
-        <div class="state-icon state-icon-dark">
-          <q-spinner size="34px" color="white" />
-        </div>
+    <!--
+      Web-side continuation of the native splash.
 
-        <h1 class="pin-lock-title">
-          {{ t('pinLock.initializing.title') }}
-        </h1>
-      </div>
+      There is intentionally no second logo/title here. The native Android
+      splash is the only branded splash screen.
 
-      <footer class="pin-lock-footer">
-        <q-icon name="verified_user" />
+      Once Android releases it:
+        dark cover
+          -> BCH green radial expansion
+          -> green halves split open
+          -> fully-rendered PIN UI beneath
+    -->
+    <div
+      v-if="startupTransitionVisible"
+      class="startup-transition-overlay"
+      :class="`startup-transition-${startupTransitionPhase}`"
+      aria-hidden="true"
+    >
+      <div class="startup-transition-disc" />
 
-        <span>{{ t('pinLock.footer') }}</span>
-      </footer>
-    </section>
-  </main>
+      <div class="startup-transition-panel startup-transition-panel-left" />
+
+      <div class="startup-transition-panel startup-transition-panel-right" />
+    </div>
+  </template>
 </template>
 
 <script setup lang="ts">
@@ -512,9 +534,23 @@ type NativeAppPlugin = {
   getInfo: () => Promise<NativeAppInfo>;
 };
 
+type NativeSplashScreenPlugin = {
+  hide: (options?: { fadeOutDuration?: number }) => Promise<void>;
+};
+
 type SetupStage = 'choose' | 'confirm';
 
+type StartupTransitionPhase =
+  | 'waiting'
+  | 'expand'
+  | 'covered'
+  | 'opening'
+  | 'done';
+
 const NativeApp = registerPlugin<NativeAppPlugin>('App');
+
+const NativeSplashScreen =
+  registerPlugin<NativeSplashScreenPlugin>('SplashScreen');
 
 const { t } = useI18n({
   useScope: 'global',
@@ -522,24 +558,43 @@ const { t } = useI18n({
 
 const sessionState = pinLockSessionState;
 
+const isAndroidPlatform = Capacitor.getPlatform() === 'android';
+
 const pinInputRef = ref<HTMLInputElement | null>(null);
+
 const pinValue = ref('');
 const firstPinValue = ref('');
+
 const selectedPinLength = ref<PinLength>(4);
+
 const setupStage = ref<SetupStage>('choose');
 
 const isSubmitting = ref(false);
 const isPinFocused = ref(false);
 const feedbackMessage = ref('');
+
 const cooldownUntil = ref<number | null>(null);
+
 const currentTime = ref(Date.now());
 
 const isDebugBuild = ref(false);
 const isSetupPreview = ref(false);
+
 const isForgottenPinHelpOpen = ref(false);
 
+const startupTransitionVisible = ref(isAndroidPlatform);
+
+const startupTransitionPhase = ref<StartupTransitionPhase>('waiting');
+
 let cooldownInterval: ReturnType<typeof setInterval> | null = null;
+
 let setupSuccessTimer: ReturnType<typeof setTimeout> | null = null;
+
+let transitionTimer: ReturnType<typeof setTimeout> | null = null;
+
+const nativeSplashFadeMs = 250;
+const radialExpansionMs = 360;
+const splitOpeningMs = 320;
 
 const pinLengthOptions = [
   {
@@ -555,6 +610,18 @@ const pinLengthOptions = [
     value: 6,
   },
 ];
+
+const shouldRenderPinSurface = computed((): boolean => {
+  if (!isAndroidPlatform) {
+    return false;
+  }
+
+  if (sessionState.value.status === 'initializing') {
+    return false;
+  }
+
+  return !canRenderPinProtectedApp.value;
+});
 
 const isConfirmingSetup = computed((): boolean => {
   return setupStage.value === 'confirm';
@@ -625,7 +692,11 @@ function clearFeedback(): void {
 }
 
 function focusPinInput(): void {
-  if (isInputDisabled.value) {
+  if (
+    isInputDisabled.value ||
+    startupTransitionVisible.value ||
+    sessionState.value.showPrivacyCover
+  ) {
     return;
   }
 
@@ -634,6 +705,7 @@ function focusPinInput(): void {
 
 function handlePinInput(event: Event): void {
   const input = event.target as HTMLInputElement;
+
   const sanitizedValue = input.value
     .replace(/\D/g, '')
     .slice(0, activePinLength.value);
@@ -644,6 +716,23 @@ function handlePinInput(event: Event): void {
 
   pinValue.value = sanitizedValue;
   clearFeedback();
+
+  /**
+   * Unlock automatically once the final
+   * configured PIN digit is entered.
+   *
+   * PIN creation intentionally retains the
+   * explicit Continue / Set PIN buttons.
+   */
+  if (
+    sessionState.value.status === 'locked' &&
+    !isSetupMode.value &&
+    sanitizedValue.length === activePinLength.value &&
+    !isSubmitting.value &&
+    !isCooldownActive.value
+  ) {
+    void handleUnlockAction();
+  }
 }
 
 function resetPinEntry(): void {
@@ -663,6 +752,7 @@ function returnToPinChoice(): void {
   setupStage.value = 'choose';
   firstPinValue.value = '';
   feedbackMessage.value = '';
+
   resetPinEntry();
 }
 
@@ -694,6 +784,7 @@ function startCooldown(until: number): void {
 
       if (cooldownInterval) {
         clearInterval(cooldownInterval);
+
         cooldownInterval = null;
       }
 
@@ -710,15 +801,20 @@ async function handleSetupAction(): Promise<void> {
 
   if (!isConfirmingSetup.value) {
     firstPinValue.value = pinValue.value;
+
     setupStage.value = 'confirm';
     feedbackMessage.value = '';
+
     resetPinEntry();
+
     return;
   }
 
   if (pinValue.value !== firstPinValue.value) {
     feedbackMessage.value = t('pinLock.errors.pinMismatch');
+
     resetPinEntry();
+
     return;
   }
 
@@ -730,11 +826,13 @@ async function handleSetupAction(): Promise<void> {
 
     if (result.status === 'invalid_format') {
       feedbackMessage.value = t('pinLock.errors.invalidFormat');
+
       resetPinEntry();
     }
 
     if (result.status === 'already_configured') {
       feedbackMessage.value = t('pinLock.errors.alreadyConfigured');
+
       resetPinEntry();
     }
   } finally {
@@ -745,7 +843,8 @@ async function handleSetupAction(): Promise<void> {
 async function handleUnlockAction(): Promise<void> {
   if (
     pinValue.value.length !== activePinLength.value ||
-    isCooldownActive.value
+    isCooldownActive.value ||
+    isSubmitting.value
   ) {
     return;
   }
@@ -764,17 +863,21 @@ async function handleUnlockAction(): Promise<void> {
       }
 
       resetPinEntry();
+
       return;
     }
 
     if (result.status === 'cooldown') {
       startCooldown(result.lockoutUntil);
+
       resetPinEntry();
+
       return;
     }
 
     if (result.status === 'invalid_format') {
       feedbackMessage.value = t('pinLock.errors.invalidFormat');
+
       resetPinEntry();
     }
   } finally {
@@ -805,9 +908,11 @@ function openSetupPreview(): void {
   isSetupPreview.value = true;
   setupStage.value = 'choose';
   selectedPinLength.value = 4;
+
   pinValue.value = '';
   firstPinValue.value = '';
   feedbackMessage.value = '';
+
   isForgottenPinHelpOpen.value = false;
 }
 
@@ -815,6 +920,7 @@ function closeSetupPreview(): void {
   isSetupPreview.value = false;
   setupStage.value = 'choose';
   selectedPinLength.value = 4;
+
   pinValue.value = '';
   firstPinValue.value = '';
   feedbackMessage.value = '';
@@ -829,7 +935,7 @@ function reloadApp(): void {
 }
 
 async function detectDebugBuild(): Promise<void> {
-  if (Capacitor.getPlatform() !== 'android') {
+  if (!isAndroidPlatform) {
     isDebugBuild.value = false;
     return;
   }
@@ -841,6 +947,115 @@ async function detectDebugBuild(): Promise<void> {
   } catch (error) {
     isDebugBuild.value = false;
   }
+}
+
+function clearTransitionTimer(): void {
+  if (transitionTimer) {
+    clearTimeout(transitionTimer);
+    transitionTimer = null;
+  }
+}
+
+function waitForTransition(milliseconds: number): Promise<void> {
+  clearTransitionTimer();
+
+  return new Promise((resolve) => {
+    transitionTimer = setTimeout(() => {
+      transitionTimer = null;
+      resolve();
+    }, milliseconds);
+  });
+}
+
+function waitForNextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  });
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+async function releaseNativeSplash(): Promise<void> {
+  if (!isAndroidPlatform) {
+    startupTransitionVisible.value = false;
+
+    startupTransitionPhase.value = 'done';
+
+    return;
+  }
+
+  /**
+   * PIN state is resolved before reaching
+   * this function. Allow Vue two paint
+   * frames so the complete lock/setup
+   * screen is already underneath the
+   * transition layer before Android's
+   * native splash disappears.
+   */
+  await nextTick();
+  await waitForNextPaint();
+
+  try {
+    await NativeSplashScreen.hide({
+      fadeOutDuration: nativeSplashFadeMs,
+    });
+  } catch (error) {
+    /**
+     * A splash-plugin failure must not
+     * prevent access to the PIN screen.
+     */
+    console.warn('Could not hide Android splash screen.', error);
+  }
+
+  if (prefersReducedMotion()) {
+    startupTransitionVisible.value = false;
+
+    startupTransitionPhase.value = 'done';
+
+    return;
+  }
+
+  /**
+   * Stage 1:
+   * BCH green expands radially from the
+   * centre over the matching dark cover.
+   */
+  startupTransitionPhase.value = 'expand';
+
+  await waitForTransition(radialExpansionMs);
+
+  /**
+   * Stage 2:
+   * Replace the expanded circle with two
+   * indistinguishable green panels.
+   */
+  startupTransitionPhase.value = 'covered';
+
+  await waitForNextPaint();
+
+  /**
+   * Stage 3:
+   * The green halves split away from the
+   * centre, revealing the fully-rendered
+   * PIN interface underneath.
+   */
+  startupTransitionPhase.value = 'opening';
+
+  await waitForTransition(splitOpeningMs);
+
+  startupTransitionVisible.value = false;
+
+  startupTransitionPhase.value = 'done';
 }
 
 watch(selectedPinLength, () => {
@@ -860,6 +1075,7 @@ watch(
     pinValue.value = '';
     feedbackMessage.value = '';
     cooldownUntil.value = null;
+
     isForgottenPinHelpOpen.value = false;
 
     if (status === 'needs_setup') {
@@ -875,11 +1091,32 @@ watch(
 
       setupSuccessTimer = setTimeout(() => {
         finishPinSetupSuccess();
+
         setupSuccessTimer = null;
       }, 1600);
     }
+  }
+);
 
-    if (status === 'needs_setup' || status === 'locked') {
+/**
+ * Focus only when the actual PIN UI is
+ * visible. This avoids the Android
+ * keyboard appearing underneath either
+ * the startup transition or privacy
+ * cover.
+ */
+watch(
+  [
+    () => sessionState.value.status,
+    () => sessionState.value.showPrivacyCover,
+    startupTransitionVisible,
+  ],
+  ([status, showPrivacy, showStartup]) => {
+    if (
+      (status === 'needs_setup' || status === 'locked') &&
+      !showPrivacy &&
+      !showStartup
+    ) {
       void nextTick(() => {
         focusPinInput();
       });
@@ -888,8 +1125,28 @@ watch(
 );
 
 onMounted(async () => {
+  if (!isAndroidPlatform) {
+    await initializePinLockSession();
+    return;
+  }
+
+  /**
+   * Debug detection can run alongside PIN
+   * initialization. It does not determine
+   * whether the app may be unlocked.
+   */
+  const debugDetectionPromise = detectDebugBuild();
+
   await initializePinLockSession();
-  await detectDebugBuild();
+
+  /**
+   * Do not release the native splash until
+   * secure PIN state has definitely been
+   * resolved.
+   */
+  await releaseNativeSplash();
+
+  await debugDetectionPromise;
 
   if (
     sessionState.value.status === 'needs_setup' ||
@@ -908,6 +1165,8 @@ onBeforeUnmount(() => {
   if (setupSuccessTimer) {
     clearTimeout(setupSuccessTimer);
   }
+
+  clearTransitionTimer();
 });
 </script>
 
@@ -976,23 +1235,12 @@ onBeforeUnmount(() => {
   padding-bottom: 18px;
 }
 
-.brand-logo-frame {
-  align-items: center;
-  background: #00ce1b;
-  border-radius: 17px;
-  display: flex;
-  flex: 0 0 54px;
-  height: 54px;
-  justify-content: center;
-  overflow: hidden;
-  width: 54px;
-}
-
 .brand-logo {
   display: block;
-  height: 42px;
+  flex: 0 0 54px;
+  height: 54px;
   object-fit: contain;
-  width: 42px;
+  width: 54px;
 }
 
 .brand-copy {
@@ -1061,11 +1309,6 @@ onBeforeUnmount(() => {
   width: 62px;
 }
 
-.state-icon-dark {
-  background: #111111;
-  color: #ffffff;
-}
-
 .state-icon-green {
   background: #00ce1b;
   color: #050505;
@@ -1094,6 +1337,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   margin-top: 24px;
+}
+
+.pin-lock-form-unlock {
+  margin-bottom: 0;
 }
 
 .pin-length-section {
@@ -1142,7 +1389,7 @@ onBeforeUnmount(() => {
   padding: 17px 14px;
   position: relative;
   transition: border-color 0.16s ease, background 0.16s ease,
-    box-shadow 0.16s ease;
+    box-shadow 0.16s ease, opacity 0.16s ease;
 }
 
 .pin-entry-area-focused {
@@ -1249,7 +1496,7 @@ onBeforeUnmount(() => {
   align-items: center;
   display: flex;
   flex-direction: column;
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 .pin-help-button,
@@ -1386,23 +1633,36 @@ onBeforeUnmount(() => {
   font-size: 17px;
 }
 
-.pin-lock-privacy {
-  justify-content: flex-start;
+/* ------------------------------------------------------------- */
+/* Background privacy overlay                                    */
+/* ------------------------------------------------------------- */
+
+.pin-privacy-overlay {
+  align-items: center;
+  background: radial-gradient(
+      circle at top right,
+      rgba(0, 206, 27, 0.17),
+      transparent 34%
+    ),
+    linear-gradient(155deg, #070807 0%, #111311 56%, #050505 100%);
+  color: #ffffff;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 9000;
 }
 
 .privacy-brand {
   align-items: center;
   display: flex;
   gap: 13px;
-  margin: auto;
 }
 
 .privacy-logo {
-  background: #00ce1b;
-  border-radius: 18px;
+  display: block;
   height: 58px;
   object-fit: contain;
-  padding: 8px;
   width: 58px;
 }
 
@@ -1417,6 +1677,128 @@ onBeforeUnmount(() => {
   font-size: 12px;
   font-weight: 750;
   margin-top: 4px;
+}
+
+.privacy-cover-enter-active,
+.privacy-cover-leave-active {
+  transition: opacity 0.14s ease;
+}
+
+.privacy-cover-enter-from,
+.privacy-cover-leave-to {
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------- */
+/* Cold-start transition                                         */
+/* ------------------------------------------------------------- */
+
+.startup-transition-overlay {
+  background: #070807;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: all;
+  position: fixed;
+  z-index: 10000;
+}
+
+.startup-transition-disc {
+  background: #00ce1b;
+  inset: 0;
+  position: absolute;
+
+  clip-path: circle(0 at 50% 50%);
+}
+
+.startup-transition-panel {
+  background: #00ce1b;
+  bottom: 0;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  width: 50.5%;
+}
+
+.startup-transition-panel-left {
+  left: 0;
+}
+
+.startup-transition-panel-right {
+  right: 0;
+}
+
+/*
+ * Waiting:
+ * Native Android splash is still visible
+ * above this dark matching layer.
+ */
+.startup-transition-waiting .startup-transition-disc {
+  clip-path: circle(0 at 50% 50%);
+}
+
+/*
+ * Expand:
+ * BCH green grows rapidly from the centre.
+ */
+.startup-transition-expand .startup-transition-disc {
+  clip-path: circle(150vmax at 50% 50%);
+
+  transition: clip-path 0.36s cubic-bezier(0.22, 0.72, 0.26, 1);
+}
+
+/*
+ * Covered:
+ * Swap the now-full green circle for two
+ * identical green screen halves. Because
+ * every visible pixel is the same green,
+ * the swap itself is invisible.
+ */
+.startup-transition-covered {
+  background: transparent;
+}
+
+.startup-transition-covered .startup-transition-disc {
+  clip-path: circle(150vmax at 50% 50%);
+}
+
+.startup-transition-covered .startup-transition-panel {
+  opacity: 1;
+}
+
+/*
+ * Opening:
+ * Green halves pull away from the centre
+ * and expose the already-rendered PIN UI.
+ */
+.startup-transition-opening {
+  background: transparent;
+}
+
+.startup-transition-opening .startup-transition-disc {
+  opacity: 0;
+}
+
+.startup-transition-opening .startup-transition-panel {
+  opacity: 1;
+
+  transition: transform 0.32s cubic-bezier(0.7, 0, 0.25, 1);
+}
+
+.startup-transition-opening .startup-transition-panel-left {
+  transform: translateX(-102%);
+}
+
+.startup-transition-opening .startup-transition-panel-right {
+  transform: translateX(102%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .startup-transition-disc,
+  .startup-transition-panel,
+  .privacy-cover-enter-active,
+  .privacy-cover-leave-active {
+    transition: none !important;
+  }
 }
 
 @media (max-width: 390px) {

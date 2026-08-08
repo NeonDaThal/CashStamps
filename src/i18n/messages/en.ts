@@ -783,7 +783,7 @@ const en = {
   },
   pinLock: {
     brand: {
-      title: 'Bitcoin Cash Topup',
+      title: 'Bitcoin Cash Topups',
       subtitle: 'Secure merchant access',
       logoAlt: 'Bitcoin Cash logo',
     },
@@ -814,13 +814,13 @@ const en = {
     success: {
       eyebrow: 'Setup complete',
       title: 'Your PIN has been set up.',
-      message: 'Bitcoin Cash Topup is ready to open.',
+      message: 'Bitcoin Cash Topups is ready to open.',
       openApp: 'Open App',
     },
     unlock: {
       eyebrow: 'Merchant access',
       title: 'Welcome back',
-      message: 'Enter your PIN to open Bitcoin Cash Topup.',
+      message: 'Enter your PIN to open Bitcoin Cash Topups.',
       timeoutMessage:
         'The app was inactive for three hours or more. Enter your PIN to continue.',
       inputLabel: 'Enter your {length}-digit PIN',

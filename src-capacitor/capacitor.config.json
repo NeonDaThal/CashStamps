@@ -1,5 +1,12 @@
 {
   "appId": "app.bitcoincashtopup.android",
   "appName": "BCH Topups",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "launchFadeOutDuration": 350,
+      "showSpinner": false
+    }
+  }
 }
