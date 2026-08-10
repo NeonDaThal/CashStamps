@@ -70,8 +70,10 @@ const en = {
     salePreviewTitle: 'Sale preview',
     salePreviewSubtitle:
       'A live BCH quote will be locked on the review screen.',
+    topupAmount: 'Topup amount',
+    customerToPay: 'Customer to pay',
     customerPays: 'Customer pays',
-    serviceFee: 'Fees',
+    serviceFee: 'Service fee',
     voucherValueBeforeQuote: 'Customer receives (minus fees)',
     quoteSource: 'Quote',
     lockedAfterReview: 'Locked after review',

@@ -68,6 +68,8 @@ const neNP = {
     customerCashAmount: 'ग्राहकको नगद रकम',
     salePreviewTitle: 'बिक्री पूर्वावलोकन',
     salePreviewSubtitle: 'समीक्षा स्क्रिनमा लाइभ BCH दर लक गरिनेछ।',
+    topupAmount: 'Topup amount',
+    customerToPay: 'Customer to pay',
     customerPays: 'ग्राहकले तिर्छ',
     serviceFee: 'सेवा शुल्क',
     voucherValueBeforeQuote: 'दर लक हुनु अघिको भौचर मूल्य',

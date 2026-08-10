@@ -68,6 +68,8 @@ const svSE = {
     customerCashAmount: 'Kundens kontantbelopp',
     salePreviewTitle: 'Förhandsvisning av försäljning',
     salePreviewSubtitle: 'En livekurs för BCH låses på granskningsskärmen.',
+    topupAmount: 'Topup amount',
+    customerToPay: 'Customer to pay',
     customerPays: 'Kunden betalar',
     serviceFee: 'Serviceavgift',
     voucherValueBeforeQuote: 'Värdekodens värde före kurslåsning',

@@ -69,6 +69,8 @@ const sw = {
     salePreviewTitle: 'Muonekano wa mauzo',
     salePreviewSubtitle:
       'Bei ya moja kwa moja ya BCH itafungwa kwenye skrini ya ukaguzi.',
+    topupAmount: 'Topup amount',
+    customerToPay: 'Customer to pay',
     customerPays: 'Mteja analipa',
     serviceFee: 'Ada ya huduma',
     voucherValueBeforeQuote: 'Thamani ya vocha kabla ya bei kufungwa',

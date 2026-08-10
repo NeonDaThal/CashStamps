@@ -1,3 +1,5 @@
+import type { LockedPriceQuote } from 'src/types/pricing';
+
 import { calculateTopupFeeModelV1 } from './fee-model';
 import type {
   TopupFeeModelV1Calculation,
@@ -7,25 +9,25 @@ import type {
 
 const SATS_PER_BCH = 100_000_000;
 
+/**
+ * Use the application's real locked-quote contract directly.
+ *
+ * This avoids maintaining a second nearly-identical quote type whose
+ * property names can drift away from src/types/pricing.
+ */
+export type TopupLockedQuoteLike = LockedPriceQuote;
+
+/**
+ * TopupPricingV1 exposes normalised quote metadata to the rest of the
+ * Topup flow.
+ *
+ * The fake value is retained for compatibility with existing display/factory
+ * code, although calculateTopupPricingV1FromLockedQuote receives a real
+ * LockedPriceQuote.
+ */
 export type TopupPricingQuoteSource =
-  | 'fake_phase_2_quote'
-  | 'general_protocols_oracle'
-  | 'coingecko'
-  | 'cached'
-  | 'manual';
-
-export interface TopupLockedQuoteLike {
-  fiatCurrency: string;
-  marketRate: number;
-
-  quoteTimestamp: string;
-  quoteSource: TopupPricingQuoteSource;
-
-  quoteLockedAt?: string;
-  quoteExpiresAt?: string;
-
-  isFallbackQuote: boolean;
-}
+  | LockedPriceQuote['provider']
+  | 'fake_phase_2_quote';
 
 export interface TopupPricingV1 {
   feeModelVersion: 'topup_v1';
@@ -84,8 +86,13 @@ export interface TopupPricingV1 {
    */
   merchantFeeEquivalentSats: number;
 
+  /**
+   * Normalised names retained for compatibility with VoucherRecord and
+   * existing confirmation-display code.
+   */
   quoteTimestamp: string;
   quoteSource: TopupPricingQuoteSource;
+
   quoteLockedAt?: string;
   quoteExpiresAt?: string;
   isFallbackQuote: boolean;
@@ -155,7 +162,7 @@ export function convertFiatMinorToSatsAtRate(
 
 export function calculateTopupPricingV1FromLockedQuote(
   principalMinor: number,
-  lockedQuote: TopupLockedQuoteLike
+  lockedQuote: LockedPriceQuote
 ): TopupPricingV1 {
   const feeModelCalculation = calculateTopupFeeModelV1(
     principalMinor,
@@ -213,8 +220,14 @@ export function calculateTopupPricingV1FromLockedQuote(
     platformFeeSats,
     merchantFeeEquivalentSats,
 
-    quoteTimestamp: lockedQuote.quoteTimestamp,
-    quoteSource: lockedQuote.quoteSource,
+    /**
+     * LockedPriceQuote uses marketRateTimestamp/provider.
+     * TopupPricingV1 normalises these to the historical pricing names used
+     * elsewhere in the voucher code.
+     */
+    quoteTimestamp: lockedQuote.marketRateTimestamp,
+    quoteSource: lockedQuote.provider,
+
     quoteLockedAt: lockedQuote.quoteLockedAt,
     quoteExpiresAt: lockedQuote.quoteExpiresAt,
     isFallbackQuote: lockedQuote.isFallbackQuote,

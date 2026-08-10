@@ -69,6 +69,8 @@ const de = {
     salePreviewTitle: 'Verkaufsvorschau',
     salePreviewSubtitle:
       'Ein Live-BCH-Kurs wird auf dem Prüfungsbildschirm festgeschrieben.',
+    topupAmount: 'Topup amount',
+    customerToPay: 'Customer to pay',
     customerPays: 'Kunde zahlt',
     serviceFee: 'Servicegebühr',
     voucherValueBeforeQuote: 'Voucher-Wert vor Kursfestlegung',

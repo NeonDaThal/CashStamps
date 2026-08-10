@@ -5,12 +5,14 @@ import type {
 } from 'src/types/treasury-funding';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import type {
+  VoucherFee,
   VoucherFundingBroadcast,
   VoucherKeyMetadata,
   VoucherRecord,
   VoucherQuoteSource,
 } from 'src/types/voucher';
 import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
+import type { TopupPricingV1 } from 'src/services/topup-pricing-v1';
 
 export interface VoucherAddressData {
   derivationIndex: number;
@@ -26,6 +28,8 @@ export interface CreateVoucherRecordOptions {
   fundingBroadcast?: VoucherFundingBroadcast | null;
 }
 
+type VoucherPricingForRecord = FakeVoucherPricingQuote | TopupPricingV1;
+
 function createVoucherId(): string {
   return `voucher-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -40,14 +44,70 @@ function createVoucherSerial(): string {
   return `BCHV-${datePart}-${randomPart}`;
 }
 
+function isTopupPricingV1(
+  pricing: VoucherPricingForRecord
+): pricing is TopupPricingV1 {
+  return 'feeModelVersion' in pricing && pricing.feeModelVersion === 'topup_v1';
+}
+
 function mapPricingQuoteSourceToVoucherQuoteSource(
-  source: FakeVoucherPricingQuote['quoteSource']
+  source: string
 ): VoucherQuoteSource {
-  if (source === 'fake_phase_2_quote') {
-    return 'manual';
+  switch (source) {
+    case 'fake_phase_2':
+    case 'fake_phase_2_quote':
+      return 'manual';
+
+    case 'coingecko':
+      return 'coingecko';
+
+    case 'cached':
+      return 'cached';
+
+    case 'general_protocols_oracle':
+      return 'general_protocols_oracle';
+
+    case 'manual':
+      return 'manual';
+
+    case 'unknown':
+    default:
+      return 'unknown';
+  }
+}
+
+function createVoucherFee(pricing?: VoucherPricingForRecord): VoucherFee {
+  if (!pricing) {
+    return {
+      type: 'percentage',
+      basisPoints: 1000,
+      amountMinor: 0,
+      description: 'MVP service fee',
+    };
   }
 
-  return source;
+  if (isTopupPricingV1(pricing)) {
+    const isPercentageTier = pricing.feeTier === 'percentage';
+
+    return {
+      type: isPercentageTier ? 'percentage' : 'fixed',
+
+      basisPoints: isPercentageTier
+        ? pricing.feeModelCalculation.percentageBasisPoints
+        : 0,
+
+      amountMinor: pricing.serviceFeeAmountMinor,
+
+      description: `Fee Model v1 ${pricing.feeTier} service fee`,
+    };
+  }
+
+  return {
+    type: 'percentage',
+    basisPoints: pricing.serviceFeeBasisPoints,
+    amountMinor: pricing.serviceFeeAmountMinor,
+    description: 'MVP service fee',
+  };
 }
 
 function cloneSelectedUtxos(
@@ -131,7 +191,9 @@ function cloneFeeModel(
         feeModel.scheduleSnapshot.percentageTierMaximumPrincipalMinor,
 
       minimumFeeMinor: feeModel.scheduleSnapshot.minimumFeeMinor,
+
       percentageBasisPoints: feeModel.scheduleSnapshot.percentageBasisPoints,
+
       maximumFeeMinor: feeModel.scheduleSnapshot.maximumFeeMinor,
     },
 
@@ -165,6 +227,7 @@ function cloneFeeOutputPlan(
     bufferReserveAddress: feeOutputPlan.bufferReserveAddress,
     bufferReserveSats: feeOutputPlan.bufferReserveSats,
     bufferReserveBasisPoints: feeOutputPlan.bufferReserveBasisPoints,
+
     bufferReserveOutputEnabled: feeOutputPlan.bufferReserveOutputEnabled,
 
     totalServiceFeeSats: feeOutputPlan.totalServiceFeeSats,
@@ -204,7 +267,7 @@ function cloneFundingBroadcast(
 export function createDraftVoucherRecord(
   fiatAmountMinor: number,
   fiatCurrency = 'GBP',
-  pricing?: FakeVoucherPricingQuote,
+  pricing?: VoucherPricingForRecord,
   options?: CreateVoucherRecordOptions
 ): VoucherRecord {
   const now = new Date().toISOString();
@@ -221,15 +284,10 @@ export function createDraftVoucherRecord(
     fiatCurrency,
     fiatAmountMinor,
 
-    // These retain their legacy meanings until the live Topup flow is migrated
-    // to Fee Model v1 in Checkpoint B2.
     marketBchSats: pricing?.marketBchSats ?? 0,
-    fee: {
-      type: 'percentage',
-      basisPoints: pricing?.serviceFeeBasisPoints ?? 1000,
-      amountMinor: pricing?.serviceFeeAmountMinor ?? 0,
-      description: 'MVP service fee',
-    },
+
+    fee: createVoucherFee(pricing),
+
     finalBchSats: pricing?.finalBchSats ?? 0,
 
     feeModel: cloneFeeModel(options?.feeModel),
@@ -238,23 +296,31 @@ export function createDraftVoucherRecord(
       source: pricing
         ? mapPricingQuoteSourceToVoucherQuoteSource(pricing.quoteSource)
         : 'unknown',
+
       fiatCurrency,
+
       marketRate: pricing?.marketRate ?? 0,
+
       marketRateTimestamp: pricing?.quoteTimestamp ?? now,
+
       quoteLockedAt: pricing?.quoteLockedAt,
       quoteExpiresAt: pricing?.quoteExpiresAt,
+
       isFallbackQuote: pricing?.isFallbackQuote ?? false,
     },
 
     derivationIndex: options?.addressData?.derivationIndex ?? -1,
+
     address: options?.addressData?.address ?? '',
 
     keyMetadata: cloneKeyMetadata(options?.keyMetadata),
 
     feeOutputPlan: cloneFeeOutputPlan(options?.feeOutputPlan),
+
     treasuryFundingPreview: cloneTreasuryFundingPreview(
       options?.treasuryFundingPreview
     ),
+
     fundingBroadcast,
 
     status: fundingBroadcast?.status === 'broadcasted' ? 'funded' : 'draft',

@@ -37,15 +37,15 @@
         </div>
 
         <div class="preview-breakdown">
-          <div class="preview-line preview-line--primary">
+          <div class="preview-line">
             <div class="preview-label">
-              {{ t('sellForm.customerPays') }}
+              {{ t('sellForm.topupAmount') }}
             </div>
 
             <div class="preview-value">
               {{
                 formatMinorFiatAmount(
-                  previewPricing.customerPaysMinor,
+                  previewPricing.principalMinor,
                   previewPricing.fiatCurrency
                 )
               }}
@@ -59,10 +59,6 @@
 
             <div class="preview-value">
               {{
-                formatBasisPointsAsPercent(previewPricing.serviceFeeBasisPoints)
-              }}
-              —
-              {{
                 formatMinorFiatAmount(
                   previewPricing.serviceFeeAmountMinor,
                   previewPricing.fiatCurrency
@@ -71,15 +67,15 @@
             </div>
           </div>
 
-          <div class="preview-line">
+          <div class="preview-line preview-line--primary">
             <div class="preview-label">
-              {{ t('sellForm.voucherValueBeforeQuote') }}
+              {{ t('sellForm.customerToPay') }}
             </div>
 
             <div class="preview-value">
               {{
                 formatMinorFiatAmount(
-                  previewPricing.voucherValueMinor,
+                  previewPricing.customerPaysMinor,
                   previewPricing.fiatCurrency
                 )
               }}
@@ -119,11 +115,9 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
-import {
-  calculateFakeVoucherPricing,
-  formatBasisPointsAsPercent,
-  formatMinorFiatAmount,
-} from 'src/services/voucher-pricing';
+import { formatMinorFiatAmount } from 'src/services/voucher-pricing';
+
+import { calculateTopupFeeModelV1 } from 'src/services/fee-model';
 
 const { t } = useI18n({ useScope: 'global' });
 
@@ -144,9 +138,30 @@ const canCreateVoucher = computed(() => {
   return Number.isFinite(fiatAmount.value) && fiatAmount.value > 0;
 });
 
-const previewPricing = computed(() =>
-  calculateFakeVoucherPricing(fiatAmountMinor.value, fiatCurrency)
-);
+const previewPricing = computed(() => {
+  const amount = Number(fiatAmount.value);
+
+  const principalMinor =
+    Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
+
+  if (principalMinor <= 0) {
+    return {
+      fiatCurrency: 'GBP',
+      principalMinor: 0,
+      serviceFeeAmountMinor: 0,
+      customerPaysMinor: 0,
+    };
+  }
+
+  const feeModel = calculateTopupFeeModelV1(principalMinor, 'GBP');
+
+  return {
+    fiatCurrency: feeModel.currency,
+    principalMinor: feeModel.principalMinor,
+    serviceFeeAmountMinor: feeModel.serviceFeeMinor,
+    customerPaysMinor: feeModel.customerTotalBeforeNetworkFeeMinor,
+  };
+});
 
 function handleSubmit(): void {
   if (!canCreateVoucher.value) {
@@ -210,6 +225,7 @@ function handleSubmit(): void {
 
 .amount-input :deep(input[type='number']) {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .amount-input :deep(input[type='number']::-webkit-inner-spin-button),

@@ -8,10 +8,11 @@
   "scripts": {
     "lint": "eslint --ext .js,.ts,.vue ./",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
-    "test": "npm run test:fee-model && npm run test:treasury-funding && npm run test:topup-pricing-v1",
+    "test": "npm run test:fee-model && npm run test:treasury-funding && npm run test:topup-pricing-v1 && npm run test:topup-v1-integration",
     "test:fee-model": "tsx src/services/fee-model.test.ts",
     "test:treasury-funding": "tsx src/services/treasury-funding.test.ts",
     "test:topup-pricing-v1": "tsx src/services/topup-pricing-v1.test.ts",
+    "test:topup-v1-integration": "tsx src/services/topup-v1-integration.test.ts",
     "dev": "quasar dev",
     "build": "quasar build",
     "build_github": "BASE_PATH='CashStamps/' quasar build",

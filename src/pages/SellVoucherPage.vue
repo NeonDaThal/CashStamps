@@ -419,10 +419,12 @@ import {
   PricingService,
   PricingUnavailableError,
 } from 'src/services/pricing-service';
+import { formatBchSats } from 'src/services/voucher-pricing';
 import {
-  calculateVoucherPricingFromLockedQuote,
-  formatBchSats,
-} from 'src/services/voucher-pricing';
+  calculateTopupPricingV1FromLockedQuote,
+  createTopupFeeModelV1Snapshot,
+  type TopupPricingV1,
+} from 'src/services/topup-pricing-v1';
 import {
   getTreasuryWalletBalance,
   getTreasuryWalletPublicInfo,
@@ -434,8 +436,7 @@ import {
   exportVoucherKeyAtIndex,
   type DerivedVoucherAddress,
 } from 'src/services/voucher-wallet';
-import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
-import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
+import { createVoucherFeeOutputPlanV1 } from 'src/services/voucher-fee-plan-v1';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
 
@@ -454,9 +455,7 @@ const isProgressDialogOpen = ref(false);
 const isReceiptPreviewDialogOpen = ref(false);
 const isTreasuryDialogOpen = ref(false);
 
-const pendingFiatAmountMinor = ref(0);
-const pendingFiatCurrency = ref('GBP');
-const pendingPricing = ref<FakeVoucherPricingQuote | null>(null);
+const pendingPricing = ref<TopupPricingV1 | null>(null);
 const pendingFeeOutputPlan = ref<VoucherFeeOutputPlan | null>(null);
 const pendingTreasuryFundingPreview = ref<TreasuryFundingPreview | null>(null);
 const pendingFundingBroadcast = ref<TreasuryBroadcastResult | null>(null);
@@ -487,9 +486,15 @@ const treasuryWarning = computed(() => {
     return t('sellPage.messages.treasuryBalanceNotCheckedWarning');
   }
 
-  if (treasuryBalance.value.balanceSats < pendingPricing.value.finalBchSats) {
+  const estimatedRequiredSats =
+    pendingTreasuryFundingPreview.value?.estimatedTotalRequiredSats;
+
+  if (
+    estimatedRequiredSats !== undefined &&
+    treasuryBalance.value.balanceSats < estimatedRequiredSats
+  ) {
     return t('sellPage.messages.treasuryBalanceTooLow', {
-      required: formatBchSats(pendingPricing.value.finalBchSats),
+      required: formatBchSats(estimatedRequiredSats),
       available: formatBchSats(treasuryBalance.value.balanceSats),
     });
   }
@@ -642,9 +647,6 @@ async function handleReviewVoucher(
     return;
   }
 
-  pendingFiatAmountMinor.value = fiatAmountMinor;
-  pendingFiatCurrency.value = fiatCurrency;
-
   isSubmitting.value = true;
 
   try {
@@ -668,12 +670,12 @@ async function handleReviewVoucher(
 
     const lockedQuote = await pricingService.getLockedQuote(fiatCurrency);
 
-    pendingPricing.value = calculateVoucherPricingFromLockedQuote(
+    pendingPricing.value = calculateTopupPricingV1FromLockedQuote(
       fiatAmountMinor,
       lockedQuote
     );
 
-    pendingFeeOutputPlan.value = createVoucherFeeOutputPlan(
+    pendingFeeOutputPlan.value = createVoucherFeeOutputPlanV1(
       pendingPricing.value
     );
 
@@ -701,9 +703,17 @@ async function handleReviewVoucher(
       pendingTreasuryFundingPreview.value = createTreasuryFundingPreview({
         treasuryAddress: treasuryWallet.value.address,
         voucherAddress: pendingVoucherAddress.value.address,
+
         amountSats: pendingPricing.value.finalBchSats,
+
+        platformFeeSats: pendingFeeOutputPlan.value.platformFeeSats,
+
+        bufferReserveSats: 0,
+
         treasuryBalanceSats: treasuryBalance.value?.balanceSats ?? 0,
+
         treasuryUtxoCount: treasuryBalance.value?.utxoCount ?? 0,
+
         treasuryUtxos: treasuryBalance.value?.utxos ?? [],
       });
     }
@@ -799,9 +809,17 @@ async function handleCreateDraftVoucher(): Promise<void> {
   try {
     await runFakeIssueProgress();
 
+    const feeModelSnapshot = createTopupFeeModelV1Snapshot(
+      pendingPricing.value,
+      {
+        estimatedNetworkFeeSats:
+          pendingTreasuryFundingPreview.value?.estimatedFeeSats,
+      }
+    );
+
     const voucher = createDraftVoucherRecord(
-      pendingFiatAmountMinor.value,
-      pendingFiatCurrency.value,
+      pendingPricing.value.customerPaysMinor,
+      pendingPricing.value.fiatCurrency,
       pendingPricing.value,
       {
         addressData: {
@@ -809,6 +827,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
           address: pendingVoucherAddress.value.address,
         },
         keyMetadata: pendingKeyMetadata.value,
+        feeModel: feeModelSnapshot,
         feeOutputPlan: pendingFeeOutputPlan.value,
         treasuryFundingPreview: pendingTreasuryFundingPreview.value,
         fundingBroadcast: pendingFundingBroadcast.value,

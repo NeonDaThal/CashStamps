@@ -68,6 +68,8 @@ const zhHK = {
     customerCashAmount: '顧客現金金額',
     salePreviewTitle: '銷售預覽',
     salePreviewSubtitle: '系統會在覆核畫面鎖定即時 BCH 報價。',
+    topupAmount: 'Topup amount',
+    customerToPay: 'Customer to pay',
     customerPays: '顧客付款',
     serviceFee: '服務費',
     voucherValueBeforeQuote: '報價前的增值券金額',

@@ -69,6 +69,8 @@ const es = {
     salePreviewTitle: 'Vista previa de la venta',
     salePreviewSubtitle:
       'Se bloqueará una cotización BCH en vivo en la pantalla de revisión.',
+    topupAmount: 'Topup amount',
+    customerToPay: 'Customer to pay',
     customerPays: 'El cliente paga',
     serviceFee: 'Comisión de servicio',
     voucherValueBeforeQuote: 'Valor del vale antes de la cotización',

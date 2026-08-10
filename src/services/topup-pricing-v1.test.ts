@@ -14,13 +14,15 @@ interface TopupPricingTest {
 
 function createLockedQuote(marketRate = 100): TopupLockedQuoteLike {
   return {
+    provider: 'coingecko',
+
     fiatCurrency: 'GBP',
     marketRate,
 
-    quoteTimestamp: '2026-08-10T12:00:00.000Z',
-    quoteSource: 'coingecko',
+    marketRateTimestamp: '2026-08-10T12:00:00.000Z',
 
     quoteLockedAt: '2026-08-10T12:00:01.000Z',
+
     quoteExpiresAt: '2026-08-10T12:02:01.000Z',
 
     isFallbackQuote: false,
@@ -49,11 +51,8 @@ const tests: TopupPricingTest[] = [
 
       assert.equal(pricing.customerPaysMinor, 2_400);
 
-      // At £100 per BCH:
-      // £20 = 0.2 BCH.
       assert.equal(pricing.finalBchSats, 20_000_000);
 
-      // £2 platform share = 0.02 BCH.
       assert.equal(pricing.platformFeeSats, 2_000_000);
     },
   },
@@ -80,6 +79,7 @@ const tests: TopupPricingTest[] = [
       assert.equal(pricing.marketBchSats, 100_000_000);
 
       assert.equal(pricing.platformFeeSats, 5_000_000);
+
       assert.equal(pricing.merchantFeeEquivalentSats, 5_000_000);
     },
   },
@@ -115,10 +115,8 @@ const tests: TopupPricingTest[] = [
         createLockedQuote(500)
       );
 
-      // £100 / £500 = 0.2 BCH.
       assert.equal(pricing.finalBchSats, 20_000_000);
 
-      // £5 / £500 = 0.01 BCH.
       assert.equal(pricing.platformFeeSats, 1_000_000);
     },
   },
@@ -141,22 +139,28 @@ const tests: TopupPricingTest[] = [
       assert.equal(pricing.customerPaysMinor, 4_406);
 
       assert.equal(pricing.platformFeeSats, 2_000_000);
+
       assert.equal(pricing.merchantFeeEquivalentSats, 2_010_000);
     },
   },
 
   {
-    name: 'quote metadata is preserved exactly',
+    name: 'real LockedPriceQuote metadata is normalised correctly',
     run: () => {
       const quote = createLockedQuote(250);
 
       const pricing = calculateTopupPricingV1FromLockedQuote(10_000, quote);
 
       assert.equal(pricing.marketRate, 250);
-      assert.equal(pricing.quoteTimestamp, quote.quoteTimestamp);
-      assert.equal(pricing.quoteSource, quote.quoteSource);
+
+      assert.equal(pricing.quoteTimestamp, quote.marketRateTimestamp);
+
+      assert.equal(pricing.quoteSource, quote.provider);
+
       assert.equal(pricing.quoteLockedAt, quote.quoteLockedAt);
+
       assert.equal(pricing.quoteExpiresAt, quote.quoteExpiresAt);
+
       assert.equal(pricing.isFallbackQuote, quote.isFallbackQuote);
     },
   },
@@ -166,7 +170,6 @@ const tests: TopupPricingTest[] = [
     run: () => {
       const sats = convertFiatMinorToSatsAtRate(1, 500, 2);
 
-      // £0.01 / £500 = 0.00002 BCH.
       assert.equal(sats, 2_000);
     },
   },
@@ -218,6 +221,7 @@ const tests: TopupPricingTest[] = [
       assert.equal(snapshot.platformFeeMinor, 500);
 
       assert.equal(snapshot.networkFee.status, 'estimated');
+
       assert.equal(snapshot.networkFee.feeSats, 500);
 
       assert.equal(snapshot.networkFee.recoveryMinor, undefined);
@@ -241,6 +245,7 @@ const tests: TopupPricingTest[] = [
       });
 
       assert.equal(snapshot.networkFee.status, 'not_calculated');
+
       assert.equal(snapshot.networkFee.feeSats, undefined);
       assert.equal(snapshot.customerTotalMinor, undefined);
     },

@@ -102,8 +102,6 @@
               {{ t('saleConfirm.summary.serviceFee') }}
             </div>
             <div class="summary-value">
-              {{ formatBasisPointsAsPercent(pricing.serviceFeeBasisPoints) }}
-              —
               {{
                 formatMinorFiatAmount(
                   pricing.serviceFeeAmountMinor,
@@ -228,7 +226,7 @@
                 <q-item>
                   <q-item-section>
                     <q-item-label caption
-                      >Merchant retained spread</q-item-label
+                      >Merchant service fee share</q-item-label
                     >
                     <q-item-label>
                       {{ formatBchSats(feeOutputPlan.merchantRetainedSats) }}
@@ -239,37 +237,6 @@
                         )
                       }}
                       · retained by merchant/accounting, not a separate output
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-item>
-                  <q-item-section>
-                    <q-item-label caption>Buffer reserve</q-item-label>
-                    <q-item-label>
-                      {{ formatBchSats(feeOutputPlan.bufferReserveSats) }}
-                      /
-                      {{
-                        formatBasisPointsAsPercent(
-                          feeOutputPlan.bufferReserveBasisPoints
-                        )
-                      }}
-                      <span
-                        v-if="
-                          feeOutputPlan.bufferReserveOutputEnabled &&
-                          feeOutputPlan.bufferReserveAddress
-                        "
-                      >
-                        · output configured
-                      </span>
-                      <span
-                        v-else-if="feeOutputPlan.bufferReserveOutputEnabled"
-                      >
-                        · address not configured yet
-                      </span>
-                      <span v-else>
-                        · tracked only, no separate output for MVP
-                      </span>
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -942,15 +909,11 @@
 
                   <q-item v-if="transactionPlan">
                     <q-item-section>
-                      <q-item-label caption>Planned fee outputs</q-item-label>
+                      <q-item-label caption>Planned fee output</q-item-label>
                       <q-item-label>
                         Platform fee:
                         {{
                           formatBchSats(transactionPlan.platformFeeOutputSats)
-                        }}
-                        · Buffer reserve:
-                        {{
-                          formatBchSats(transactionPlan.bufferReserveOutputSats)
                         }}
                       </q-item-label>
                     </q-item-section>
@@ -1110,7 +1073,7 @@ import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
 import type { TreasuryTransactionDraftAudit } from 'src/types/treasury-transaction-audit';
-import type { FakeVoucherPricingQuote } from 'src/services/voucher-pricing';
+import type { TopupPricingV1 } from 'src/services/topup-pricing-v1';
 import { auditTreasuryTransactionDraft } from 'src/services/treasury-transaction-audit';
 import { broadcastTreasuryTransactionDraft } from 'src/services/treasury-broadcast';
 import { createFundingReadinessCheck } from 'src/services/funding-readiness';
@@ -1121,7 +1084,7 @@ import {
   createTreasuryTransactionDraftStatusFromPlan,
 } from 'src/services/treasury-transaction-draft';
 import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
-import { createVoucherFeeOutputPlan } from 'src/services/voucher-fee-plan';
+import { createVoucherFeeOutputPlanV1 } from 'src/services/voucher-fee-plan-v1';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import type { VoucherKeyMetadata } from 'src/types/voucher';
 import {
@@ -1133,7 +1096,7 @@ import {
 
 const props = defineProps<{
   modelValue: boolean;
-  pricing: FakeVoucherPricingQuote;
+  pricing: TopupPricingV1;
   isSubmitting: boolean;
   treasuryWarning?: string;
   treasuryBalanceSats?: number;
@@ -1158,18 +1121,27 @@ const broadcastGuardTestResult = ref<TreasuryBroadcastResult | null>(null);
 const realBroadcastResult = ref<TreasuryBroadcastResult | null>(null);
 
 const quoteSourceLabel = computed(() => {
-  const labels: Record<FakeVoucherPricingQuote['quoteSource'], string> = {
-    fake_phase_2_quote: t('saleConfirm.quoteSources.developmentQuote'),
-    coingecko: 'CoinGecko',
-    cached: t('saleConfirm.quoteSources.cachedQuote'),
-    general_protocols_oracle: 'General Protocols Oracle',
-  };
+  switch (props.pricing.quoteSource) {
+    case 'fake_phase_2':
+    case 'fake_phase_2_quote':
+      return t('saleConfirm.quoteSources.developmentQuote');
 
-  return labels[props.pricing.quoteSource];
+    case 'coingecko':
+      return 'CoinGecko';
+
+    case 'cached':
+      return t('saleConfirm.quoteSources.cachedQuote');
+
+    case 'general_protocols_oracle':
+      return 'General Protocols Oracle';
+
+    default:
+      return props.pricing.quoteSource;
+  }
 });
 
 const feeOutputPlan = computed<VoucherFeeOutputPlan>(() =>
-  createVoucherFeeOutputPlan(props.pricing)
+  createVoucherFeeOutputPlanV1(props.pricing)
 );
 
 const transactionPlan = computed<TreasuryTransactionPlan | null>(() => {

@@ -69,6 +69,8 @@ const pt = {
     salePreviewTitle: 'Pré-visualização da venda',
     salePreviewSubtitle:
       'Uma cotação BCH em tempo real será bloqueada no ecrã de revisão.',
+    topupAmount: 'Topup amount',
+    customerToPay: 'Customer to pay',
     customerPays: 'Cliente paga',
     serviceFee: 'Taxa de serviço',
     voucherValueBeforeQuote: 'Valor do vale antes da cotação',
