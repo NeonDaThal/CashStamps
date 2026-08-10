@@ -1,3 +1,4 @@
+import type { TopupFeeModelV1Snapshot } from 'src/types/fee-model';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 
@@ -78,6 +79,17 @@ export interface VoucherRecord {
   marketBchSats: number;
   fee: VoucherFee;
   finalBchSats: number;
+
+  /**
+   * Fee Model v1 snapshot.
+   *
+   * Legacy records do not have this field and continue to use the historical
+   * meanings of fiatAmountMinor, fee, finalBchSats and feeOutputPlan.
+   *
+   * New Fee Model v1 records will populate this field once the live Topup flow
+   * is migrated in Checkpoint B2.
+   */
+  feeModel?: TopupFeeModelV1Snapshot;
 
   quote: VoucherQuote;
 

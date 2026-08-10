@@ -2,6 +2,8 @@ export type FeeModelVersion = 'topup_v1' | 'cashout_v1';
 
 export type TopupFeeTier = 'minimum' | 'percentage' | 'maximum';
 
+export type NetworkFeeSnapshotStatus = 'not_calculated' | 'estimated' | 'final';
+
 export interface TopupFeeSchedule {
   /**
    * Highest principal amount that still uses the flat minimum fee.
@@ -113,4 +115,51 @@ export interface CashOutFeeModelV1Calculation extends FeeSplit {
     smallestPositivePrincipalMinor: number;
     percentageBasisPoints: number;
   };
+}
+
+/**
+ * Network-fee information captured with a persisted fee-model snapshot.
+ *
+ * Fee Model v1 deliberately keeps the network fee separate from the service
+ * fee so the two cannot accidentally be combined in reports or accounting.
+ */
+export interface FeeModelNetworkFeeSnapshot {
+  status: NetworkFeeSnapshotStatus;
+
+  /**
+   * Actual or estimated blockchain miner fee.
+   */
+  feeSats?: number;
+
+  /**
+   * Fiat minor units recovered from the customer for the network fee.
+   *
+   * For example, a non-zero BCH network fee costing less than £0.01 may
+   * eventually result in a 1-penny GBP recovery.
+   */
+  recoveryMinor?: number;
+}
+
+/**
+ * Persisted Fee Model v1 snapshot for a Topup.
+ *
+ * Existing/legacy VoucherRecords do not have this property. Its absence
+ * therefore identifies records created under the legacy fee model.
+ *
+ * The snapshot is designed to contain the commercial terms used when the
+ * transaction was created so future configuration changes do not alter the
+ * historical meaning of the record.
+ */
+export interface TopupFeeModelV1Snapshot extends TopupFeeModelV1Calculation {
+  snapshotCreatedAt: string;
+
+  networkFee: FeeModelNetworkFeeSnapshot;
+
+  /**
+   * Final physical cash amount paid by the customer once network-fee recovery
+   * is known.
+   *
+   * This may remain undefined until the network fee has been calculated.
+   */
+  customerTotalMinor?: number;
 }

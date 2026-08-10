@@ -1,3 +1,4 @@
+import type { TopupFeeModelV1Snapshot } from 'src/types/fee-model';
 import type {
   TreasuryFundingPreview,
   TreasuryFundingPreviewSelectedUtxo,
@@ -19,6 +20,7 @@ export interface VoucherAddressData {
 export interface CreateVoucherRecordOptions {
   addressData?: VoucherAddressData;
   keyMetadata?: VoucherKeyMetadata | null;
+  feeModel?: TopupFeeModelV1Snapshot | null;
   feeOutputPlan?: VoucherFeeOutputPlan | null;
   treasuryFundingPreview?: TreasuryFundingPreview | null;
   fundingBroadcast?: VoucherFundingBroadcast | null;
@@ -87,6 +89,57 @@ function cloneTreasuryFundingPreview(
 
     isAffordable: preview.isAffordable,
     createdAt: preview.createdAt,
+  };
+}
+
+function cloneFeeModel(
+  feeModel?: TopupFeeModelV1Snapshot | null
+): TopupFeeModelV1Snapshot | undefined {
+  if (!feeModel) {
+    return undefined;
+  }
+
+  return {
+    version: feeModel.version,
+
+    currency: feeModel.currency,
+    principalMinor: feeModel.principalMinor,
+
+    feeTier: feeModel.feeTier,
+    percentageBasisPoints: feeModel.percentageBasisPoints,
+
+    serviceFeeMinor: feeModel.serviceFeeMinor,
+    merchantFeeMinor: feeModel.merchantFeeMinor,
+    platformFeeMinor: feeModel.platformFeeMinor,
+
+    customerTotalBeforeNetworkFeeMinor:
+      feeModel.customerTotalBeforeNetworkFeeMinor,
+
+    scheduleSnapshot: {
+      minorUnitDigits: feeModel.scheduleSnapshot.minorUnitDigits,
+      smallestPositivePrincipalMinor:
+        feeModel.scheduleSnapshot.smallestPositivePrincipalMinor,
+
+      minimumTierMaximumPrincipalMinor:
+        feeModel.scheduleSnapshot.minimumTierMaximumPrincipalMinor,
+
+      percentageTierMaximumPrincipalMinor:
+        feeModel.scheduleSnapshot.percentageTierMaximumPrincipalMinor,
+
+      minimumFeeMinor: feeModel.scheduleSnapshot.minimumFeeMinor,
+      percentageBasisPoints: feeModel.scheduleSnapshot.percentageBasisPoints,
+      maximumFeeMinor: feeModel.scheduleSnapshot.maximumFeeMinor,
+    },
+
+    snapshotCreatedAt: feeModel.snapshotCreatedAt,
+
+    networkFee: {
+      status: feeModel.networkFee.status,
+      feeSats: feeModel.networkFee.feeSats,
+      recoveryMinor: feeModel.networkFee.recoveryMinor,
+    },
+
+    customerTotalMinor: feeModel.customerTotalMinor,
   };
 }
 
@@ -164,7 +217,8 @@ export function createDraftVoucherRecord(
     fiatCurrency,
     fiatAmountMinor,
 
-    // These become real BCH satoshi values once a real locked quote is passed in.
+    // These retain their legacy meanings until the live Topup flow is migrated
+    // to Fee Model v1 in Checkpoint B2.
     marketBchSats: pricing?.marketBchSats ?? 0,
     fee: {
       type: 'percentage',
@@ -173,6 +227,8 @@ export function createDraftVoucherRecord(
       description: 'MVP service fee',
     },
     finalBchSats: pricing?.finalBchSats ?? 0,
+
+    feeModel: cloneFeeModel(options?.feeModel),
 
     quote: {
       source: pricing
