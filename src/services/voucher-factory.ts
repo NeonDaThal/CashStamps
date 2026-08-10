@@ -76,6 +76,10 @@ function cloneTreasuryFundingPreview(
     voucherAddress: preview.voucherAddress,
 
     amountSats: preview.amountSats,
+
+    platformFeeSats: preview.platformFeeSats ?? 0,
+    bufferReserveSats: preview.bufferReserveSats ?? 0,
+
     estimatedFeeSats: preview.estimatedFeeSats,
     estimatedTotalRequiredSats: preview.estimatedTotalRequiredSats,
     estimatedChangeSats: preview.estimatedChangeSats,
