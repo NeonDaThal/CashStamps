@@ -66,7 +66,7 @@ const en = {
   },
 
   sellForm: {
-    customerCashAmount: 'Enter amount customer is paying',
+    customerCashAmount: 'Topup Amount',
     salePreviewTitle: 'Sale preview',
     salePreviewSubtitle:
       'A live BCH quote will be locked on the review screen.',
@@ -74,7 +74,7 @@ const en = {
     customerToPay: 'Customer to pay',
     customerPays: 'Customer pays',
     serviceFee: 'Service fee',
-    voucherValueBeforeQuote: 'Customer receives (minus fees)',
+    voucherValueBeforeQuote: 'Topup Amount',
     quoteSource: 'Quote',
     lockedAfterReview: 'Locked after review',
     reviewVoucher: 'Review Topup',
@@ -93,7 +93,7 @@ const en = {
       eyebrow: 'New Voucher Sale',
       title: 'Sell Topup',
       intro:
-        'Enter the cash amount the customer is paying. The app will lock a BCH quote and show a review screen before issuing the voucher. You then present the voucher with QR code to the customer.',
+        'Enter the Topup amount. The app will lock a BCH quote and show the service fee and total customer payment before issuing the voucher. You then present the voucher QR code to the customer.',
     },
     treasury: {
       title: 'Treasury Wallet',
@@ -110,7 +110,7 @@ const en = {
     sale: {
       eyebrow: 'New voucher',
       title: 'Enter sale amount',
-      copy: 'Enter the cash amount the customer is paying. The app will lock a BCH quote and show a review screen before issuing the voucher. You then present the QR code to the customer.',
+      copy: 'Enter the Topup amount. The app will lock a BCH quote and show the service fee and total customer payment before issuing the voucher.',
     },
     issued: {
       title: 'Voucher issued',
@@ -1149,7 +1149,7 @@ const en = {
       reference: 'Reference',
       issued: 'Issued',
       customerPaid: 'Customer Paid',
-      loaded: 'Loaded',
+      loaded: 'Topup Loaded',
       voucherAddress: 'Voucher Address',
     },
     privateKeyWarning:
@@ -1158,7 +1158,7 @@ const en = {
     receiptTitle: 'BCH Voucher',
     printerSubtitle: 'Topup Voucher',
     receiptSubtitle: 'Sweepable BCH voucher receipt',
-    voucherValueLoaded: 'Voucher value loaded',
+    voucherValueLoaded: 'Value loaded',
     scanToSweep: 'Scan to sweep',
     qrAlt: 'Sweepable BCH voucher QR code',
     reference: 'Reference',

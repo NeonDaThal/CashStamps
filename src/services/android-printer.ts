@@ -55,6 +55,7 @@ interface BluetoothEscPosPrinterPlugin {
     serial: string;
     issuedAtLabel: string;
     customerPaidLabel: string;
+    serviceFeeLabel: string;
     loadedFiatLabel: string;
     bchAmountLabel: string;
     voucherAddress: string;
@@ -68,7 +69,7 @@ interface BluetoothEscPosPrinterPlugin {
     referenceLabel: string;
     issuedLabel: string;
     customerPaidFieldLabel: string;
-    loadedFieldLabel: string;
+    serviceFeeFieldLabel: string;
     voucherAddressLabel: string;
   }): Promise<AndroidPrinterResult>;
 }
@@ -90,7 +91,7 @@ const DEFAULT_PRINT_LABELS = {
   reference: 'Reference',
   issued: 'Issued',
   customerPaid: 'Customer Paid',
-  loaded: 'Loaded',
+  serviceFee: 'Service Fee',
   voucherAddress: 'Voucher Address',
 } as const;
 
@@ -224,6 +225,7 @@ export async function printBluetoothVoucherReceipt(
     serial: receiptData.serial,
     issuedAtLabel: receiptData.issuedAtLabel,
     customerPaidLabel: receiptData.customerPaidLabel,
+    serviceFeeLabel: receiptData.serviceFeeLabel,
     loadedFiatLabel: receiptData.loadedFiatLabel,
     bchAmountLabel: receiptData.bchAmountLabel,
     voucherAddress: receiptData.address,
@@ -237,7 +239,7 @@ export async function printBluetoothVoucherReceipt(
     referenceLabel: printLabels.reference,
     issuedLabel: printLabels.issued,
     customerPaidFieldLabel: printLabels.customerPaid,
-    loadedFieldLabel: printLabels.loaded,
+    serviceFeeFieldLabel: printLabels.serviceFee,
     voucherAddressLabel: printLabels.voucherAddress,
   });
 }

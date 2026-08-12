@@ -2,6 +2,7 @@ import type { VoucherRecord } from 'src/types/voucher';
 import type { VoucherKeyExport } from 'src/types/voucher-key';
 import { exportVoucherKeyAtIndex } from 'src/services/voucher-wallet';
 import { formatBchSats } from 'src/services/voucher-pricing';
+import { getTopupRecordValues } from 'src/services/topup-record-values';
 
 export interface VoucherReceiptPrintLabels {
   valueLoaded: string;
@@ -9,7 +10,7 @@ export interface VoucherReceiptPrintLabels {
   reference: string;
   issued: string;
   customerPaid: string;
-  loaded: string;
+  serviceFee: string;
   voucherAddress: string;
 }
 
@@ -22,10 +23,14 @@ export interface VoucherReceiptData {
   issuedAtLabel: string;
 
   fiatCurrency: string;
+
   customerPaidMinor: number;
   loadedFiatMinor: number;
+  serviceFeeMinor: number;
+
   customerPaidLabel: string;
   loadedFiatLabel: string;
+  serviceFeeLabel: string;
 
   bchSats: number;
   bchAmountLabel: string;
@@ -95,7 +100,7 @@ const DEFAULT_PRINT_LABELS: VoucherReceiptPrintLabels = {
   reference: 'Reference',
   issued: 'Issued',
   customerPaid: 'Customer Paid',
-  loaded: 'Loaded',
+  serviceFee: 'Service Fee',
   voucherAddress: 'Voucher Address',
 };
 
@@ -130,13 +135,6 @@ function formatReceiptDate(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
-}
-
-function getLoadedFiatMinor(voucher: VoucherRecord): number {
-  const feeAmountMinor =
-    voucher.fee.type === 'none' ? 0 : voucher.fee.amountMinor;
-
-  return Math.max(0, voucher.fiatAmountMinor - feeAmountMinor);
 }
 
 function getReceiptIssuedAt(voucher: VoucherRecord): string {
@@ -197,7 +195,7 @@ export async function buildVoucherReceiptData(
   }
 
   const issuedAt = getReceiptIssuedAt(voucher);
-  const loadedFiatMinor = getLoadedFiatMinor(voucher);
+  const values = getTopupRecordValues(voucher);
 
   return {
     title: options.title ?? DEFAULT_RECEIPT_TITLE,
@@ -208,16 +206,28 @@ export async function buildVoucherReceiptData(
     issuedAtLabel: formatReceiptDate(issuedAt),
 
     fiatCurrency: voucher.fiatCurrency,
-    customerPaidMinor: voucher.fiatAmountMinor,
-    loadedFiatMinor,
+
+    customerPaidMinor: values.customerPaysMinor,
+    loadedFiatMinor: values.principalMinor,
+    serviceFeeMinor: values.serviceFeeMinor,
+
     customerPaidLabel: formatFiatAmount(
-      voucher.fiatAmountMinor,
+      values.customerPaysMinor,
       voucher.fiatCurrency
     ),
-    loadedFiatLabel: formatFiatAmount(loadedFiatMinor, voucher.fiatCurrency),
 
-    bchSats: voucher.finalBchSats,
-    bchAmountLabel: formatBchSats(voucher.finalBchSats),
+    loadedFiatLabel: formatFiatAmount(
+      values.principalMinor,
+      voucher.fiatCurrency
+    ),
+
+    serviceFeeLabel: formatFiatAmount(
+      values.serviceFeeMinor,
+      voucher.fiatCurrency
+    ),
+
+    bchSats: values.bchLoadedSats,
+    bchAmountLabel: formatBchSats(values.bchLoadedSats),
 
     address: voucherAddress,
     derivationIndex: voucher.derivationIndex,
@@ -232,7 +242,9 @@ export async function buildVoucherReceiptData(
 
     redemptionInstruction:
       options.redemptionInstruction ?? DEFAULT_REDEMPTION_INSTRUCTION,
+
     cashWarning: options.cashWarning ?? DEFAULT_CASH_WARNING,
+
     supportNote: options.supportNote ?? DEFAULT_SUPPORT_NOTE,
 
     isDevelopmentPrivateKeyPreview: true,

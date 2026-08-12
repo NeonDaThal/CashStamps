@@ -209,7 +209,6 @@
               @click="handlePrintCharacterEncodingTest"
             />
 
-
             <q-btn
               color="deep-purple"
               icon="image"
@@ -305,14 +304,17 @@ function buildFakeAppSideReceiptData(): VoucherReceiptData {
 
   return {
     title: 'BCH Voucher',
+    printerSubtitle: 'Topup Voucher',
     serial: 'APP-TEST-0001',
     issuedAt,
     issuedAtLabel: nowLabel,
     fiatCurrency: 'GBP',
     customerPaidMinor: 1100,
     loadedFiatMinor: 1000,
+    serviceFeeMinor: 100,
     customerPaidLabel: 'GBP 11.00',
     loadedFiatLabel: 'GBP 10.00',
+    serviceFeeLabel: 'GBP 1.00',
     bchSats: 1234567,
     bchAmountLabel: '0.01234567 BCH',
     address: testAddress,
@@ -508,7 +510,6 @@ async function handlePrintCharacterEncodingTest(): Promise<void> {
     isPrintingCharacterTest.value = false;
   }
 }
-
 
 async function handlePrintRasterTextTest(): Promise<void> {
   isPrintingRasterTextTest.value = true;

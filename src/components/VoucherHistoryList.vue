@@ -493,28 +493,53 @@
                       <q-item-label caption>Fee output plan</q-item-label>
                       <q-item-label>
                         <span v-if="voucher.feeOutputPlan">
-                          platform
-                          {{
-                            formatBchSats(voucher.feeOutputPlan.platformFeeSats)
-                          }}
-                          · merchant retained
-                          {{
-                            formatBchSats(
-                              voucher.feeOutputPlan.merchantRetainedSats
-                            )
-                          }}
-                          · buffer
-                          {{
-                            formatBchSats(
-                              voucher.feeOutputPlan.bufferReserveSats
-                            )
-                          }}
-                          · total
-                          {{
-                            formatBchSats(
-                              voucher.feeOutputPlan.totalServiceFeeSats
-                            )
-                          }}
+                          <template v-if="isTopupFeeModelV1(voucher)">
+                            platform
+                            {{
+                              formatBchSats(
+                                voucher.feeOutputPlan.platformFeeSats
+                              )
+                            }}
+                            · merchant service fee share
+                            {{
+                              formatBchSats(
+                                voucher.feeOutputPlan.merchantRetainedSats
+                              )
+                            }}
+                            · total service fee equivalent
+                            {{
+                              formatBchSats(
+                                voucher.feeOutputPlan.totalServiceFeeSats
+                              )
+                            }}
+                          </template>
+
+                          <template v-else>
+                            platform
+                            {{
+                              formatBchSats(
+                                voucher.feeOutputPlan.platformFeeSats
+                              )
+                            }}
+                            · merchant retained
+                            {{
+                              formatBchSats(
+                                voucher.feeOutputPlan.merchantRetainedSats
+                              )
+                            }}
+                            · buffer
+                            {{
+                              formatBchSats(
+                                voucher.feeOutputPlan.bufferReserveSats
+                              )
+                            }}
+                            · total
+                            {{
+                              formatBchSats(
+                                voucher.feeOutputPlan.totalServiceFeeSats
+                              )
+                            }}
+                          </template>
                         </span>
                         <span v-else>Not available</span>
                       </q-item-label>
@@ -713,6 +738,10 @@ import VoucherReceiptPreview from 'src/components/VoucherReceiptPreview.vue';
 import VoucherWifRevealCard from 'src/components/VoucherWifRevealCard.vue';
 import type { VoucherRecord, VoucherQuoteSource } from 'src/types/voucher';
 import { formatBchSats, formatMarketRate } from 'src/services/voucher-pricing';
+import {
+  getTopupRecordValues,
+  isTopupFeeModelV1,
+} from 'src/services/topup-record-values';
 
 type VoucherStatusKey = 'redeemed' | 'funded' | 'error' | 'issued';
 
@@ -845,15 +874,22 @@ function formatFiatAmount(amountMinor: number, currency: string): string {
 }
 
 function formatFee(voucher: VoucherRecord): string {
-  if (voucher.fee.type === 'none') {
+  const values = getTopupRecordValues(voucher);
+
+  if (values.serviceFeeMinor === 0) {
     return 'None';
   }
 
-  const feePercent = `${voucher.fee.basisPoints / 100}%`;
   const feeAmount = formatFiatAmount(
-    voucher.fee.amountMinor,
+    values.serviceFeeMinor,
     voucher.fiatCurrency
   );
+
+  if (values.model === 'topup_v1') {
+    return feeAmount;
+  }
+
+  const feePercent = `${voucher.fee.basisPoints / 100}%`;
 
   return `${feePercent} / ${feeAmount}`;
 }

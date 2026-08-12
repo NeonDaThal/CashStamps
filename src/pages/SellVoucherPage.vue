@@ -85,12 +85,47 @@
                 <q-item>
                   <q-item-section>
                     <q-item-label caption>
-                      {{ t('sellPage.issued.customerPaid') }}
+                      {{ t('sellForm.topupAmount') }}
                     </q-item-label>
                     <q-item-label>
                       {{
                         formatFiatAmount(
-                          lastIssuedVoucher.fiatAmountMinor,
+                          getTopupRecordValues(lastIssuedVoucher)
+                            .principalMinor,
+                          lastIssuedVoucher.fiatCurrency
+                        )
+                      }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption>
+                      {{ t('sellForm.serviceFee') }}
+                    </q-item-label>
+                    <q-item-label>
+                      {{
+                        formatFiatAmount(
+                          getTopupRecordValues(lastIssuedVoucher)
+                            .serviceFeeMinor,
+                          lastIssuedVoucher.fiatCurrency
+                        )
+                      }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption>
+                      {{ t('sellForm.customerToPay') }}
+                    </q-item-label>
+                    <q-item-label class="text-weight-bold">
+                      {{
+                        formatFiatAmount(
+                          getTopupRecordValues(lastIssuedVoucher)
+                            .customerPaysMinor,
                           lastIssuedVoucher.fiatCurrency
                         )
                       }}
@@ -438,6 +473,7 @@ import {
 } from 'src/services/voucher-wallet';
 import { createVoucherFeeOutputPlanV1 } from 'src/services/voucher-fee-plan-v1';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
+import { getTopupRecordValues } from 'src/services/topup-record-values';
 import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
 
 const { t, locale } = useI18n({ useScope: 'global' });

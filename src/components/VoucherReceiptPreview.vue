@@ -134,6 +134,11 @@
             <strong>{{ receiptData.customerPaidLabel }}</strong>
           </div>
 
+          <div class="receipt-row">
+            <span>{{ t('sellForm.serviceFee') }}</span>
+            <strong>{{ receiptData.serviceFeeLabel }}</strong>
+          </div>
+
           <div class="receipt-block">
             <div class="receipt-label">
               {{ t('receiptPreview.voucherAddress') }}
@@ -242,7 +247,7 @@ async function buildReceiptPreview(): Promise<void> {
         reference: t('receiptPreview.printLabels.reference'),
         issued: t('receiptPreview.printLabels.issued'),
         customerPaid: t('receiptPreview.printLabels.customerPaid'),
-        loaded: t('receiptPreview.printLabels.loaded'),
+        serviceFee: t('sellForm.serviceFee'),
         voucherAddress: t('receiptPreview.printLabels.voucherAddress'),
       },
       errors: {

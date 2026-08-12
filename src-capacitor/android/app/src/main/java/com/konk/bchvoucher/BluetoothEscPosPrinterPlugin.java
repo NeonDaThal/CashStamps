@@ -370,8 +370,9 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         final String serial = safeString(call.getString("serial", "UNKNOWN"));
         final String issuedAtLabel = safeString(call.getString("issuedAtLabel", ""));
         final String customerPaidLabel = safeString(call.getString("customerPaidLabel", ""));
-        final String loadedFiatLabel = safeString(call.getString("loadedFiatLabel", ""));
-        final String bchAmountLabel = safeString(call.getString("bchAmountLabel", ""));
+final String serviceFeeLabel = safeString(call.getString("serviceFeeLabel", ""));
+final String loadedFiatLabel = safeString(call.getString("loadedFiatLabel", ""));
+final String bchAmountLabel = safeString(call.getString("bchAmountLabel", ""));
         final String voucherAddress = safeString(call.getString("voucherAddress", ""));
         final String qrPayload = safeString(call.getString("qrPayload", ""));
         final String qrImageDataUrl = safeString(call.getString("qrImageDataUrl", ""));
@@ -404,11 +405,11 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
             "customerPaidFieldLabel",
             "Customer Paid"
         );
-        final String loadedFieldLabel = getStringWithFallback(
-            call,
-            "loadedFieldLabel",
-            "Loaded"
-        );
+        final String serviceFeeFieldLabel = getStringWithFallback(
+    call,
+    "serviceFeeFieldLabel",
+    "Service Fee"
+);
         final String voucherAddressLabel = getStringWithFallback(
             call,
             "voucherAddressLabel",
@@ -428,8 +429,9 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
                     serial,
                     issuedAtLabel,
                     customerPaidLabel,
-                    loadedFiatLabel,
-                    bchAmountLabel,
+serviceFeeLabel,
+loadedFiatLabel,
+bchAmountLabel,
                     voucherAddress,
                     qrPayload,
                     qrImageDataUrl,
@@ -441,8 +443,8 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
                     referenceLabel,
                     issuedLabel,
                     customerPaidFieldLabel,
-                    loadedFieldLabel,
-                    voucherAddressLabel
+serviceFeeFieldLabel,
+voucherAddressLabel
                 );
 
                 sendBytesToPrinter(printerAddress, bytes);
@@ -617,29 +619,30 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     }
 
     private byte[] buildVoucherReceiptTestBytes() throws IOException {
-        return buildVoucherReceiptBytes(
-            "BCH Voucher",
-            "Topup Voucher",
-            "TEST-0001",
-            "TEST MODE",
-            "GBP 11.00",
-            "GBP 10.00",
-            "0.01234567 BCH",
-            "bitcoincash:qptestvoucheraddress000000000000000000000000000",
-            "BCH_VOUCHER_TEST_ONLY_REFERENCE_TEST-0001",
-            "",
-            "This QR is test-only. It does not contain a voucher key.",
-            "WARNING: TREAT A REAL VOUCHER LIKE CASH.",
-            "Keep the receipt safe until the voucher is redeemed.",
-            "Value loaded",
-            "Scan to Redeem",
-            "Reference",
-            "Issued",
-            "Customer Paid",
-            "Loaded",
-            "Voucher Address"
-        );
-    }
+    return buildVoucherReceiptBytes(
+        "BCH Voucher",
+        "Topup Voucher",
+        "TEST-0001",
+        "TEST MODE",
+        "GBP 14.00",
+        "GBP 4.00",
+        "GBP 10.00",
+        "0.01234567 BCH",
+        "bitcoincash:qptestvoucheraddress000000000000000000000000000",
+        "BCH_VOUCHER_TEST_ONLY_REFERENCE_TEST-0001",
+        "",
+        "This QR is test-only. It does not contain a voucher key.",
+        "WARNING: TREAT A REAL VOUCHER LIKE CASH.",
+        "Keep the receipt safe until the voucher is redeemed.",
+        "Value loaded",
+        "Scan to Redeem",
+        "Reference",
+        "Issued",
+        "Customer Paid",
+        "Service Fee",
+        "Voucher Address"
+    );
+}
 
     private byte[] buildCharacterEncodingTestBytes() throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -815,8 +818,9 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         String serial,
         String issuedAtLabel,
         String customerPaidLabel,
-        String loadedFiatLabel,
-        String bchAmountLabel,
+String serviceFeeLabel,
+String loadedFiatLabel,
+String bchAmountLabel,
         String voucherAddress,
         String qrPayload,
         String qrImageDataUrl,
@@ -828,8 +832,8 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         String referenceLabel,
         String issuedLabel,
         String customerPaidFieldLabel,
-        String loadedFieldLabel,
-        String voucherAddressLabel
+String serviceFeeFieldLabel,
+String voucherAddressLabel
     ) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
 
@@ -890,17 +894,17 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         writeRasterTextBlock(
             output,
             buildReceiptDetailsText(
-                referenceLabel,
-                serial,
-                issuedLabel,
-                issuedAtLabel,
-                customerPaidFieldLabel,
-                customerPaidLabel,
-                loadedFieldLabel,
-                loadedFiatLabel,
-                voucherAddressLabel,
-                voucherAddress
-            ),
+    referenceLabel,
+    serial,
+    issuedLabel,
+    issuedAtLabel,
+    customerPaidFieldLabel,
+    customerPaidLabel,
+    serviceFeeFieldLabel,
+    serviceFeeLabel,
+    voucherAddressLabel,
+    voucherAddress
+),
             24,
             false,
             Layout.Alignment.ALIGN_NORMAL,
@@ -1382,32 +1386,32 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     }
 
     private String buildReceiptDetailsText(
-        String referenceLabel,
-        String serial,
-        String issuedLabel,
-        String issuedAtLabel,
-        String customerPaidFieldLabel,
-        String customerPaidLabel,
-        String loadedFieldLabel,
-        String loadedFiatLabel,
-        String voucherAddressLabel,
-        String voucherAddress
-    ) {
-        StringBuilder builder = new StringBuilder();
+    String referenceLabel,
+    String serial,
+    String issuedLabel,
+    String issuedAtLabel,
+    String customerPaidFieldLabel,
+    String customerPaidLabel,
+    String serviceFeeFieldLabel,
+    String serviceFeeLabel,
+    String voucherAddressLabel,
+    String voucherAddress
+) {
+    StringBuilder builder = new StringBuilder();
 
-        appendLabelValue(builder, referenceLabel, serial);
-        appendLabelValue(builder, issuedLabel, issuedAtLabel);
-        appendLabelValue(builder, customerPaidFieldLabel, customerPaidLabel);
-        appendLabelValue(builder, loadedFieldLabel, loadedFiatLabel);
+    appendLabelValue(builder, referenceLabel, serial);
+    appendLabelValue(builder, issuedLabel, issuedAtLabel);
+    appendLabelValue(builder, customerPaidFieldLabel, customerPaidLabel);
+    appendLabelValue(builder, serviceFeeFieldLabel, serviceFeeLabel);
 
-        if (hasText(voucherAddress)) {
-            appendBlankLine(builder);
-            builder.append(voucherAddressLabel).append(":\n");
-            builder.append(voucherAddress);
-        }
-
-        return builder.toString();
+    if (hasText(voucherAddress)) {
+        appendBlankLine(builder);
+        builder.append(voucherAddressLabel).append(":\n");
+        builder.append(voucherAddress);
     }
+
+    return builder.toString();
+}
 
     private void appendLabelValue(
         StringBuilder builder,
