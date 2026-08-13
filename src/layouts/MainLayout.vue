@@ -232,15 +232,13 @@
             </q-item-section>
           </q-item>
 
-          <q-item disable class="placeholder-item">
+          <q-item clickable to="/app-settings" @click="closeDrawer">
             <q-item-section avatar>
               <q-icon name="settings" />
             </q-item-section>
+
             <q-item-section>
-              <q-item-label>{{ t('layout.items.appSettings') }}</q-item-label>
-              <q-item-label caption>
-                {{ t('layout.common.comingSoon') }}
-              </q-item-label>
+              {{ t('layout.items.appSettings') }}
             </q-item-section>
           </q-item>
 

@@ -203,7 +203,7 @@ export function readCachedAppUpdateResult(): AppUpdateCheckResult | null {
   return null;
 }
 
-async function getInstalledAppVersion(): Promise<InstalledAppVersion> {
+export async function getInstalledAppVersion(): Promise<InstalledAppVersion> {
   if (Capacitor.getPlatform() !== 'android') {
     return {
       appName: 'Bitcoin Cash Topup',

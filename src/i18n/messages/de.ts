@@ -894,6 +894,116 @@ const de = {
     footer: 'Practical protection for merchant access on this device.',
   },
 
+  appSettings: {
+    hero: {
+      eyebrow: 'Merchant setup',
+      title: 'App Settings',
+      intro:
+        'Manage your business details and how Bitcoin Cash Topup works on this device.',
+    },
+
+    sections: {
+      business: 'Business',
+      appSecurity: 'App & Security',
+      hardware: 'Hardware',
+      regional: 'Regional',
+      toolsInformation: 'Tools & Information',
+      help: 'Help',
+    },
+
+    items: {
+      yourBusiness: {
+        title: 'Your Business',
+        subtitle: 'Add your business name and merchant details.',
+        savedSubtitle: 'Business name saved on this device.',
+      },
+      yourWallets: {
+        title: 'Your Wallets',
+        subtitle: 'Manage wallet-related settings and addresses.',
+      },
+      privacySecurity: {
+        title: 'Privacy & Security',
+        subtitle: 'Manage PIN, privacy, and app access protection.',
+      },
+      preferences: {
+        title: 'Preferences',
+        subtitle: 'Choose how the app behaves for your business.',
+      },
+      backupStorage: {
+        title: 'Backup and Storage',
+        subtitle: 'Manage local data, backups, and storage options.',
+      },
+      printerSettings: {
+        title: 'Printer Settings',
+        subtitle: 'Configure receipt printing and printer behaviour.',
+      },
+      devices: {
+        title: 'Devices',
+        subtitle: 'Manage connected and trusted devices.',
+      },
+      language: {
+        title: 'Language',
+        subtitle: 'Choose the language used throughout the app.',
+      },
+      currencies: {
+        title: 'Currencies',
+        subtitle: 'Choose currencies used for merchant activity.',
+      },
+      transactionChecker: {
+        title: 'Transaction Checker',
+        subtitle: 'Tools for checking Bitcoin Cash transactions.',
+      },
+      appInfo: {
+        title: 'App Info',
+        subtitle: 'View app version, updates, and release information.',
+      },
+      contactUs: {
+        title: 'Contact us',
+        subtitle: 'Get in touch with Bitcoin Cash Topup.',
+      },
+      faq: {
+        title: 'FAQ',
+        subtitle: 'Find answers to common questions.',
+      },
+      privacyPolicy: {
+        title: 'Privacy Policy',
+        subtitle: 'Read how app and merchant data are handled.',
+      },
+    },
+
+    navigation: {
+      backToSettings: 'Back to App Settings',
+    },
+
+    business: {
+      eyebrow: 'Business settings',
+      title: 'Your Business',
+      subtitle: 'Manage the business details saved on this device.',
+      cardTitle: 'Business details',
+      cardSubtitle:
+        'Add the name customers know your business by. This can be used to personalise receipts, reports, and other merchant areas in future.',
+      nameLabel: 'Business name',
+      nameHint: 'For example, Corner Shop',
+      save: 'Save Business Name',
+      saved: 'Business name saved.',
+      saveFailed: 'Could not save the business name.',
+    },
+
+    version: {
+      appName: 'Bitcoin Cash Topup',
+      loading: 'Checking app version...',
+      webPreview: 'Web preview',
+      unavailable: 'Version unavailable',
+      versionAndBuild: 'Version {version} · Build {build}',
+    },
+
+    comingSoon: {
+      eyebrow: 'App Settings',
+      title: 'Coming soon',
+      message: '{section} settings will be added here in a future update.',
+    },
+  },
+
   layout: {
     brand: {
       title: 'Bitcoin-Cash-Gutscheine',
