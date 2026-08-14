@@ -1778,7 +1778,7 @@ async function refreshTreasuryBalance(
 }
 
 async function handleRefreshBalance(): Promise<void> {
-  await refreshTreasuryBalance();
+  await refreshTreasuryBalance({ showSuccess: false });
 }
 
 async function handleRevealTreasuryBackup(): Promise<void> {
