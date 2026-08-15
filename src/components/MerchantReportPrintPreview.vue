@@ -129,12 +129,13 @@
 
                   <div class="print-summary-tile">
                     <span>
-                      {{ t('merchantReportsPage.summary.grossFiat') }}
+                      {{ t('merchantReportsPage.summary.topupCashCollected') }}
                     </span>
                     <strong>
                       {{
                         formatFiatAmount(
-                          report?.current.overall.grossFiatMovementMinor ?? 0,
+                          report?.current.vouchers.customerCashCollectedMinor ??
+                            0,
                           primaryCurrency
                         )
                       }}
@@ -143,12 +144,12 @@
 
                   <div class="print-summary-tile">
                     <span>
-                      {{ t('merchantReportsPage.summary.netFiat') }}
+                      {{ t('merchantReportsPage.summary.topupServiceFees') }}
                     </span>
                     <strong>
                       {{
                         formatFiatAmount(
-                          report?.current.overall.netFiatMovementMinor ?? 0,
+                          report?.current.vouchers.serviceFeeMinor ?? 0,
                           primaryCurrency
                         )
                       }}

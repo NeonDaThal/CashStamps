@@ -1062,7 +1062,8 @@ const en = {
     hero: {
       eyebrow: 'Merchant Reports',
       title: 'Reports',
-      intro: 'Track topups, cash-outs, revenue, and growth from this device.',
+      intro:
+        'Track topups, cash-outs, fees, and merchant activity from this device.',
     },
     actions: {
       viewHistory: 'View History',
@@ -1111,6 +1112,14 @@ const en = {
       netFiatCaption:
         'Estimated value after tracked fee deductions where available.',
 
+      topupCashCollected: 'Topup Cash Collected',
+      topupCashCollectedCaption:
+        'Total cash collected from Topup customers, including service fees.',
+
+      topupServiceFees: 'Topup Service Fees',
+      topupServiceFeesCaption:
+        'Total service fees charged on completed Topups.',
+
       bchLoaded: 'BCH Loaded Into Topups',
       bchLoadedCaption:
         'Total BCH loaded into customer topups during this period.',
@@ -1140,8 +1149,8 @@ const en = {
     tracker: {
       title: 'Topups vs Cash-outs',
       subtitle:
-        'See whether this merchant is mainly selling BCH topups or buying BCH back from customers.',
-      fiatMovement: 'Fiat Movement',
+        'Compare the fiat value loaded into Topups with cash paid out through Cash-outs.',
+      fiatMovement: 'Transaction Value',
       localPeriod: 'Selected Range',
       topups: 'Topups',
       cashOuts: 'Cash-outs',
@@ -1181,10 +1190,15 @@ const en = {
 
       flowTitle: 'Topup & Cash-out Flow',
       topupsIssued: 'Topups issued',
+      topupValueLoaded: 'Topup value loaded',
+      topupServiceFees: 'Topup service fees',
+      merchantFeeShare: 'Known merchant fee share',
+      platformFeeShare: 'Known platform fee share',
+      legacyFeeSplits: 'Legacy fee splits unavailable',
       cashOutsCompleted: 'Cash-outs completed',
       totalBchMovement: 'Total BCH movement',
       flowText:
-        'This compares the merchant’s BCH sold through topups against BCH bought back from customers through cash-outs.',
+        'Topup service fees are shown separately from the value loaded. Merchant and platform fee shares are only included where the stored record explicitly identifies the split.',
 
       statusTitle: 'Reportable Records',
       recordsLoaded: 'Records loaded',

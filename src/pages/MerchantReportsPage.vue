@@ -363,6 +363,74 @@
 
               <div class="mini-stat-row">
                 <span>
+                  {{ t('merchantReportsPage.breakdowns.topupValueLoaded') }}
+                </span>
+                <strong>
+                  {{
+                    formatFiatAmount(
+                      report?.current.vouchers.principalMinor ?? 0,
+                      primaryCurrency
+                    )
+                  }}
+                </strong>
+              </div>
+
+              <div class="mini-stat-row">
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.topupServiceFees') }}
+                </span>
+                <strong>
+                  {{
+                    formatFiatAmount(
+                      report?.current.vouchers.serviceFeeMinor ?? 0,
+                      primaryCurrency
+                    )
+                  }}
+                </strong>
+              </div>
+
+              <div class="mini-stat-row">
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.merchantFeeShare') }}
+                </span>
+                <strong>
+                  {{
+                    formatFiatAmount(
+                      report?.current.vouchers.merchantFeeRevenueMinor ?? 0,
+                      primaryCurrency
+                    )
+                  }}
+                </strong>
+              </div>
+
+              <div class="mini-stat-row">
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.platformFeeShare') }}
+                </span>
+                <strong>
+                  {{
+                    formatFiatAmount(
+                      report?.current.vouchers.platformFeeMinor ?? 0,
+                      primaryCurrency
+                    )
+                  }}
+                </strong>
+              </div>
+
+              <div
+                v-if="(report?.current.vouchers.feeSplitUnknownCount ?? 0) > 0"
+                class="mini-stat-row"
+              >
+                <span>
+                  {{ t('merchantReportsPage.breakdowns.legacyFeeSplits') }}
+                </span>
+                <strong>
+                  {{ report?.current.vouchers.feeSplitUnknownCount ?? 0 }}
+                </strong>
+              </div>
+
+              <div class="mini-stat-row">
+                <span>
                   {{ t('merchantReportsPage.breakdowns.cashOutsCompleted') }}
                 </span>
                 <strong>{{ report?.current.cashOuts.count ?? 0 }}</strong>
@@ -601,8 +669,7 @@ const localFirstMessage = computed(() => {
 });
 
 const movementTracker = computed<MerchantReportPrintMovementTracker>(() => {
-  const topupFiatMinor =
-    report.value?.current.vouchers.grossFiatRevenueMinor ?? 0;
+  const topupFiatMinor = report.value?.current.vouchers.principalMinor ?? 0;
   const cashOutFiatMinor = report.value?.current.cashOuts.cashPaidOutMinor ?? 0;
   const totalFiatMinor = topupFiatMinor + cashOutFiatMinor;
 
@@ -660,25 +727,26 @@ const summaryCards = computed<SummaryCard[]>(() => {
       highlight: true,
     },
     {
-      key: 'gross-fiat',
+      key: 'topup-cash-collected',
       icon: 'payments',
-      label: t('merchantReportsPage.summary.grossFiat'),
+      label: t('merchantReportsPage.summary.topupCashCollected'),
       value: formatFiatAmount(
-        overallTotals?.grossFiatMovementMinor ?? 0,
+        voucherTotals?.customerCashCollectedMinor ?? 0,
         primaryCurrency.value
       ),
-      caption: t('merchantReportsPage.summary.grossFiatCaption'),
+      caption: t('merchantReportsPage.summary.topupCashCollectedCaption'),
       badge: primaryCurrency.value,
+      theme: 'topup',
     },
     {
-      key: 'net-fiat',
+      key: 'topup-service-fees',
       icon: 'savings',
-      label: t('merchantReportsPage.summary.netFiat'),
+      label: t('merchantReportsPage.summary.topupServiceFees'),
       value: formatFiatAmount(
-        overallTotals?.netFiatMovementMinor ?? 0,
+        voucherTotals?.serviceFeeMinor ?? 0,
         primaryCurrency.value
       ),
-      caption: t('merchantReportsPage.summary.netFiatCaption'),
+      caption: t('merchantReportsPage.summary.topupServiceFeesCaption'),
       badge: primaryCurrency.value,
     },
     {
