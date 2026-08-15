@@ -11,27 +11,29 @@ export const GBP_FEE_SCHEDULE: CurrencyFeeSchedule = {
    * One penny is simply the smallest positive GBP amount this calculator
    * can represent.
    *
-   * A separate technical BCH minimum will be determined later from
-   * transaction-output and network-fee tests.
+   * A separate technical BCH minimum may still be determined later from
+   * transaction-output and network-fee tests if one is required.
    */
   smallestPositivePrincipalMinor: 1,
 
   topup: {
     /**
-     * £0.01 through £40.00:
-     * flat £4.00 service fee.
+     * £0.01 through £5.00:
+     * flat £0.50 minimum service fee.
      */
-    minimumTierMaximumPrincipalMinor: 4_000,
+    minimumTierMaximumPrincipalMinor: 500,
 
     /**
-     * £40.01 through £500.00:
+     * £5.01 through £500.00:
      * 10% service fee.
      *
-     * £500.01 and above use the £50 maximum fee.
+     * £500.01 and above use the £50 maximum service fee.
+     *
+     * Fee Model v1 does not impose a maximum Topup amount.
      */
     percentageTierMaximumPrincipalMinor: 50_000,
 
-    minimumFeeMinor: 400,
+    minimumFeeMinor: 50,
     percentageBasisPoints: 1_000,
     maximumFeeMinor: 5_000,
   },

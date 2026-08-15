@@ -12,70 +12,72 @@ interface FeeModelTest {
 
 const tests: FeeModelTest[] = [
   {
-    name: 'Topup £0.01 uses the minimum tier with no commercial minimum',
+    name: 'Topup £0.01 uses the 50p minimum tier with no commercial minimum',
     run: () => {
       const result = calculateTopupFeeModelV1(1, 'GBP');
 
       assert.equal(result.feeTier, 'minimum');
-      assert.equal(result.serviceFeeMinor, 400);
-      assert.equal(result.merchantFeeMinor, 200);
-      assert.equal(result.platformFeeMinor, 200);
-      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 401);
+      assert.equal(result.serviceFeeMinor, 50);
+      assert.equal(result.merchantFeeMinor, 25);
+      assert.equal(result.platformFeeMinor, 25);
+      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 51);
     },
   },
 
   {
-    name: 'Topup £39.99 uses the £4 minimum fee',
+    name: 'Topup £4.99 uses the 50p minimum fee',
     run: () => {
-      const result = calculateTopupFeeModelV1(3_999, 'GBP');
+      const result = calculateTopupFeeModelV1(499, 'GBP');
 
       assert.equal(result.feeTier, 'minimum');
-      assert.equal(result.serviceFeeMinor, 400);
-      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 4_399);
+      assert.equal(result.serviceFeeMinor, 50);
+      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 549);
     },
   },
 
   {
-    name: 'Topup £40.00 is the final amount in the minimum tier',
+    name: 'Topup £5.00 is the final amount in the minimum tier',
     run: () => {
-      const result = calculateTopupFeeModelV1(4_000, 'GBP');
+      const result = calculateTopupFeeModelV1(500, 'GBP');
 
       assert.equal(result.feeTier, 'minimum');
-      assert.equal(result.serviceFeeMinor, 400);
-      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 4_400);
+      assert.equal(result.serviceFeeMinor, 50);
+      assert.equal(result.merchantFeeMinor, 25);
+      assert.equal(result.platformFeeMinor, 25);
+      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 550);
     },
   },
 
   {
-    name: 'Topup £40.01 is the first amount in the percentage tier',
+    name: 'Topup £5.01 is the first amount in the percentage tier',
     run: () => {
-      const result = calculateTopupFeeModelV1(4_001, 'GBP');
+      const result = calculateTopupFeeModelV1(501, 'GBP');
 
       assert.equal(result.feeTier, 'percentage');
 
-      // 10% = 400.1 pence, which rounds to £4.00.
-      assert.equal(result.serviceFeeMinor, 400);
+      // 10% = 50.1 pence, which rounds to £0.50.
+      assert.equal(result.serviceFeeMinor, 50);
 
-      assert.equal(result.merchantFeeMinor, 200);
-      assert.equal(result.platformFeeMinor, 200);
+      assert.equal(result.merchantFeeMinor, 25);
+      assert.equal(result.platformFeeMinor, 25);
 
-      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 4_401);
+      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 551);
     },
   },
 
   {
-    name: 'Topup £40.05 percentage fee rounds to £4.01',
+    name: 'Topup £5.05 percentage fee rounds to 51p',
     run: () => {
-      const result = calculateTopupFeeModelV1(4_005, 'GBP');
+      const result = calculateTopupFeeModelV1(505, 'GBP');
 
       assert.equal(result.feeTier, 'percentage');
-      assert.equal(result.serviceFeeMinor, 401);
+      assert.equal(result.serviceFeeMinor, 51);
 
       // Odd penny goes to the merchant.
-      assert.equal(result.merchantFeeMinor, 201);
-      assert.equal(result.platformFeeMinor, 200);
+      assert.equal(result.merchantFeeMinor, 26);
+      assert.equal(result.platformFeeMinor, 25);
 
-      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 4_406);
+      assert.equal(result.customerTotalBeforeNetworkFeeMinor, 556);
     },
   },
 
@@ -176,7 +178,7 @@ const tests: FeeModelTest[] = [
 
       assert.equal(
         result.scheduleSnapshot.minimumTierMaximumPrincipalMinor,
-        4_000
+        500
       );
 
       assert.equal(
@@ -184,7 +186,7 @@ const tests: FeeModelTest[] = [
         50_000
       );
 
-      assert.equal(result.scheduleSnapshot.minimumFeeMinor, 400);
+      assert.equal(result.scheduleSnapshot.minimumFeeMinor, 50);
       assert.equal(result.scheduleSnapshot.percentageBasisPoints, 1_000);
       assert.equal(result.scheduleSnapshot.maximumFeeMinor, 5_000);
     },

@@ -32,10 +32,10 @@ function createLockedQuote(marketRate = 100): TopupLockedQuoteLike {
 
 const tests: IntegrationTest[] = [
   {
-    name: '£20 minimum-tier Topup routes half of £4 fee to platform',
+    name: '£2 minimum-tier Topup routes half of the 50p fee to platform',
     run: () => {
       const pricing = calculateTopupPricingV1FromLockedQuote(
-        2_000,
+        200,
         createLockedQuote()
       );
 
@@ -44,23 +44,24 @@ const tests: IntegrationTest[] = [
         'bitcoincash:test-platform-address'
       );
 
-      assert.equal(pricing.principalMinor, 2_000);
-      assert.equal(pricing.customerPaysMinor, 2_400);
+      assert.equal(pricing.principalMinor, 200);
+      assert.equal(pricing.serviceFeeAmountMinor, 50);
+      assert.equal(pricing.customerPaysMinor, 250);
 
-      assert.equal(pricing.finalBchSats, 20_000_000);
+      assert.equal(pricing.finalBchSats, 2_000_000);
 
-      assert.equal(plan.platformFeeSats, 2_000_000);
-      assert.equal(plan.merchantRetainedSats, 2_000_000);
+      assert.equal(plan.platformFeeSats, 250_000);
+      assert.equal(plan.merchantRetainedSats, 250_000);
 
       assert.equal(plan.bufferReserveSats, 0);
       assert.equal(plan.bufferReserveOutputEnabled, false);
 
-      // £2 is 10% of the £20 principal.
-      assert.equal(plan.platformFeeBasisPoints, 1_000);
-      assert.equal(plan.merchantRetainedBasisPoints, 1_000);
+      // 25p is 12.5% of the £2 principal.
+      assert.equal(plan.platformFeeBasisPoints, 1_250);
+      assert.equal(plan.merchantRetainedBasisPoints, 1_250);
 
-      // £4 is an effective 20% at this amount.
-      assert.equal(plan.totalServiceFeeBasisPoints, 2_000);
+      // 50p is an effective 25% fee on a £2 Topup.
+      assert.equal(plan.totalServiceFeeBasisPoints, 2_500);
     },
   },
 

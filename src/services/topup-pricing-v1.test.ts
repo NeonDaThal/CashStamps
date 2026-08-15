@@ -31,29 +31,31 @@ function createLockedQuote(marketRate = 100): TopupLockedQuoteLike {
 
 const tests: TopupPricingTest[] = [
   {
-    name: '£20 Topup preserves £20 principal and adds £4 service fee',
+    name: '£2 Topup preserves £2 principal and adds the 50p minimum fee',
     run: () => {
       const pricing = calculateTopupPricingV1FromLockedQuote(
-        2_000,
+        200,
         createLockedQuote(100)
       );
 
       assert.equal(pricing.feeModelVersion, 'topup_v1');
 
-      assert.equal(pricing.principalMinor, 2_000);
-      assert.equal(pricing.voucherValueMinor, 2_000);
+      assert.equal(pricing.principalMinor, 200);
+      assert.equal(pricing.voucherValueMinor, 200);
 
       assert.equal(pricing.feeTier, 'minimum');
-      assert.equal(pricing.serviceFeeAmountMinor, 400);
+      assert.equal(pricing.serviceFeeAmountMinor, 50);
 
-      assert.equal(pricing.merchantFeeAmountMinor, 200);
-      assert.equal(pricing.platformFeeAmountMinor, 200);
+      assert.equal(pricing.merchantFeeAmountMinor, 25);
+      assert.equal(pricing.platformFeeAmountMinor, 25);
 
-      assert.equal(pricing.customerPaysMinor, 2_400);
+      assert.equal(pricing.customerPaysMinor, 250);
 
-      assert.equal(pricing.finalBchSats, 20_000_000);
+      assert.equal(pricing.finalBchSats, 2_000_000);
 
-      assert.equal(pricing.platformFeeSats, 2_000_000);
+      assert.equal(pricing.platformFeeSats, 250_000);
+
+      assert.equal(pricing.merchantFeeEquivalentSats, 250_000);
     },
   },
 
@@ -125,22 +127,22 @@ const tests: TopupPricingTest[] = [
     name: 'odd-penny service-fee split is preserved before BCH conversion',
     run: () => {
       const pricing = calculateTopupPricingV1FromLockedQuote(
-        4_005,
+        505,
         createLockedQuote(100)
       );
 
       assert.equal(pricing.feeTier, 'percentage');
 
-      assert.equal(pricing.serviceFeeAmountMinor, 401);
+      assert.equal(pricing.serviceFeeAmountMinor, 51);
 
-      assert.equal(pricing.merchantFeeAmountMinor, 201);
-      assert.equal(pricing.platformFeeAmountMinor, 200);
+      assert.equal(pricing.merchantFeeAmountMinor, 26);
+      assert.equal(pricing.platformFeeAmountMinor, 25);
 
-      assert.equal(pricing.customerPaysMinor, 4_406);
+      assert.equal(pricing.customerPaysMinor, 556);
 
-      assert.equal(pricing.platformFeeSats, 2_000_000);
+      assert.equal(pricing.platformFeeSats, 250_000);
 
-      assert.equal(pricing.merchantFeeEquivalentSats, 2_010_000);
+      assert.equal(pricing.merchantFeeEquivalentSats, 260_000);
     },
   },
 
