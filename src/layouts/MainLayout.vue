@@ -78,36 +78,15 @@
 
           <q-menu auto-close>
             <q-list style="min-width: 160px">
-              <q-item clickable @click="setLocale('en')">
-                <q-item-section>{{ t('language.english') }}</q-item-section>
-              </q-item>
-
-              <q-item clickable @click="setLocale('es')">
-                <q-item-section>{{ t('language.spanish') }}</q-item-section>
-              </q-item>
-
-              <q-item clickable @click="setLocale('de')">
-                <q-item-section>{{ t('language.german') }}</q-item-section>
-              </q-item>
-
-              <q-item clickable @click="setLocale('pt')">
-                <q-item-section>{{ t('language.portuguese') }}</q-item-section>
-              </q-item>
-
-              <q-item clickable @click="setLocale('zh-HK')">
-                <q-item-section>{{ t('language.cantonese') }}</q-item-section>
-              </q-item>
-
-              <q-item clickable @click="setLocale('ne-NP')">
-                <q-item-section>{{ t('language.nepali') }}</q-item-section>
-              </q-item>
-
-              <q-item clickable @click="setLocale('sv-SE')">
-                <q-item-section>{{ t('language.swedish') }}</q-item-section>
-              </q-item>
-
-              <q-item clickable @click="setLocale('sw')">
-                <q-item-section>{{ t('language.swahili') }}</q-item-section>
+              <q-item
+                v-for="localeOption in localeOptions"
+                :key="localeOption.value"
+                clickable
+                @click="setLocale(localeOption.value)"
+              >
+                <q-item-section>
+                  {{ t(localeOption.labelKey) }}
+                </q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -524,7 +503,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { openURL, useQuasar } from 'quasar';
-import type { SupportedLocale } from '../i18n';
+import { getLocaleOption, localeOptions, type SupportedLocale } from '../i18n';
 import { saveStoredLocale } from '../i18n/locale-storage';
 import {
   checkForAppUpdate,
@@ -606,38 +585,7 @@ const selectedCurrencyOption = computed((): CurrencyOption => {
 });
 
 const localeShortLabel = computed((): string => {
-  const localeValue = locale.value;
-  const localeMain = localeValue.substring(0, 2);
-
-  if (localeMain === 'es') {
-    return 'ES';
-  }
-
-  if (localeMain === 'de') {
-    return 'DE';
-  }
-
-  if (localeMain === 'pt') {
-    return 'PT';
-  }
-
-  if (localeValue === 'zh-HK' || localeMain === 'zh') {
-    return 'HK';
-  }
-
-  if (localeValue === 'ne-NP' || localeMain === 'ne') {
-    return 'NP';
-  }
-
-  if (localeValue === 'sv-SE' || localeMain === 'sv') {
-    return 'SE';
-  }
-
-  if (localeValue === 'sw' || localeMain === 'sw') {
-    return 'SW';
-  }
-
-  return 'EN';
+  return getLocaleOption(locale.value).toolbarLabel;
 });
 
 const hasAvailableUpdate = computed((): boolean => {

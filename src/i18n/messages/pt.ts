@@ -984,6 +984,11 @@ const pt = {
       saved: 'Business name saved.',
       saveFailed: 'Could not save the business name.',
     },
+    language: {
+      prompt: 'Please select the language you wish to use',
+      toolbarHint:
+        'You can also switch language at any time by clicking the language button in the top, right hand corner of the app.',
+    },
     version: {
       appName: 'Bitcoin Cash Topup',
       loading: 'Checking app version...',
