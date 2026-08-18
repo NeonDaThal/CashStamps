@@ -603,83 +603,6 @@
                 </q-banner>
 
                 <q-banner
-                  v-if="realBroadcastResult"
-                  :class="
-                    realBroadcastResult.status === 'broadcasted'
-                      ? 'bg-green-1 text-green-10'
-                      : 'bg-red-1 text-red-10'
-                  "
-                  rounded
-                  class="q-mb-md"
-                >
-                  <template #avatar>
-                    <q-icon
-                      :name="
-                        realBroadcastResult.status === 'broadcasted'
-                          ? 'check_circle'
-                          : 'warning'
-                      "
-                    />
-                  </template>
-
-                  <span v-if="realBroadcastResult.status === 'broadcasted'">
-                    Real funding transaction broadcasted. Txid:
-                    {{ realBroadcastResult.txid }}
-                  </span>
-
-                  <span v-else>
-                    Real funding transaction was not broadcast:
-                    {{ realBroadcastResult.errorMessage }}
-                  </span>
-                </q-banner>
-
-                <q-list
-                  v-if="realBroadcastResult"
-                  dense
-                  bordered
-                  separator
-                  class="q-mb-md"
-                >
-                  <q-item>
-                    <q-item-section>
-                      <q-item-label caption>Real broadcast status</q-item-label>
-                      <q-item-label>
-                        {{ realBroadcastResult.status }}
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-
-                  <q-item>
-                    <q-item-section>
-                      <q-item-label caption>Broadcast enabled</q-item-label>
-                      <q-item-label>
-                        {{
-                          realBroadcastResult.broadcastEnabled ? 'Yes' : 'No'
-                        }}
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-
-                  <q-item v-if="realBroadcastResult.txid">
-                    <q-item-section>
-                      <q-item-label caption>Transaction ID</q-item-label>
-                      <q-item-label class="text-break">
-                        {{ realBroadcastResult.txid }}
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-
-                  <q-item>
-                    <q-item-section>
-                      <q-item-label caption>Attempted</q-item-label>
-                      <q-item-label>
-                        {{ formatDateTime(realBroadcastResult.attemptedAt) }}
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-
-                <q-banner
                   v-if="broadcastGuardTestResult"
                   :class="
                     broadcastGuardTestResult.status === 'blocked'
@@ -764,10 +687,8 @@
                   <q-item-section>
                     <q-btn
                       color="negative"
-                      label="Broadcast Real Funding Transaction"
-                      :disable="!broadcastGate.canBroadcast"
-                      :loading="isBroadcastingRealFunding"
-                      @click="handleBroadcastRealFundingTransaction"
+                      label="Real Broadcast Moved To Durable Issue Flow"
+                      disable
                     />
                   </q-item-section>
                 </q-item>
@@ -798,9 +719,9 @@
                 <q-item>
                   <q-item-section>
                     <q-item-label caption>
-                      The real broadcast button is intentionally disabled until
-                      the pre-broadcast checklist passes and the global guard is
-                      explicitly enabled.
+                      Real Topup broadcast is now reserved for the durable Issue
+                      flow. A signed funding intent must be saved to the voucher
+                      record before any future broadcast attempt.
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -1052,6 +973,7 @@
           class="primary-button"
           :label="t('saleConfirm.actions.issueVoucher')"
           :loading="isSubmitting"
+          :disable="!canPrepareFundingIntent"
           unelevated
           no-caps
           @click="emit('confirm')"
@@ -1114,11 +1036,9 @@ const { t } = useI18n({ useScope: 'global' });
 
 const isRunningDraftCheck = ref(false);
 const isTestingBroadcastGuard = ref(false);
-const isBroadcastingRealFunding = ref(false);
 const draftCheckResult = ref<TreasuryTransactionDraft | null>(null);
 const draftAudit = ref<TreasuryTransactionDraftAudit | null>(null);
 const broadcastGuardTestResult = ref<TreasuryBroadcastResult | null>(null);
-const realBroadcastResult = ref<TreasuryBroadcastResult | null>(null);
 
 const quoteSourceLabel = computed(() => {
   switch (props.pricing.quoteSource) {
@@ -1173,6 +1093,14 @@ const transactionDraftStatus = computed<TreasuryTransactionDraft | null>(() => {
   );
 });
 
+const canPrepareFundingIntent = computed(() => {
+  return (
+    transactionPlan.value?.status === 'valid' &&
+    Boolean(props.voucherKeyMetadata?.hasWif) &&
+    !props.isSubmitting
+  );
+});
+
 const fundingReadiness = computed<FundingReadinessCheck | null>(() => {
   return createFundingReadinessCheck({
     treasuryIsSetup: Boolean(props.treasuryFundingPreview?.treasuryAddress),
@@ -1214,7 +1142,6 @@ async function handleRunDraftCheck(): Promise<void> {
   draftCheckResult.value = null;
   draftAudit.value = null;
   broadcastGuardTestResult.value = null;
-  realBroadcastResult.value = null;
   isRunningDraftCheck.value = true;
 
   try {
@@ -1265,37 +1192,6 @@ async function handleTestBlockedBroadcastGuard(): Promise<void> {
     };
   } finally {
     isTestingBroadcastGuard.value = false;
-  }
-}
-
-async function handleBroadcastRealFundingTransaction(): Promise<void> {
-  if (!draftCheckResult.value || !broadcastGate.value.canBroadcast) {
-    return;
-  }
-
-  realBroadcastResult.value = null;
-  isBroadcastingRealFunding.value = true;
-
-  try {
-    realBroadcastResult.value = await broadcastTreasuryTransactionDraft(
-      draftCheckResult.value
-    );
-
-    emit('broadcast-result', realBroadcastResult.value);
-  } catch (error) {
-    realBroadcastResult.value = {
-      status: 'failed',
-      broadcastEnabled: true,
-      errorMessage:
-        error instanceof Error
-          ? error.message
-          : 'Real funding broadcast failed.',
-      attemptedAt: new Date().toISOString(),
-    };
-
-    emit('broadcast-result', realBroadcastResult.value);
-  } finally {
-    isBroadcastingRealFunding.value = false;
   }
 }
 

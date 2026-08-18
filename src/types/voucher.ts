@@ -66,6 +66,40 @@ export interface VoucherManualRedemption {
   redeemedAt: string;
 }
 
+export type VoucherFundingIntentStatus = 'prepared';
+
+export interface VoucherFundingIntent {
+  /**
+   * Stable identifier for one merchant Issue action.
+   *
+   * The same operation ID must never create a second VoucherRecord.
+   */
+  operationId: string;
+
+  status: VoucherFundingIntentStatus;
+
+  /**
+   * Signed transaction prepared for this exact Topup.
+   *
+   * This is persisted before any future broadcast attempt so the app can
+   * recover/reconcile the exact same transaction after interruption.
+   */
+  rawTransactionHex: string;
+
+  actualFeeSats: number;
+  actualChangeSats: number;
+
+  /**
+   * Sub-dust treasury remainder intentionally absorbed into the miner fee.
+   */
+  dustChangeAbsorbedSats: number;
+
+  inputCount: number;
+  outputCount: number;
+
+  preparedAt: string;
+}
+
 export interface VoucherRecord {
   id: string;
   serial: string;
@@ -97,6 +131,20 @@ export interface VoucherRecord {
   address: string;
 
   keyMetadata?: VoucherKeyMetadata;
+
+  /**
+   * Idempotency key for the merchant Issue action that created this record.
+   *
+   * Legacy records do not have this field.
+   */
+  issueOperationId?: string;
+
+  /**
+   * Durable signed transaction intent saved before any broadcast attempt.
+   *
+   * Legacy records do not have this field.
+   */
+  fundingIntent?: VoucherFundingIntent;
 
   fundingBroadcast?: VoucherFundingBroadcast;
 

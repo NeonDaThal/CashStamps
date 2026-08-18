@@ -1,4 +1,9 @@
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
+import {
+  createTreasuryChangeAllocation,
+  isAtOrAboveStandardP2pkhDustLimit,
+  STANDARD_P2PKH_DUST_LIMIT_SATS,
+} from 'src/services/treasury-output-safety';
 import type {
   TreasuryTransactionPlan,
   TreasuryTransactionPlanFeeOutputs,
@@ -35,12 +40,17 @@ function createInvalidPlan(
 
     estimatedFeeSats: preview.estimatedFeeSats,
     estimatedChangeSats: preview.estimatedChangeSats,
+    dustChangeAbsorbedSats: 0,
 
     invalidReason,
     invalidMessage,
 
     createdAt: new Date().toISOString(),
   };
+}
+
+function isNonNegativeSafeInteger(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0;
 }
 
 function createFeeOutputs(
@@ -89,11 +99,20 @@ export function createTreasuryTransactionPlanFromPreview(
     );
   }
 
-  if (!Number.isFinite(preview.amountSats) || preview.amountSats <= 0) {
+  if (!Number.isSafeInteger(preview.amountSats) || preview.amountSats <= 0) {
     return createInvalidPlan(
       preview,
       'invalid_amount',
       'Voucher funding amount is invalid.',
+      feeOutputs
+    );
+  }
+
+  if (!isAtOrAboveStandardP2pkhDustLimit(preview.amountSats)) {
+    return createInvalidPlan(
+      preview,
+      'voucher_output_below_dust',
+      `Voucher output must be at least ${STANDARD_P2PKH_DUST_LIMIT_SATS} satoshis.`,
       feeOutputs
     );
   }
@@ -107,11 +126,53 @@ export function createTreasuryTransactionPlanFromPreview(
     );
   }
 
+  if (!isNonNegativeSafeInteger(feeOutputs.platformFeeSats)) {
+    return createInvalidPlan(
+      preview,
+      'invalid_platform_fee_amount',
+      'Platform fee amount is invalid.',
+      feeOutputs
+    );
+  }
+
+  if (
+    feeOutputs.platformFeeSats > 0 &&
+    !isAtOrAboveStandardP2pkhDustLimit(feeOutputs.platformFeeSats)
+  ) {
+    return createInvalidPlan(
+      preview,
+      'platform_fee_output_below_dust',
+      `Platform fee output must be at least ${STANDARD_P2PKH_DUST_LIMIT_SATS} satoshis when present.`,
+      feeOutputs
+    );
+  }
+
   if (feeOutputs.platformFeeSats > 0 && !feeOutputs.platformFeeAddress) {
     return createInvalidPlan(
       preview,
       'missing_platform_fee_address',
       'Platform fee amount is planned, but no platform fee address is configured.',
+      feeOutputs
+    );
+  }
+
+  if (!isNonNegativeSafeInteger(feeOutputs.bufferReserveSats)) {
+    return createInvalidPlan(
+      preview,
+      'invalid_buffer_reserve_amount',
+      'Buffer reserve amount is invalid.',
+      feeOutputs
+    );
+  }
+
+  if (
+    feeOutputs.bufferReserveSats > 0 &&
+    !isAtOrAboveStandardP2pkhDustLimit(feeOutputs.bufferReserveSats)
+  ) {
+    return createInvalidPlan(
+      preview,
+      'buffer_reserve_output_below_dust',
+      `Buffer reserve output must be at least ${STANDARD_P2PKH_DUST_LIMIT_SATS} satoshis when present.`,
       feeOutputs
     );
   }
@@ -130,16 +191,23 @@ export function createTreasuryTransactionPlanFromPreview(
     feeOutputs.platformFeeSats +
     feeOutputs.bufferReserveSats;
 
-  const totalRequiredSats =
-    totalOutputSatsBeforeChange + preview.estimatedFeeSats;
+  const changeAllocation = createTreasuryChangeAllocation({
+    selectedInputSats: preview.selectedInputSats,
+    nonChangeOutputSats: totalOutputSatsBeforeChange,
+    minimumFeeSats: preview.estimatedFeeSats,
+  });
 
-  const estimatedChangeSats = preview.selectedInputSats - totalRequiredSats;
+  if (!changeAllocation.isAffordable) {
+    const estimatedChangeSats =
+      preview.selectedInputSats -
+      totalOutputSatsBeforeChange -
+      preview.estimatedFeeSats;
 
-  if (preview.selectedInputSats < totalRequiredSats) {
     return createInvalidPlan(
       {
         ...preview,
-        estimatedTotalRequiredSats: totalRequiredSats,
+        estimatedTotalRequiredSats:
+          totalOutputSatsBeforeChange + preview.estimatedFeeSats,
         estimatedChangeSats,
       },
       'insufficient_input_value',
@@ -148,13 +216,9 @@ export function createTreasuryTransactionPlanFromPreview(
     );
   }
 
-  if (estimatedChangeSats < 0) {
+  if (changeAllocation.changeSats < 0) {
     return createInvalidPlan(
-      {
-        ...preview,
-        estimatedTotalRequiredSats: totalRequiredSats,
-        estimatedChangeSats,
-      },
+      preview,
       'invalid_change',
       'Estimated change is negative.',
       feeOutputs
@@ -170,10 +234,10 @@ export function createTreasuryTransactionPlanFromPreview(
     ...createFeeOutputs(feeOutputs),
   ];
 
-  if (estimatedChangeSats > 0) {
+  if (changeAllocation.changeSats > 0) {
     outputs.push({
       address: preview.treasuryAddress,
-      valueSats: estimatedChangeSats,
+      valueSats: changeAllocation.changeSats,
       purpose: 'change',
     });
   }
@@ -194,8 +258,9 @@ export function createTreasuryTransactionPlanFromPreview(
     platformFeeOutputSats: feeOutputs.platformFeeSats,
     bufferReserveOutputSats: feeOutputs.bufferReserveSats,
 
-    estimatedFeeSats: preview.estimatedFeeSats,
-    estimatedChangeSats,
+    estimatedFeeSats: changeAllocation.finalFeeSats,
+    estimatedChangeSats: changeAllocation.changeSats,
+    dustChangeAbsorbedSats: changeAllocation.dustChangeAbsorbedSats,
 
     createdAt: new Date().toISOString(),
   };

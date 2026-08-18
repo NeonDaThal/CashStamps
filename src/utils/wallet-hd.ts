@@ -18,7 +18,7 @@ import { ElectrumService } from 'src/services/electrum';
 
 import { HdPrivateNodeValid } from '@bitauth/libauth';
 
-export const DERIVATION_PATH = `m/44'/145'/0'`;
+export const DERIVATION_PATH = "m/44'/145'/0'";
 export const ADDRESS_GAP = 20;
 
 export class WalletHD extends HDPrivateNode {
@@ -191,7 +191,7 @@ export class WalletHD extends HDPrivateNode {
     // We need to calculate the number of bytes so that we can calculate the fee.
     // So we loop twice and store the final transaction here each time.
     // 1st time will have zero fee. 2nd time will accommodate the fee.
-    let encodedTransaction = new Uint8Array();
+    let encodedTransaction: Uint8Array<ArrayBufferLike> = new Uint8Array();
 
     // Create the transaction by looping twice.
     // 1st loop: Transaction without a fee.

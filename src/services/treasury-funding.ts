@@ -18,6 +18,15 @@ function cloneUtxo(utxo: TreasuryUtxo): TreasuryFundingPreviewSelectedUtxo {
     outpointTransactionHash: utxo.outpointTransactionHash,
     outpointIndex: utxo.outpointIndex,
     valueSats: utxo.valueSats,
+
+    /**
+     * Preserve treasury ownership provenance.
+     *
+     * The signer needs this to derive the exact treasury child wallet that
+     * owns each selected UTXO.
+     */
+    address: utxo.address,
+    derivationIndex: utxo.derivationIndex,
   };
 }
 
@@ -43,10 +52,7 @@ function estimateDryRunFeeSats(
 
   const estimatedOutputCount = safeNonChangeOutputCount + 1;
 
-  const estimatedBytes =
-    10 + // tx overhead
-    safeInputCount * 148 + // rough P2PKH input size
-    estimatedOutputCount * 34;
+  const estimatedBytes = 10 + safeInputCount * 148 + estimatedOutputCount * 34;
 
   return Math.max(MINIMUM_DRY_RUN_FEE_SATS, estimatedBytes);
 }
@@ -59,11 +65,7 @@ function countNonChangeOutputs(
   platformFeeSats: number,
   bufferReserveSats: number
 ): number {
-  return (
-    1 + // voucher output
-    (platformFeeSats > 0 ? 1 : 0) +
-    (bufferReserveSats > 0 ? 1 : 0)
-  );
+  return 1 + (platformFeeSats > 0 ? 1 : 0) + (bufferReserveSats > 0 ? 1 : 0);
 }
 
 function selectDryRunUtxos(
@@ -77,6 +79,7 @@ function selectDryRunUtxos(
   estimatedFeeSats: number;
 } {
   const sortedUtxos = sortUtxosByValueAscending(utxos);
+
   const selectedUtxos: TreasuryFundingPreviewSelectedUtxo[] = [];
 
   const nonChangeOutputCount = countNonChangeOutputs(
@@ -87,10 +90,12 @@ function selectDryRunUtxos(
   const nonNetworkOutputSats = amountSats + platformFeeSats + bufferReserveSats;
 
   let selectedInputSats = 0;
+
   let estimatedFeeSats = estimateDryRunFeeSats(1, nonChangeOutputCount);
 
   for (const utxo of sortedUtxos) {
     selectedUtxos.push(cloneUtxo(utxo));
+
     selectedInputSats += utxo.valueSats;
 
     estimatedFeeSats = estimateDryRunFeeSats(
@@ -164,6 +169,7 @@ export function createTreasuryFundingPreview(
       : {
           selectedUtxos: [],
           selectedInputSats: input.treasuryBalanceSats,
+
           estimatedFeeSats: estimateDryRunFeeSats(
             input.treasuryUtxoCount,
             nonChangeOutputCount
@@ -189,12 +195,14 @@ export function createTreasuryFundingPreview(
     estimatedChangeSats,
 
     treasuryBalanceSats: input.treasuryBalanceSats,
+
     treasuryUtxoCount: input.treasuryUtxoCount,
 
     selectedUtxos,
     selectedInputSats,
 
     isAffordable: estimatedChangeSats >= 0,
+
     createdAt: new Date().toISOString(),
   };
 }

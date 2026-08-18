@@ -184,6 +184,16 @@ const sw = {
       noVoucherAddress:
         'Hakuna anwani ya vocha inayopatikana. Tafadhali kagua vocha tena.',
       couldNotIssueVoucher: 'Haikuwezekana kutoa vocha.',
+      noIssueOperation:
+        'This Topup review no longer has a valid issue operation. Please review the Topup again.',
+
+      fundingIntentNotReady:
+        'The Topup funding transaction is not ready. Refresh the Treasury Wallet and review the Topup again.',
+
+      issueOperationAlreadySaved:
+        'This Topup issue operation was already saved. The existing record has been reused.',
+      quoteExpired:
+        'The locked quote has expired. Please review the Topup again to get a fresh BCH quote before issuing.',
     },
   },
 

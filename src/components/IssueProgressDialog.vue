@@ -1,19 +1,35 @@
 <template>
-  <q-dialog :model-value="modelValue" persistent>
+  <q-dialog
+    :model-value="modelValue"
+    :persistent="!canDismiss"
+    @update:model-value="handleModelUpdate"
+  >
     <q-card class="progress-card">
       <q-card-section class="progress-header">
         <div class="header-icon">
           <q-icon name="receipt_long" />
         </div>
 
-        <div>
+        <div class="progress-heading">
           <div class="text-h5 text-weight-bold">
             {{ t('issueProgress.title') }}
           </div>
+
           <p class="text-grey-7 q-mb-none">
             {{ t('issueProgress.subtitle') }}
           </p>
         </div>
+
+        <q-btn
+          v-if="canDismiss"
+          flat
+          dense
+          round
+          icon="close"
+          class="close-button"
+          :aria-label="t('common.close')"
+          @click="requestClose"
+        />
       </q-card-section>
 
       <q-separator />
@@ -77,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 export type IssueProgressStepStatus =
@@ -92,12 +109,49 @@ export interface IssueProgressStep {
   status: IssueProgressStepStatus;
 }
 
-defineProps<{
+const props = defineProps<{
   modelValue: boolean;
   steps: IssueProgressStep[];
 }>();
 
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean];
+}>();
+
 const { t } = useI18n({ useScope: 'global' });
+
+const hasActiveStep = computed(() =>
+  props.steps.some((step) => step.status === 'active')
+);
+
+const hasErrorStep = computed(() =>
+  props.steps.some((step) => step.status === 'error')
+);
+
+/**
+ * While an Issue operation is still running, the dialog is intentionally
+ * locked.
+ *
+ * If the operation terminates with an error, the merchant may dismiss the
+ * dialog either with the close button or by clicking outside it.
+ *
+ * Successful operations are closed automatically by the parent flow.
+ */
+const canDismiss = computed(() => hasErrorStep.value && !hasActiveStep.value);
+
+function requestClose(): void {
+  if (!canDismiss.value) {
+    return;
+  }
+
+  emit('update:modelValue', false);
+}
+
+function handleModelUpdate(value: boolean): void {
+  if (!value && canDismiss.value) {
+    emit('update:modelValue', false);
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -112,6 +166,16 @@ const { t } = useI18n({ useScope: 'global' });
   display: flex;
   gap: 14px;
   padding: 22px;
+}
+
+.progress-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.close-button {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .header-icon {

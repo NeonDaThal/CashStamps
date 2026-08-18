@@ -16,6 +16,12 @@ export interface TreasuryTransactionDraft {
   actualFeeSats?: number;
   actualChangeSats?: number;
 
+  /**
+   * Actual sub-dust remainder absorbed into the miner fee rather than emitted
+   * as a change output.
+   */
+  dustChangeAbsorbedSats?: number;
+
   outputCount?: number;
   inputCount?: number;
 

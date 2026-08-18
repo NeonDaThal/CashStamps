@@ -13,6 +13,24 @@ export class PricingUnavailableError extends Error {
   }
 }
 
+export interface GetLockedQuoteOptions {
+  ttlMilliseconds?: number;
+}
+
+function normaliseQuoteTtlMilliseconds(
+  ttlMilliseconds: number | undefined
+): number {
+  const value = ttlMilliseconds ?? PRICE_QUOTE_TTL_MILLISECONDS;
+
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(
+      'Quote lock duration must be a positive whole number of milliseconds.'
+    );
+  }
+
+  return value;
+}
+
 function isQuoteWithinFallbackWindow(quote: LockedPriceQuote): boolean {
   const quoteTimestamp = new Date(quote.marketRateTimestamp).getTime();
 
@@ -28,17 +46,18 @@ function isQuoteWithinFallbackWindow(quote: LockedPriceQuote): boolean {
   );
 }
 
-function createFallbackLockedQuote(quote: LockedPriceQuote): LockedPriceQuote {
+function lockQuoteForDuration(
+  quote: LockedPriceQuote,
+  ttlMilliseconds: number,
+  isFallbackQuote: boolean
+): LockedPriceQuote {
   const now = new Date();
 
   return {
     ...quote,
-    provider: 'cached',
     quoteLockedAt: now.toISOString(),
-    quoteExpiresAt: new Date(
-      now.getTime() + PRICE_QUOTE_TTL_MILLISECONDS
-    ).toISOString(),
-    isFallbackQuote: true,
+    quoteExpiresAt: new Date(now.getTime() + ttlMilliseconds).toISOString(),
+    isFallbackQuote,
   };
 }
 
@@ -47,21 +66,35 @@ export class PricingService {
     private readonly primaryProvider: PriceProvider = new CoinGeckoPriceProvider()
   ) {}
 
-  async getLockedQuote(fiatCurrency: string): Promise<LockedPriceQuote> {
+  async getLockedQuote(
+    fiatCurrency: string,
+    options?: GetLockedQuoteOptions
+  ): Promise<LockedPriceQuote> {
+    const ttlMilliseconds = normaliseQuoteTtlMilliseconds(
+      options?.ttlMilliseconds
+    );
+
     try {
       const liveQuote = await this.primaryProvider.getLiveQuote(fiatCurrency);
 
+      const lockedLiveQuote = lockQuoteForDuration(
+        liveQuote,
+        ttlMilliseconds,
+        false
+      );
+
       await saveLastGoodQuote({
-        source: liveQuote.provider === 'coingecko' ? 'coingecko' : 'unknown',
-        fiatCurrency: liveQuote.fiatCurrency,
-        marketRate: liveQuote.marketRate,
-        marketRateTimestamp: liveQuote.marketRateTimestamp,
-        quoteLockedAt: liveQuote.quoteLockedAt,
-        quoteExpiresAt: liveQuote.quoteExpiresAt,
+        source:
+          lockedLiveQuote.provider === 'coingecko' ? 'coingecko' : 'unknown',
+        fiatCurrency: lockedLiveQuote.fiatCurrency,
+        marketRate: lockedLiveQuote.marketRate,
+        marketRateTimestamp: lockedLiveQuote.marketRateTimestamp,
+        quoteLockedAt: lockedLiveQuote.quoteLockedAt,
+        quoteExpiresAt: lockedLiveQuote.quoteExpiresAt,
         isFallbackQuote: false,
       });
 
-      return liveQuote;
+      return lockedLiveQuote;
     } catch (error) {
       console.error(error);
 
@@ -71,25 +104,23 @@ export class PricingService {
         throw new PricingUnavailableError();
       }
 
-      const lockedCachedQuote: LockedPriceQuote = {
+      const cachedLockedQuote: LockedPriceQuote = {
         provider: 'cached',
         fiatCurrency: cachedQuote.fiatCurrency,
         marketRate: cachedQuote.marketRate,
         marketRateTimestamp: cachedQuote.marketRateTimestamp,
-        quoteLockedAt: cachedQuote.quoteLockedAt ?? new Date().toISOString(),
-        quoteExpiresAt:
-          cachedQuote.quoteExpiresAt ??
-          new Date(Date.now() + PRICE_QUOTE_TTL_MILLISECONDS).toISOString(),
+        quoteLockedAt: new Date().toISOString(),
+        quoteExpiresAt: new Date(Date.now() + ttlMilliseconds).toISOString(),
         isFallbackQuote: true,
       };
 
-      if (!isQuoteWithinFallbackWindow(lockedCachedQuote)) {
+      if (!isQuoteWithinFallbackWindow(cachedLockedQuote)) {
         throw new PricingUnavailableError(
           'Pricing is temporarily unavailable and the cached quote is too old.'
         );
       }
 
-      return createFallbackLockedQuote(lockedCachedQuote);
+      return lockQuoteForDuration(cachedLockedQuote, ttlMilliseconds, true);
     }
   }
 }

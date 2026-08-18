@@ -464,7 +464,14 @@ import {
   getTreasuryWalletBalance,
   getTreasuryWalletPublicInfo,
 } from 'src/services/treasury-wallet';
-import { addVoucherRecord } from 'src/services/voucher-store';
+import {
+  addVoucherRecordIdempotently,
+  getVoucherRecordByIssueOperationId,
+} from 'src/services/voucher-store';
+import {
+  createTopupIssueOperationId,
+  prepareTopupFundingIntent,
+} from 'src/services/topup-issue-operation';
 import { recordTopupSaleCashReceived } from 'src/services/cash-on-hand-store';
 import {
   deriveNextVoucherAddress,
@@ -475,6 +482,8 @@ import { createVoucherFeeOutputPlanV1 } from 'src/services/voucher-fee-plan-v1';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import { getTopupRecordValues } from 'src/services/topup-record-values';
 import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
+import { TOPUP_PRICE_QUOTE_TTL_MILLISECONDS } from 'src/services/pricing-config';
+import { getTopupQuoteIssueSafety } from 'src/services/topup-issue-safety';
 
 const { t, locale } = useI18n({ useScope: 'global' });
 
@@ -482,6 +491,7 @@ const pricingService = new PricingService();
 
 const isSubmitting = ref(false);
 const isCheckingTreasuryBalance = ref(false);
+const isIssueOperationRunning = ref(false);
 const successMessage = ref('');
 const warningMessage = ref('');
 const errorMessage = ref('');
@@ -497,6 +507,7 @@ const pendingTreasuryFundingPreview = ref<TreasuryFundingPreview | null>(null);
 const pendingFundingBroadcast = ref<TreasuryBroadcastResult | null>(null);
 const pendingVoucherAddress = ref<DerivedVoucherAddress | null>(null);
 const pendingKeyMetadata = ref<VoucherKeyMetadata | null>(null);
+const pendingIssueOperationId = ref<string | null>(null);
 
 const lastIssuedVoucher = ref<VoucherRecord | null>(null);
 
@@ -643,7 +654,7 @@ function setIssueProgressStepStatus(
   );
 }
 
-function waitForFakeStep(milliseconds: number): Promise<void> {
+function waitForUiDelay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, milliseconds);
   });
@@ -673,6 +684,7 @@ async function handleReviewVoucher(
   isReceiptPreviewDialogOpen.value = false;
   pendingPricing.value = null;
   pendingFeeOutputPlan.value = null;
+  pendingIssueOperationId.value = null;
   pendingTreasuryFundingPreview.value = null;
   pendingFundingBroadcast.value = null;
   pendingVoucherAddress.value = null;
@@ -704,7 +716,9 @@ async function handleReviewVoucher(
       }
     }
 
-    const lockedQuote = await pricingService.getLockedQuote(fiatCurrency);
+    const lockedQuote = await pricingService.getLockedQuote(fiatCurrency, {
+      ttlMilliseconds: TOPUP_PRICE_QUOTE_TTL_MILLISECONDS,
+    });
 
     pendingPricing.value = calculateTopupPricingV1FromLockedQuote(
       fiatAmountMinor,
@@ -753,6 +767,8 @@ async function handleReviewVoucher(
         treasuryUtxos: treasuryBalance.value?.utxos ?? [],
       });
     }
+
+    pendingIssueOperationId.value = createTopupIssueOperationId();
 
     if (lockedQuote.isFallbackQuote) {
       warningMessage.value = t('sellPage.messages.fallbackQuoteWarning');
@@ -805,94 +821,288 @@ async function recordCashOnHandForIssuedTopup(
   }
 }
 
-async function runFakeIssueProgress(): Promise<void> {
-  resetIssueProgressSteps();
-
-  setIssueProgressStepStatus('quote', 'active');
-  await waitForFakeStep(350);
-  setIssueProgressStepStatus('quote', 'complete');
-
-  setIssueProgressStepStatus('wallet', 'active');
-  await waitForFakeStep(350);
-  setIssueProgressStepStatus('wallet', 'complete');
-
-  setIssueProgressStepStatus('funding', 'active');
-  await waitForFakeStep(350);
-  setIssueProgressStepStatus('funding', 'complete');
-
-  setIssueProgressStepStatus('store', 'active');
-}
-
 async function handleCreateDraftVoucher(): Promise<void> {
+  /**
+   * First line of double-submit protection.
+   *
+   * If an Issue operation is already running, a second call is ignored.
+   */
+  if (isIssueOperationRunning.value) {
+    return;
+  }
+
   clearMessages();
+
   lastIssuedVoucher.value = null;
   isReceiptPreviewDialogOpen.value = false;
 
-  if (!pendingPricing.value) {
+  /**
+   * Capture the current review state before beginning async work.
+   *
+   * This prevents later UI/ref changes from silently changing the financial
+   * values used by the operation once Issue has started.
+   */
+  const pricing = pendingPricing.value;
+  const voucherAddress = pendingVoucherAddress.value;
+  const feeOutputPlan = pendingFeeOutputPlan.value;
+  const treasuryFundingPreview = pendingTreasuryFundingPreview.value;
+  const issueOperationId = pendingIssueOperationId.value;
+
+  /**
+   * These checks happen before the progress dialog because they indicate that
+   * the review itself is incomplete rather than that an Issue operation has
+   * failed midway through.
+   */
+  if (!pricing) {
     errorMessage.value = t('sellPage.messages.noLockedQuote');
     return;
   }
 
-  if (!pendingVoucherAddress.value) {
+  if (!voucherAddress) {
     errorMessage.value = t('sellPage.messages.noVoucherAddress');
     return;
   }
 
+  if (!issueOperationId) {
+    errorMessage.value = t('sellPage.messages.noIssueOperation');
+    return;
+  }
+
+  if (!feeOutputPlan || !treasuryFundingPreview) {
+    errorMessage.value = t('sellPage.messages.fundingIntentNotReady');
+    return;
+  }
+
+  /**
+   * From this point onward, this Issue operation owns the UI until it either
+   * succeeds or terminates with an error.
+   */
+  isIssueOperationRunning.value = true;
   isSubmitting.value = true;
+
   isConfirmDialogOpen.value = false;
+
+  resetIssueProgressSteps();
   isProgressDialogOpen.value = true;
 
-  try {
-    await runFakeIssueProgress();
+  /**
+   * This tracks the real operation currently in progress.
+   *
+   * If an exception occurs, only the step that was actually running receives
+   * the red error marker.
+   */
+  let activeIssueProgressStep: 'quote' | 'wallet' | 'funding' | 'store' =
+    'quote';
 
-    const feeModelSnapshot = createTopupFeeModelV1Snapshot(
-      pendingPricing.value,
-      {
-        estimatedNetworkFeeSats:
-          pendingTreasuryFundingPreview.value?.estimatedFeeSats,
-      }
+  try {
+    /**
+     * DURABLE IDEMPOTENCY RECOVERY
+     *
+     * If this exact merchant Issue operation has already saved a voucher,
+     * reuse that existing record rather than creating/signing anything again.
+     */
+    const existingVoucher = await getVoucherRecordByIssueOperationId(
+      issueOperationId
     );
+
+    if (existingVoucher) {
+      setIssueProgressStepStatus('quote', 'complete');
+      setIssueProgressStepStatus('wallet', 'complete');
+      setIssueProgressStepStatus('funding', 'complete');
+      setIssueProgressStepStatus('store', 'complete');
+
+      await waitForUiDelay(300);
+
+      lastIssuedVoucher.value = existingVoucher;
+
+      await recordCashOnHandForIssuedTopup(existingVoucher);
+
+      isProgressDialogOpen.value = false;
+      isReceiptPreviewDialogOpen.value = true;
+
+      warningMessage.value = t('sellPage.messages.issueOperationAlreadySaved');
+
+      return;
+    }
+
+    /**
+     * STEP 1 — CONFIRM LOCKED QUOTE
+     */
+    activeIssueProgressStep = 'quote';
+    setIssueProgressStepStatus('quote', 'active');
+
+    const quoteIssueSafety = getTopupQuoteIssueSafety(pricing);
+
+    if (quoteIssueSafety.status !== 'valid') {
+      throw new Error(t('sellPage.messages.quoteExpired'));
+    }
+
+    setIssueProgressStepStatus('quote', 'complete');
+
+    /**
+     * STEP 2 — PREPARE VOUCHER WALLET
+     *
+     * The address and derivation index were prepared during Review. Here we
+     * verify that the exact wallet information needed for this Issue operation
+     * still exists and is sane.
+     */
+    activeIssueProgressStep = 'wallet';
+    setIssueProgressStepStatus('wallet', 'active');
+
+    if (!voucherAddress.address || voucherAddress.derivationIndex < 0) {
+      throw new Error(t('sellPage.messages.noVoucherAddress'));
+    }
+
+    setIssueProgressStepStatus('wallet', 'complete');
+
+    /**
+     * STEP 3 — PREPARE FUNDING TRANSACTION
+     *
+     * This creates the transaction plan and signed transaction draft and
+     * captures the exact funding intent.
+     *
+     * IMPORTANT:
+     * Nothing is broadcast here.
+     */
+    activeIssueProgressStep = 'funding';
+    setIssueProgressStepStatus('funding', 'active');
+
+    const fundingIntent = await prepareTopupFundingIntent({
+      operationId: issueOperationId,
+      treasuryFundingPreview,
+      feeOutputPlan,
+    });
+
+    /**
+     * Transaction preparation may have taken some time.
+     *
+     * Re-check the locked quote before allowing the signed funding intent to
+     * become the durable transaction record.
+     *
+     * It is still safe to abort here because nothing has been broadcast.
+     */
+    const finalQuoteIssueSafety = getTopupQuoteIssueSafety(pricing);
+
+    if (finalQuoteIssueSafety.status !== 'valid') {
+      throw new Error(t('sellPage.messages.quoteExpired'));
+    }
+
+    setIssueProgressStepStatus('funding', 'complete');
+
+    /**
+     * STEP 4 — SAVE DURABLE FUNDING INTENT
+     */
+    activeIssueProgressStep = 'store';
+    setIssueProgressStepStatus('store', 'active');
+
+    const feeModelSnapshot = createTopupFeeModelV1Snapshot(pricing, {
+      estimatedNetworkFeeSats: treasuryFundingPreview.estimatedFeeSats,
+    });
 
     const voucher = createDraftVoucherRecord(
-      pendingPricing.value.customerPaysMinor,
-      pendingPricing.value.fiatCurrency,
-      pendingPricing.value,
+      pricing.customerPaysMinor,
+      pricing.fiatCurrency,
+      pricing,
       {
         addressData: {
-          derivationIndex: pendingVoucherAddress.value.derivationIndex,
-          address: pendingVoucherAddress.value.address,
+          derivationIndex: voucherAddress.derivationIndex,
+
+          address: voucherAddress.address,
         },
+
         keyMetadata: pendingKeyMetadata.value,
+
         feeModel: feeModelSnapshot,
-        feeOutputPlan: pendingFeeOutputPlan.value,
-        treasuryFundingPreview: pendingTreasuryFundingPreview.value,
-        fundingBroadcast: pendingFundingBroadcast.value,
+
+        feeOutputPlan,
+
+        treasuryFundingPreview,
+
+        issueOperationId,
+
+        fundingIntent,
       }
     );
 
-    await addVoucherRecord(voucher);
-    await recordCashOnHandForIssuedTopup(voucher);
+    /**
+     * CRITICAL B5 WRITE-AHEAD BOUNDARY
+     *
+     * The signed transaction intent becomes durable here.
+     *
+     * B5.5 broadcast code must only ever operate on a transaction that has
+     * already successfully passed this persistence boundary.
+     */
+    const savedResult = await addVoucherRecordIdempotently(voucher);
+
+    const savedVoucher = savedResult.record;
 
     setIssueProgressStepStatus('store', 'complete');
-    await waitForFakeStep(300);
 
-    lastIssuedVoucher.value = voucher;
+    /**
+     * Cash on Hand is recorded only after the durable voucher record exists.
+     * The Cash on Hand store already deduplicates by linked Topup ID.
+     */
+    await recordCashOnHandForIssuedTopup(savedVoucher);
+
+    /**
+     * Leave all four green ticks visible very briefly before closing the
+     * progress dialog automatically.
+     */
+    await waitForUiDelay(300);
+
+    lastIssuedVoucher.value = savedVoucher;
+
+    /**
+     * Clear the completed Review/Issue state.
+     */
     pendingPricing.value = null;
     pendingFeeOutputPlan.value = null;
     pendingTreasuryFundingPreview.value = null;
     pendingFundingBroadcast.value = null;
     pendingVoucherAddress.value = null;
     pendingKeyMetadata.value = null;
+    pendingIssueOperationId.value = null;
+
+    /**
+     * Successful Issue:
+     *
+     * close progress automatically and continue to the existing development
+     * receipt-preview flow.
+     *
+     * B5.8 will later harden actual WIF reveal/print finality.
+     */
     isProgressDialogOpen.value = false;
     isReceiptPreviewDialogOpen.value = true;
+
+    if (!savedResult.created) {
+      warningMessage.value = t('sellPage.messages.issueOperationAlreadySaved');
+    }
 
     await loadTreasuryWallet();
   } catch (error) {
     console.error(error);
-    errorMessage.value = t('sellPage.messages.couldNotIssueVoucher');
-    setIssueProgressStepStatus('store', 'error');
+
+    /**
+     * During B5 development we intentionally display the exact internal error
+     * so transaction-preparation faults can be diagnosed accurately.
+     *
+     * Before release these will become merchant-safe messages.
+     */
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : t('sellPage.messages.couldNotIssueVoucher');
+
+    /**
+     * Turn the step that was actually running red.
+     *
+     * Because no step remains "active", IssueProgressDialog will now allow
+     * the merchant to dismiss the failed operation using its X or backdrop.
+     */
+    setIssueProgressStepStatus(activeIssueProgressStep, 'error');
   } finally {
     isSubmitting.value = false;
+    isIssueOperationRunning.value = false;
   }
 }
 

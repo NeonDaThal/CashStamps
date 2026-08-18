@@ -6,16 +6,17 @@
       </div>
 
       <q-input
-        v-model.number="fiatAmount"
-        type="number"
+        :model-value="fiatAmount"
+        type="text"
         inputmode="decimal"
-        min="0.01"
-        step="0.01"
+        autocomplete="off"
         :aria-label="t('sellForm.customerCashAmount')"
         prefix="£"
         borderless
         :disable="isSubmitting"
         class="amount-input"
+        @update:model-value="handleAmountInput"
+        @blur="handleAmountBlur"
       />
     </div>
 
@@ -115,9 +116,8 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import bchLogoUrl from 'src/assets/bch-logo.png';
-import { formatMinorFiatAmount } from 'src/services/voucher-pricing';
-
 import { calculateTopupFeeModelV1 } from 'src/services/fee-model';
+import { formatMinorFiatAmount } from 'src/services/voucher-pricing';
 
 const { t } = useI18n({ useScope: 'global' });
 
@@ -125,35 +125,54 @@ const emit = defineEmits<{
   reviewVoucher: [fiatAmountMinor: number, fiatCurrency: string];
 }>();
 
-const fiatAmount = ref(100);
-const fiatCurrency = 'GBP';
-
 defineProps<{
   isSubmitting: boolean;
 }>();
 
-const fiatAmountMinor = computed(() => Math.round(fiatAmount.value * 100));
+/**
+ * Keep fiat entry as text while the merchant is typing.
+ *
+ * A JavaScript number cannot preserve a trailing zero:
+ *
+ *   91.50 -> 91.5
+ *
+ * Keeping the input as text allows monetary formatting to remain intact while
+ * all financial calculations continue to use integer minor units.
+ */
+const fiatAmount = ref('100.00');
+const fiatCurrency = 'GBP';
 
-const canCreateVoucher = computed(() => {
-  return Number.isFinite(fiatAmount.value) && fiatAmount.value > 0;
-});
+function parseFiatAmountMinor(value: string): number {
+  if (!/^\d+(?:\.\d{0,2})?$/.test(value)) {
+    return 0;
+  }
+
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return 0;
+  }
+
+  return Math.round(amount * 100);
+}
+
+const fiatAmountMinor = computed(() => parseFiatAmountMinor(fiatAmount.value));
+
+const canCreateVoucher = computed(() => fiatAmountMinor.value > 0);
 
 const previewPricing = computed(() => {
-  const amount = Number(fiatAmount.value);
-
-  const principalMinor =
-    Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
+  const principalMinor = fiatAmountMinor.value;
 
   if (principalMinor <= 0) {
     return {
-      fiatCurrency: 'GBP',
+      fiatCurrency,
       principalMinor: 0,
       serviceFeeAmountMinor: 0,
       customerPaysMinor: 0,
     };
   }
 
-  const feeModel = calculateTopupFeeModelV1(principalMinor, 'GBP');
+  const feeModel = calculateTopupFeeModelV1(principalMinor, fiatCurrency);
 
   return {
     fiatCurrency: feeModel.currency,
@@ -162,6 +181,64 @@ const previewPricing = computed(() => {
     customerPaysMinor: feeModel.customerTotalBeforeNetworkFeeMinor,
   };
 });
+
+function handleAmountInput(value: string | number | null): void {
+  let nextValue = String(value ?? '');
+
+  /**
+   * Support a decimal comma pasted/typed by users whose keyboard provides it,
+   * while storing the canonical decimal separator internally.
+   */
+  nextValue = nextValue.replace(',', '.');
+
+  /**
+   * Money entry only accepts digits and one decimal point.
+   */
+  nextValue = nextValue.replace(/[^\d.]/g, '');
+
+  const firstDecimalIndex = nextValue.indexOf('.');
+
+  if (firstDecimalIndex >= 0) {
+    const wholePart = nextValue.slice(0, firstDecimalIndex);
+    const decimalPart = nextValue
+      .slice(firstDecimalIndex + 1)
+      .replace(/\./g, '')
+      .slice(0, 2);
+
+    nextValue = `${wholePart}.${decimalPart}`;
+  }
+
+  /**
+   * Make ".50" become "0.50".
+   */
+  if (nextValue.startsWith('.')) {
+    nextValue = `0${nextValue}`;
+  }
+
+  fiatAmount.value = nextValue;
+}
+
+function handleAmountBlur(): void {
+  const value = fiatAmount.value;
+
+  if (!value) {
+    return;
+  }
+
+  if (/^\d+$/.test(value)) {
+    fiatAmount.value = `${value}.00`;
+    return;
+  }
+
+  if (/^\d+\.$/.test(value)) {
+    fiatAmount.value = `${value}00`;
+    return;
+  }
+
+  if (/^\d+\.\d$/.test(value)) {
+    fiatAmount.value = `${value}0`;
+  }
+}
 
 function handleSubmit(): void {
   if (!canCreateVoucher.value) {
@@ -221,17 +298,6 @@ function handleSubmit(): void {
 
 .amount-input :deep(.q-field__native) {
   padding: 0;
-}
-
-.amount-input :deep(input[type='number']) {
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-
-.amount-input :deep(input[type='number']::-webkit-inner-spin-button),
-.amount-input :deep(input[type='number']::-webkit-outer-spin-button) {
-  -webkit-appearance: none;
-  margin: 0;
 }
 
 .pricing-card {

@@ -13,7 +13,7 @@ export interface TreasuryFundingPreviewInput {
    * Optional additional funding outputs.
    *
    * These default to zero so legacy callers retain their existing behaviour.
-   * Fee Model v1 will begin populating platformFeeSats in B2b.
+   * Fee Model v1 populates platformFeeSats for new Topups.
    */
   platformFeeSats?: number;
   bufferReserveSats?: number;
@@ -27,6 +27,25 @@ export interface TreasuryFundingPreviewSelectedUtxo {
   outpointTransactionHash: string;
   outpointIndex: number;
   valueSats: number;
+
+  /**
+   * Treasury-derived address that owns this UTXO.
+   *
+   * Optional only for compatibility with older persisted funding previews.
+   * New funding previews preserve this information.
+   */
+  address?: string;
+
+  /**
+   * Treasury derivation index that owns this UTXO.
+   *
+   * This provenance is required by the live signing path so a Topup can spend
+   * funds held at both the main treasury address (index 0) and known Cash-out
+   * receiving addresses (indexes 1+).
+   *
+   * Optional only for compatibility with historical persisted previews.
+   */
+  derivationIndex?: number;
 }
 
 export interface TreasuryFundingPreview {

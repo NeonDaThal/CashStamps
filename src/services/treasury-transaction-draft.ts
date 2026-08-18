@@ -7,14 +7,25 @@ import {
 
 import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
+import {
+  createTreasuryChangeAllocation,
+  isAtOrAboveStandardP2pkhDustLimit,
+  STANDARD_P2PKH_DUST_LIMIT_SATS,
+} from 'src/services/treasury-output-safety';
 import { getTreasuryWalletRecord } from 'src/services/treasury-wallet';
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 import type {
   TreasuryTransactionPlan,
   TreasuryTransactionPlanOutput,
 } from 'src/types/treasury-transaction';
+import {
+  doesTreasuryInputDirectiveMatchSelectedUtxo,
+  getSelectedTreasuryDerivationIndexes,
+} from 'src/services/treasury-utxo-matching';
 import { Address } from 'src/utils/address';
 import { WalletHD } from 'src/utils/wallet-hd';
+
+const MAX_FEE_STABILISATION_PASSES = 5;
 
 function createInvalidDraft(
   plan: TreasuryTransactionPlan,
@@ -57,22 +68,6 @@ function getNonChangeOutputs(
   return outputs.filter((output) => output.purpose !== 'change');
 }
 
-function getSelectedOutpointKey(
-  outpointTransactionHash: string,
-  outpointIndex: number
-): string {
-  return `${outpointTransactionHash}:${outpointIndex}`;
-}
-
-function getDirectiveOutpointKey(inputDirective: {
-  outpointTransactionHash: Uint8Array;
-  outpointIndex: number;
-}): string {
-  return `${binToHex(inputDirective.outpointTransactionHash)}:${
-    inputDirective.outpointIndex
-  }`;
-}
-
 async function getSelectedTreasuryInputDirectives(
   plan: TreasuryTransactionPlan
 ) {
@@ -82,7 +77,19 @@ async function getSelectedTreasuryInputDirectives(
     throw new Error('Treasury wallet is not set up.');
   }
 
+  /**
+   * Every selected UTXO must retain the treasury child-wallet index that owns
+   * it.
+   *
+   * This allows Topups to spend BCH held not only at treasury index 0, but
+   * also at known Cash-out receiving addresses at indexes 1+.
+   */
+  const requiredDerivationIndexes = getSelectedTreasuryDerivationIndexes(
+    plan.selectedUtxos
+  );
+
   const electrum = new ElectrumService(ELECTRUM_SERVERS);
+
   await electrum.start();
 
   const walletHd = await WalletHD.fromMnemonic(
@@ -90,24 +97,52 @@ async function getSelectedTreasuryInputDirectives(
     electrum
   );
 
-  const [treasuryWalletP2pkh] = walletHd.deriveWallets(1, 0);
+  /**
+   * Derive only the treasury child wallets that actually own one or more of
+   * the selected transaction inputs.
+   */
+  const requiredTreasuryWallets = requiredDerivationIndexes.map(
+    (derivationIndex) => {
+      const [wallet] = walletHd.deriveWallets(1, derivationIndex);
 
-  if (!treasuryWalletP2pkh) {
-    throw new Error('Could not derive treasury wallet for transaction draft.');
-  }
+      if (!wallet) {
+        throw new Error(
+          `Could not derive treasury wallet at index ${derivationIndex}.`
+        );
+      }
 
-  const allInputDirectives = await treasuryWalletP2pkh.getUnspentDirectives();
+      return {
+        derivationIndex,
+        wallet,
+      };
+    }
+  );
 
-  const selectedOutpoints = new Set(
-    plan.selectedUtxos.map((utxo) =>
-      getSelectedOutpointKey(utxo.outpointTransactionHash, utxo.outpointIndex)
+  /**
+   * Ask every required owning wallet for its current signable UTXOs.
+   */
+  const directiveGroups = await Promise.all(
+    requiredTreasuryWallets.map(async ({ wallet }) =>
+      wallet.getUnspentDirectives()
     )
   );
 
+  const allInputDirectives = directiveGroups.flat();
+
+  /**
+   * Select only directives corresponding to the exact UTXOs selected by the
+   * funding plan.
+   */
   const selectedInputDirectives = allInputDirectives.filter((inputDirective) =>
-    selectedOutpoints.has(getDirectiveOutpointKey(inputDirective))
+    plan.selectedUtxos.some((selectedUtxo) =>
+      doesTreasuryInputDirectiveMatchSelectedUtxo(selectedUtxo, inputDirective)
+    )
   );
 
+  /**
+   * Fail closed unless every selected UTXO has exactly one signable
+   * directive available.
+   */
   if (selectedInputDirectives.length !== plan.selectedUtxos.length) {
     throw new Error(
       'Could not match all selected treasury UTXOs to signing directives.'
@@ -120,11 +155,10 @@ async function getSelectedTreasuryInputDirectives(
 /**
  * Build an encoded transaction draft from a valid transaction plan.
  *
- * This creates a local transaction draft only. It does not broadcast.
+ * This creates a local signed transaction draft only. It does not broadcast.
  *
- * The generated draft may be signed because CashStamps/libauth input
- * directives include private-key signing data. Treat rawTransactionHex as
- * sensitive until the real broadcast flow is deliberately enabled.
+ * Any positive final treasury change below the standard P2PKH dust floor is
+ * deliberately absorbed into the miner fee instead of creating a dust output.
  */
 export async function createTreasuryTransactionDraftFromPlan(
   plan: TreasuryTransactionPlan
@@ -153,6 +187,17 @@ export async function createTreasuryTransactionDraftFromPlan(
     );
   }
 
+  const unsafeOutput = nonChangeOutputs.find(
+    (output) => !isAtOrAboveStandardP2pkhDustLimit(output.valueSats)
+  );
+
+  if (unsafeOutput) {
+    return createInvalidDraft(
+      plan,
+      `${unsafeOutput.purpose} output is below the ${STANDARD_P2PKH_DUST_LIMIT_SATS}-satoshi standard dust floor.`
+    );
+  }
+
   try {
     const selectedInputDirectives = await getSelectedTreasuryInputDirectives(
       plan
@@ -169,33 +214,41 @@ export async function createTreasuryTransactionDraftFromPlan(
     );
 
     let encodedTransaction: Uint8Array<ArrayBufferLike> = new Uint8Array();
+
     let actualFeeSats = 0;
     let actualChangeSats = 0;
+    let dustChangeAbsorbedSats = 0;
+    let transactionStabilised = false;
 
-    for (let i = 0; i < 2; i++) {
-      actualFeeSats = Number(
+    for (let pass = 0; pass < MAX_FEE_STABILISATION_PASSES; pass += 1) {
+      const minimumFeeSats = Number(
         getMinimumFee(BigInt(encodedTransaction.length), 1000n)
       );
 
-      actualChangeSats =
-        selectedInputSats - nonChangeOutputSats - actualFeeSats;
+      const changeAllocation = createTreasuryChangeAllocation({
+        selectedInputSats,
+        nonChangeOutputSats,
+        minimumFeeSats,
+      });
 
-      if (actualChangeSats < 0) {
+      if (!changeAllocation.isAffordable) {
         return createInvalidDraft(
           plan,
-          'Selected treasury UTXOs do not cover outputs and actual estimated fee.'
+          'Selected treasury UTXOs do not cover outputs and the required network fee.'
         );
       }
 
       const outputs = [
         ...nonChangeOutputs.map(outputToLockingBytecode),
-        ...(actualChangeSats > 0
+
+        ...(changeAllocation.changeSats > 0
           ? [
               {
                 lockingBytecode: Address.fromCashAddrOrLegacy(
                   plan.treasuryAddress
                 ).toLockscriptBytes(),
-                valueSatoshis: BigInt(actualChangeSats),
+
+                valueSatoshis: BigInt(changeAllocation.changeSats),
               },
             ]
           : []),
@@ -217,19 +270,54 @@ export async function createTreasuryTransactionDraftFromPlan(
         );
       }
 
-      encodedTransaction = encodeTransaction(generatedTransaction.transaction);
+      const nextEncodedTransaction = encodeTransaction(
+        generatedTransaction.transaction
+      );
+
+      const finalMinimumFeeSats = Number(
+        getMinimumFee(BigInt(nextEncodedTransaction.length), 1000n)
+      );
+
+      const candidateActualFeeSats =
+        selectedInputSats - nonChangeOutputSats - changeAllocation.changeSats;
+
+      encodedTransaction = nextEncodedTransaction;
+
+      actualFeeSats = candidateActualFeeSats;
+      actualChangeSats = changeAllocation.changeSats;
+
+      dustChangeAbsorbedSats = changeAllocation.dustChangeAbsorbedSats;
+
+      if (candidateActualFeeSats >= finalMinimumFeeSats) {
+        transactionStabilised = true;
+        break;
+      }
+    }
+
+    if (!transactionStabilised) {
+      return createInvalidDraft(
+        plan,
+        'Could not stabilise transaction size and minimum network fee safely.'
+      );
     }
 
     return {
       status: 'created',
       plan,
+
       rawTransactionHex: binToHex(encodedTransaction),
       rawTransactionBytesLength: encodedTransaction.length,
+
       actualFeeSats,
       actualChangeSats,
+      dustChangeAbsorbedSats,
+
       inputCount: selectedInputDirectives.length,
+
       outputCount: nonChangeOutputs.length + (actualChangeSats > 0 ? 1 : 0),
+
       broadcastEnabled: false,
+
       createdAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -245,9 +333,8 @@ export async function createTreasuryTransactionDraftFromPlan(
 /**
  * Synchronous dry-run placeholder used by current UI computed state.
  *
- * This remains useful because Vue computed values should not perform async
- * wallet/UTXO work. The real async draft builder is
- * createTreasuryTransactionDraftFromPlan().
+ * Vue computed values must not perform async wallet/UTXO work. The real async
+ * draft builder is createTreasuryTransactionDraftFromPlan().
  */
 export function createTreasuryTransactionDraftStatusFromPlan(
   plan: TreasuryTransactionPlan

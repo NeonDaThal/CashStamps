@@ -6,8 +6,13 @@ export type TreasuryTransactionPlanInvalidReason =
   | 'missing_treasury_address'
   | 'missing_voucher_address'
   | 'invalid_amount'
+  | 'voucher_output_below_dust'
   | 'no_selected_utxos'
+  | 'invalid_platform_fee_amount'
+  | 'platform_fee_output_below_dust'
   | 'missing_platform_fee_address'
+  | 'invalid_buffer_reserve_amount'
+  | 'buffer_reserve_output_below_dust'
   | 'missing_buffer_reserve_address'
   | 'insufficient_input_value'
   | 'invalid_change';
@@ -50,6 +55,12 @@ export interface TreasuryTransactionPlan {
 
   estimatedFeeSats: number;
   estimatedChangeSats: number;
+
+  /**
+   * Estimated sub-dust treasury change intentionally added to the miner fee
+   * rather than emitted as a change output.
+   */
+  dustChangeAbsorbedSats?: number;
 
   invalidReason?: TreasuryTransactionPlanInvalidReason;
   invalidMessage?: string;

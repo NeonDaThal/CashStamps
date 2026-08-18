@@ -7,6 +7,7 @@ import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import type {
   VoucherFee,
   VoucherFundingBroadcast,
+  VoucherFundingIntent,
   VoucherKeyMetadata,
   VoucherRecord,
   VoucherQuoteSource,
@@ -25,6 +26,10 @@ export interface CreateVoucherRecordOptions {
   feeModel?: TopupFeeModelV1Snapshot | null;
   feeOutputPlan?: VoucherFeeOutputPlan | null;
   treasuryFundingPreview?: TreasuryFundingPreview | null;
+
+  issueOperationId?: string | null;
+  fundingIntent?: VoucherFundingIntent | null;
+
   fundingBroadcast?: VoucherFundingBroadcast | null;
 }
 
@@ -119,8 +124,14 @@ function cloneSelectedUtxos(
 
   return selectedUtxos.map((utxo) => ({
     outpointTransactionHash: utxo.outpointTransactionHash,
+
     outpointIndex: utxo.outpointIndex,
+
     valueSats: utxo.valueSats,
+
+    address: utxo.address,
+
+    derivationIndex: utxo.derivationIndex,
   }));
 }
 
@@ -248,6 +259,30 @@ function cloneKeyMetadata(
   };
 }
 
+function cloneFundingIntent(
+  fundingIntent?: VoucherFundingIntent | null
+): VoucherFundingIntent | undefined {
+  if (!fundingIntent) {
+    return undefined;
+  }
+
+  return {
+    operationId: fundingIntent.operationId,
+    status: fundingIntent.status,
+
+    rawTransactionHex: fundingIntent.rawTransactionHex,
+
+    actualFeeSats: fundingIntent.actualFeeSats,
+    actualChangeSats: fundingIntent.actualChangeSats,
+    dustChangeAbsorbedSats: fundingIntent.dustChangeAbsorbedSats,
+
+    inputCount: fundingIntent.inputCount,
+    outputCount: fundingIntent.outputCount,
+
+    preparedAt: fundingIntent.preparedAt,
+  };
+}
+
 function cloneFundingBroadcast(
   fundingBroadcast?: VoucherFundingBroadcast | null
 ): VoucherFundingBroadcast | undefined {
@@ -273,6 +308,7 @@ export function createDraftVoucherRecord(
   const now = new Date().toISOString();
 
   const fundingBroadcast = cloneFundingBroadcast(options?.fundingBroadcast);
+  const fundingIntent = cloneFundingIntent(options?.fundingIntent);
 
   return {
     id: createVoucherId(),
@@ -321,8 +357,17 @@ export function createDraftVoucherRecord(
       options?.treasuryFundingPreview
     ),
 
+    issueOperationId: options?.issueOperationId ?? undefined,
+
+    fundingIntent,
+
     fundingBroadcast,
 
-    status: fundingBroadcast?.status === 'broadcasted' ? 'funded' : 'draft',
+    status:
+      fundingBroadcast?.status === 'broadcasted'
+        ? 'funded'
+        : fundingIntent
+        ? 'funding'
+        : 'draft',
   };
 }

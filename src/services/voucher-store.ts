@@ -1,4 +1,5 @@
-import { get, set } from 'idb-keyval';
+import { get, set, update } from 'idb-keyval';
+
 import type {
   VoucherManualRedemption,
   VoucherRecord,
@@ -8,8 +9,20 @@ import type {
 
 const VOUCHER_RECORDS_KEY = 'bch-voucher-records';
 
+export interface AddVoucherRecordIdempotentResult {
+  record: VoucherRecord;
+  created: boolean;
+}
+
+export interface InsertVoucherRecordIdempotentResult {
+  records: VoucherRecord[];
+  record: VoucherRecord;
+  created: boolean;
+}
+
 export async function getVoucherRecords(): Promise<VoucherRecord[]> {
   const records = await get<VoucherRecord[]>(VOUCHER_RECORDS_KEY);
+
   return Array.isArray(records) ? records : [];
 }
 
@@ -34,7 +47,85 @@ export async function getVoucherRecordById(
   id: string
 ): Promise<VoucherRecord | undefined> {
   const records = await getVoucherRecords();
+
   return records.find((record) => record.id === id);
+}
+
+export async function getVoucherRecordByIssueOperationId(
+  issueOperationId: string
+): Promise<VoucherRecord | undefined> {
+  if (!issueOperationId.trim()) {
+    return undefined;
+  }
+
+  const records = await getVoucherRecords();
+
+  return records.find((record) => record.issueOperationId === issueOperationId);
+}
+
+/**
+ * Pure idempotency rule used by the IndexedDB atomic update below.
+ */
+export function insertVoucherRecordIdempotently(
+  currentRecords: VoucherRecord[],
+  record: VoucherRecord
+): InsertVoucherRecordIdempotentResult {
+  const issueOperationId = record.issueOperationId?.trim();
+
+  if (!issueOperationId) {
+    throw new Error(
+      'Cannot use idempotent voucher insertion without an issue operation ID.'
+    );
+  }
+
+  const existingRecord = currentRecords.find(
+    (existing) => existing.issueOperationId === issueOperationId
+  );
+
+  if (existingRecord) {
+    return {
+      records: currentRecords,
+      record: existingRecord,
+      created: false,
+    };
+  }
+
+  return {
+    records: [record, ...currentRecords],
+    record,
+    created: true,
+  };
+}
+
+/**
+ * Atomically insert a voucher unless this exact merchant Issue operation has
+ * already produced a record.
+ *
+ * This is the durable second line of defence after the in-memory UI guard.
+ */
+export async function addVoucherRecordIdempotently(
+  record: VoucherRecord
+): Promise<AddVoucherRecordIdempotentResult> {
+  let result: AddVoucherRecordIdempotentResult | null = null;
+
+  await update<VoucherRecord[]>(VOUCHER_RECORDS_KEY, (storedRecords = []) => {
+    const currentRecords = Array.isArray(storedRecords) ? storedRecords : [];
+
+    const insertion = insertVoucherRecordIdempotently(currentRecords, record);
+
+    result = {
+      record: insertion.record,
+      created: insertion.created,
+    };
+
+    return insertion.records;
+  });
+
+  if (!result) {
+    throw new Error('Voucher idempotent insertion completed without a result.');
+  }
+
+  return result;
 }
 
 export async function updateVoucherRecord(
@@ -87,6 +178,7 @@ export async function markVoucherManuallyRedeemed(
       note: redemption.note,
       redeemedAt: redemption.redeemedAt ?? new Date().toISOString(),
     },
+
     status: 'redeemed',
   });
 }
@@ -113,6 +205,7 @@ export async function updateVoucherRedemptionDetection(
 
   return updateVoucherRecord(id, {
     redemptionDetection: detection,
+
     ...(nextStatus ? { status: nextStatus } : {}),
   });
 }
