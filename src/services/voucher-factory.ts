@@ -268,15 +268,21 @@ function cloneFundingIntent(
 
   return {
     operationId: fundingIntent.operationId,
+
     status: fundingIntent.status,
 
     rawTransactionHex: fundingIntent.rawTransactionHex,
 
+    txid: fundingIntent.txid,
+
     actualFeeSats: fundingIntent.actualFeeSats,
+
     actualChangeSats: fundingIntent.actualChangeSats,
+
     dustChangeAbsorbedSats: fundingIntent.dustChangeAbsorbedSats,
 
     inputCount: fundingIntent.inputCount,
+
     outputCount: fundingIntent.outputCount,
 
     preparedAt: fundingIntent.preparedAt,
@@ -292,9 +298,17 @@ function cloneFundingBroadcast(
 
   return {
     status: fundingBroadcast.status,
+
     txid: fundingBroadcast.txid,
+
+    serverTxid: fundingBroadcast.serverTxid,
+
     errorMessage: fundingBroadcast.errorMessage,
+
     broadcastEnabled: fundingBroadcast.broadcastEnabled,
+
+    requestAttempted: fundingBroadcast.requestAttempted,
+
     attemptedAt: fundingBroadcast.attemptedAt,
   };
 }

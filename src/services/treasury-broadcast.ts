@@ -1,134 +1,156 @@
-import { hexToBin } from '@bitauth/libauth';
-
 import { ELECTRUM_SERVERS } from 'src/config';
+
+import {
+  classifyTreasuryBroadcastResponse,
+  createBlockedTreasuryBroadcastResult,
+  createDefinitelyNotBroadcastResult,
+  createUncertainBroadcastResult,
+} from 'src/services/treasury-broadcast-classification';
+
 import { ElectrumService } from 'src/services/electrum';
+
 import { getFundingSafetyStatus } from 'src/services/funding-safety';
+
+import type { TransactionBroadcast } from 'src/services/electrum-types';
+
 import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
+
 import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-draft';
 
-function createBlockedBroadcastResult(
-  errorMessage: string
-): TreasuryBroadcastResult {
-  return {
-    status: 'blocked',
-    errorMessage,
-    broadcastEnabled: false,
-    attemptedAt: new Date().toISOString(),
-  };
+import type { VoucherFundingIntent } from 'src/types/voucher';
+
+function isValidTransactionId(value: string | undefined): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{64}$/i.test(value.trim());
 }
 
-function createFailedBroadcastResult(
-  errorMessage: string
-): TreasuryBroadcastResult {
-  return {
-    status: 'failed',
-    errorMessage,
-    broadcastEnabled: true,
-    attemptedAt: new Date().toISOString(),
-  };
-}
-
-function createBroadcastedResult(txid: string): TreasuryBroadcastResult {
-  return {
-    status: 'broadcasted',
-    txid,
-    broadcastEnabled: true,
-    attemptedAt: new Date().toISOString(),
-  };
+function isValidRawTransactionHex(value: string | undefined): value is string {
+  return typeof value === 'string' && /^(?:[0-9a-f]{2})+$/i.test(value.trim());
 }
 
 /**
- * Broadcast a treasury transaction draft.
+ * Direct broadcasting from an in-memory transaction draft is permanently
+ * prohibited by B5 hardening.
  *
- * This function is intentionally guarded by REAL_BROADCAST_ENABLED.
- * While the global safety guard is false, this function will refuse to
- * broadcast even if called accidentally from UI code.
+ * A real broadcast must operate on a durable VoucherFundingIntent that has
+ * already crossed the pre-broadcast persistence boundary.
+ *
+ * This function remains only because the development Sale Confirm dialog has
+ * a safety-guard test that deliberately calls it and expects a blocked result.
  */
 export async function broadcastTreasuryTransactionDraft(
   draft: TreasuryTransactionDraft
 ): Promise<TreasuryBroadcastResult> {
   const fundingSafety = getFundingSafetyStatus();
 
+  /**
+   * Preserve the existing development guard test behaviour while the global
+   * real-broadcast switch remains disabled.
+   */
   if (!fundingSafety.realBroadcastEnabled) {
-    return createBlockedBroadcastResult(fundingSafety.message);
-  }
-
-  if (draft.status !== 'created') {
-    return createBlockedBroadcastResult(
-      'Transaction draft has not been created.'
+    return createBlockedTreasuryBroadcastResult(
+      fundingSafety.message,
+      false,
+      draft.txid
     );
   }
 
-  if (draft.broadcastEnabled !== false) {
-    return createBlockedBroadcastResult(
-      'Unexpected draft broadcast marker. Draft service must keep broadcastEnabled false.'
+  return createBlockedTreasuryBroadcastResult(
+    'Direct transaction-draft broadcasting is disabled. A durable funding intent must be persisted before broadcast.',
+    true,
+    draft.txid
+  );
+}
+
+/**
+ * Broadcast the exact transaction already stored in a durable Topup funding
+ * intent.
+ *
+ * B5 safety invariant:
+ *
+ *   one persisted raw transaction
+ *   + one predetermined txid
+ *   = the only transaction this Issue operation may broadcast
+ *
+ * This service never builds, modifies, signs or replaces the transaction.
+ */
+export async function broadcastTreasuryFundingIntent(
+  fundingIntent: VoucherFundingIntent
+): Promise<TreasuryBroadcastResult> {
+  const fundingSafety = getFundingSafetyStatus();
+
+  if (!fundingSafety.realBroadcastEnabled) {
+    return createBlockedTreasuryBroadcastResult(
+      fundingSafety.message,
+      false,
+      fundingIntent.txid
     );
   }
 
-  if (!draft.rawTransactionHex) {
-    return createBlockedBroadcastResult(
-      'Raw transaction hex is missing from the transaction draft.'
+  if (fundingIntent.status !== 'prepared') {
+    return createBlockedTreasuryBroadcastResult(
+      'Funding intent is not in the prepared state.',
+      true,
+      fundingIntent.txid
     );
   }
 
+  if (!isValidRawTransactionHex(fundingIntent.rawTransactionHex)) {
+    return createBlockedTreasuryBroadcastResult(
+      'Durable funding intent is missing valid signed transaction hex.',
+      true,
+      fundingIntent.txid
+    );
+  }
+
+  if (!isValidTransactionId(fundingIntent.txid)) {
+    return createBlockedTreasuryBroadcastResult(
+      'Durable funding intent is missing a valid deterministic transaction ID.',
+      true
+    );
+  }
+
+  const expectedTxid = fundingIntent.txid.trim().toLowerCase();
+
+  const electrum = new ElectrumService(ELECTRUM_SERVERS);
+
+  /**
+   * Failure here is safely classified as definitely_not_broadcast because no
+   * blockchain.transaction.broadcast request has yet been attempted.
+   */
   try {
-    const electrum = new ElectrumService(ELECTRUM_SERVERS);
     await electrum.start();
-
-    const rawTransaction = hexToBin(draft.rawTransactionHex);
-
-    /**
-     * CashStamps ElectrumService exposes broadcast functionality through the
-     * underlying Electrum client. The exact method name may vary, so this is
-     * intentionally defensive until tested.
-     */
-    const electrumLike = electrum as unknown as {
-      request?: (method: string, ...params: unknown[]) => Promise<unknown>;
-      client?: {
-        request?: (method: string, ...params: unknown[]) => Promise<unknown>;
-      };
-      broadcastTransaction?: (transaction: Uint8Array) => Promise<string>;
-      sendRawTransaction?: (transactionHex: string) => Promise<string>;
-    };
-
-    if (typeof electrumLike.broadcastTransaction === 'function') {
-      const txid = await electrumLike.broadcastTransaction(rawTransaction);
-      return createBroadcastedResult(txid);
-    }
-
-    if (typeof electrumLike.sendRawTransaction === 'function') {
-      const txid = await electrumLike.sendRawTransaction(
-        draft.rawTransactionHex
-      );
-      return createBroadcastedResult(txid);
-    }
-
-    if (typeof electrumLike.request === 'function') {
-      const txid = await electrumLike.request(
-        'blockchain.transaction.broadcast',
-        draft.rawTransactionHex
-      );
-
-      return createBroadcastedResult(String(txid));
-    }
-
-    if (typeof electrumLike.client?.request === 'function') {
-      const txid = await electrumLike.client.request(
-        'blockchain.transaction.broadcast',
-        draft.rawTransactionHex
-      );
-
-      return createBroadcastedResult(String(txid));
-    }
-
-    return createFailedBroadcastResult(
-      'No compatible Electrum broadcast method was found.'
-    );
   } catch (error) {
-    return createFailedBroadcastResult(
+    return createDefinitelyNotBroadcastResult(
       error instanceof Error
         ? error.message
-        : 'Treasury transaction broadcast failed.'
+        : 'Could not connect to Electrum before transaction broadcast.',
+      expectedTxid
+    );
+  }
+
+  /**
+   * From the moment this request begins, any error is ambiguous with our
+   * current Electrum client.
+   *
+   * The server may have received and accepted the transaction before the
+   * connection or response was lost.
+   *
+   * Therefore every exception from this point becomes UNCERTAIN.
+   */
+  try {
+    const serverTxid = await electrum.request<TransactionBroadcast>(
+      'blockchain.transaction.broadcast',
+      fundingIntent.rawTransactionHex
+    );
+
+    return classifyTreasuryBroadcastResponse(expectedTxid, serverTxid);
+  } catch (error) {
+    return createUncertainBroadcastResult(
+      expectedTxid,
+
+      error instanceof Error
+        ? error.message
+        : 'Transaction broadcast outcome is uncertain.'
     );
   }
 }

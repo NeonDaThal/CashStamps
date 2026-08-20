@@ -10,7 +10,19 @@ export interface TreasuryTransactionDraft {
 
   plan: TreasuryTransactionPlan;
 
+  /**
+   * Exact signed transaction encoded for network broadcast.
+   */
   rawTransactionHex?: string;
+
+  /**
+   * Deterministic transaction ID calculated locally from the exact signed
+   * transaction bytes before any broadcast attempt.
+   *
+   * This is normal wallet/block-explorer UI byte order.
+   */
+  txid?: string;
+
   rawTransactionBytesLength?: number;
 
   actualFeeSats?: number;

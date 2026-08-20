@@ -103,6 +103,21 @@ export interface TransactionGet extends ElectrumRequest {
   response: string;
 }
 
+/**
+ * Return the confirmation height of a transaction.
+ *
+ * > 0  = confirmed at that block height
+ * 0    = currently in the mempool
+ * null = transaction unknown to this server
+ *
+ * Added in Electrum Cash protocol 1.4.5.
+ */
+export interface TransactionGetHeight extends ElectrumRequest {
+  method: 'blockchain.transaction.get_height';
+  params: [string];
+  response: number | null;
+}
+
 export interface TransactionGetVerbose extends ElectrumRequest {
   method: 'blockchain.transaction.get';
   params: [string, true];

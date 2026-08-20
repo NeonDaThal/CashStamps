@@ -42,6 +42,18 @@ function requirePositiveSafeInteger(
   return value as number;
 }
 
+function requireTransactionId(value: string | undefined): string {
+  const normalisedValue = value?.trim().toLowerCase() ?? '';
+
+  if (!/^[0-9a-f]{64}$/.test(normalisedValue)) {
+    throw new Error(
+      'Deterministic funding transaction ID is missing or invalid.'
+    );
+  }
+
+  return normalisedValue;
+}
+
 /**
  * Convert a successfully-created signed treasury draft into the durable
  * funding intent stored with the voucher before any broadcast attempt.
@@ -64,6 +76,14 @@ export function createVoucherFundingIntentFromDraft(
   if (!draft.rawTransactionHex?.trim()) {
     throw new Error('Signed transaction hex is missing.');
   }
+
+  /**
+   * B5.5 safety boundary:
+   *
+   * A new durable funding intent may not exist without the deterministic
+   * transaction identity of its exact signed raw transaction.
+   */
+  const txid = requireTransactionId(draft.txid);
 
   const actualFeeSats = requireNonNegativeSafeInteger(
     draft.actualFeeSats,
@@ -95,6 +115,8 @@ export function createVoucherFundingIntentFromDraft(
     status: 'prepared',
 
     rawTransactionHex: draft.rawTransactionHex,
+
+    txid,
 
     actualFeeSats,
     actualChangeSats,

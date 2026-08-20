@@ -1,5 +1,11 @@
 import { get, set, update } from 'idb-keyval';
 
+import { applyVoucherFundingBroadcast } from 'src/services/voucher-funding-broadcast';
+import { applyVoucherFundingReconciliation } from 'src/services/voucher-funding-reconciliation';
+
+import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
+import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
+
 import type {
   VoucherManualRedemption,
   VoucherRecord,
@@ -36,6 +42,7 @@ export async function addVoucherRecord(
   record: VoucherRecord
 ): Promise<VoucherRecord> {
   const records = await getVoucherRecords();
+
   const updatedRecords = [record, ...records];
 
   await saveVoucherRecords(updatedRecords);
@@ -92,7 +99,9 @@ export function insertVoucherRecordIdempotently(
 
   return {
     records: [record, ...currentRecords],
+
     record,
+
     created: true,
   };
 }
@@ -108,18 +117,23 @@ export async function addVoucherRecordIdempotently(
 ): Promise<AddVoucherRecordIdempotentResult> {
   let result: AddVoucherRecordIdempotentResult | null = null;
 
-  await update<VoucherRecord[]>(VOUCHER_RECORDS_KEY, (storedRecords = []) => {
-    const currentRecords = Array.isArray(storedRecords) ? storedRecords : [];
+  await update<VoucherRecord[]>(
+    VOUCHER_RECORDS_KEY,
 
-    const insertion = insertVoucherRecordIdempotently(currentRecords, record);
+    (storedRecords = []) => {
+      const currentRecords = Array.isArray(storedRecords) ? storedRecords : [];
 
-    result = {
-      record: insertion.record,
-      created: insertion.created,
-    };
+      const insertion = insertVoucherRecordIdempotently(currentRecords, record);
 
-    return insertion.records;
-  });
+      result = {
+        record: insertion.record,
+
+        created: insertion.created,
+      };
+
+      return insertion.records;
+    }
+  );
 
   if (!result) {
     throw new Error('Voucher idempotent insertion completed without a result.');
@@ -128,11 +142,91 @@ export async function addVoucherRecordIdempotently(
   return result;
 }
 
+/**
+ * Atomically persist one broadcast result for the exact durable transaction
+ * associated with this voucher.
+ *
+ * Transaction identity is validated by applyVoucherFundingBroadcast before
+ * any updated record is written.
+ */
+export async function updateVoucherFundingBroadcast(
+  id: string,
+  result: TreasuryBroadcastResult
+): Promise<VoucherRecord | undefined> {
+  let updatedRecord: VoucherRecord | undefined;
+
+  await update<VoucherRecord[]>(
+    VOUCHER_RECORDS_KEY,
+
+    (storedRecords = []) => {
+      const currentRecords = Array.isArray(storedRecords) ? storedRecords : [];
+
+      const existingRecord = currentRecords.find((record) => record.id === id);
+
+      if (!existingRecord) {
+        return currentRecords;
+      }
+
+      const nextRecord = applyVoucherFundingBroadcast(existingRecord, result);
+
+      updatedRecord = nextRecord;
+
+      return currentRecords.map((record) =>
+        record.id === id ? nextRecord : record
+      );
+    }
+  );
+
+  return updatedRecord;
+}
+
+/**
+ * Atomically apply reconciliation evidence for the exact durable funding
+ * transaction associated with one voucher.
+ *
+ * The pure reconciliation helper validates transaction identity and prevents
+ * stronger network evidence from being downgraded.
+ */
+export async function updateVoucherFundingReconciliation(
+  id: string,
+  reconciliation: TreasuryBroadcastReconciliationResult
+): Promise<VoucherRecord | undefined> {
+  let updatedRecord: VoucherRecord | undefined;
+
+  await update<VoucherRecord[]>(
+    VOUCHER_RECORDS_KEY,
+
+    (storedRecords = []) => {
+      const currentRecords = Array.isArray(storedRecords) ? storedRecords : [];
+
+      const existingRecord = currentRecords.find((record) => record.id === id);
+
+      if (!existingRecord) {
+        return currentRecords;
+      }
+
+      const nextRecord = applyVoucherFundingReconciliation(
+        existingRecord,
+        reconciliation
+      );
+
+      updatedRecord = nextRecord;
+
+      return currentRecords.map((record) =>
+        record.id === id ? nextRecord : record
+      );
+    }
+  );
+
+  return updatedRecord;
+}
+
 export async function updateVoucherRecord(
   id: string,
   updates: Partial<VoucherRecord>
 ): Promise<VoucherRecord | undefined> {
   const records = await getVoucherRecords();
+
   const existingRecord = records.find((record) => record.id === id);
 
   if (!existingRecord) {
@@ -142,6 +236,7 @@ export async function updateVoucherRecord(
   const updatedRecord: VoucherRecord = {
     ...existingRecord,
     ...updates,
+
     updatedAt: new Date().toISOString(),
   };
 
@@ -174,8 +269,11 @@ export async function markVoucherManuallyRedeemed(
   return updateVoucherRecord(id, {
     manualRedemption: {
       status: 'swept',
+
       txid: redemption.txid,
+
       note: redemption.note,
+
       redeemedAt: redemption.redeemedAt ?? new Date().toISOString(),
     },
 
@@ -206,7 +304,11 @@ export async function updateVoucherRedemptionDetection(
   return updateVoucherRecord(id, {
     redemptionDetection: detection,
 
-    ...(nextStatus ? { status: nextStatus } : {}),
+    ...(nextStatus
+      ? {
+          status: nextStatus,
+        }
+      : {}),
   });
 }
 

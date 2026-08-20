@@ -1,4 +1,5 @@
 import type { TopupFeeModelV1Snapshot } from 'src/types/fee-model';
+import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 
@@ -86,6 +87,16 @@ export interface VoucherFundingIntent {
    */
   rawTransactionHex: string;
 
+  /**
+   * Deterministic transaction ID calculated locally from rawTransactionHex
+   * before any broadcast attempt.
+   *
+   * New B5.5 funding intents always populate this field. It remains optional
+   * only so funding intents persisted during earlier development checkpoints
+   * remain readable.
+   */
+  txid?: string;
+
   actualFeeSats: number;
   actualChangeSats: number;
 
@@ -148,6 +159,16 @@ export interface VoucherRecord {
 
   fundingBroadcast?: VoucherFundingBroadcast;
 
+  /**
+   * Latest strongest network evidence for the exact deterministic funding
+   * transaction.
+   *
+   * Positive evidence is monotonic:
+   * confirmed must never be downgraded;
+   * mempool must never be replaced by unknown/unavailable.
+   */
+  fundingReconciliation?: TreasuryBroadcastReconciliationResult;
+
   redemptionDetection?: VoucherRedemptionDetection;
 
   manualRedemption?: VoucherManualRedemption;
@@ -168,10 +189,42 @@ export interface VoucherRecord {
   errorMessage?: string;
 }
 
+export type VoucherFundingBroadcastStatus =
+  | 'blocked'
+  | 'broadcasted'
+  | 'definitely_not_broadcast'
+  | 'uncertain'
+
+  /**
+   * Legacy development records may contain the old generic failed state.
+   *
+   * New B5.5 broadcasts must not create this status.
+   */
+  | 'failed';
+
 export interface VoucherFundingBroadcast {
-  status: 'blocked' | 'broadcasted' | 'failed';
+  status: VoucherFundingBroadcastStatus;
+
+  /**
+   * Deterministic locally-calculated transaction ID.
+   */
   txid?: string;
+
+  /**
+   * Transaction ID returned by Electrum when available.
+   */
+  serverTxid?: string;
+
   errorMessage?: string;
+
   broadcastEnabled: boolean;
+
+  /**
+   * Optional only for compatibility with historical development records.
+   *
+   * New B5.5 broadcast results always populate this field.
+   */
+  requestAttempted?: boolean;
+
   attemptedAt: string;
 }

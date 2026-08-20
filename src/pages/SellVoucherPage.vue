@@ -484,6 +484,9 @@ import { getTopupRecordValues } from 'src/services/topup-record-values';
 import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
 import { TOPUP_PRICE_QUOTE_TTL_MILLISECONDS } from 'src/services/pricing-config';
 import { getTopupQuoteIssueSafety } from 'src/services/topup-issue-safety';
+import { getFundingSafetyStatus } from 'src/services/funding-safety';
+
+import { advanceTopupFundingLifecycle } from 'src/services/topup-funding-lifecycle';
 
 const { t, locale } = useI18n({ useScope: 'global' });
 
@@ -557,22 +560,39 @@ function createIssueProgressSteps(): IssueProgressStep[] {
       description: t('sellPage.issueSteps.quote.description'),
       status: 'pending',
     },
+
     {
       key: 'wallet',
       label: t('sellPage.issueSteps.wallet.label'),
       description: t('sellPage.issueSteps.wallet.description'),
       status: 'pending',
     },
+
     {
       key: 'funding',
       label: t('sellPage.issueSteps.funding.label'),
       description: t('sellPage.issueSteps.funding.description'),
       status: 'pending',
     },
+
     {
       key: 'store',
       label: t('sellPage.issueSteps.store.label'),
       description: t('sellPage.issueSteps.store.description'),
+      status: 'pending',
+    },
+
+    {
+      key: 'broadcast',
+      label: t('sellPage.issueSteps.broadcast.label'),
+      description: t('sellPage.issueSteps.broadcast.description'),
+      status: 'pending',
+    },
+
+    {
+      key: 'confirmFunding',
+      label: t('sellPage.issueSteps.confirmFunding.label'),
+      description: t('sellPage.issueSteps.confirmFunding.description'),
       status: 'pending',
     },
   ];
@@ -837,10 +857,10 @@ async function handleCreateDraftVoucher(): Promise<void> {
   isReceiptPreviewDialogOpen.value = false;
 
   /**
-   * Capture the current review state before beginning async work.
+   * Capture the exact Review state before async work begins.
    *
-   * This prevents later UI/ref changes from silently changing the financial
-   * values used by the operation once Issue has started.
+   * Once Issue starts, later UI/ref changes must not alter the financial
+   * values being used by this operation.
    */
   const pricing = pendingPricing.value;
   const voucherAddress = pendingVoucherAddress.value;
@@ -849,232 +869,457 @@ async function handleCreateDraftVoucher(): Promise<void> {
   const issueOperationId = pendingIssueOperationId.value;
 
   /**
-   * These checks happen before the progress dialog because they indicate that
-   * the review itself is incomplete rather than that an Issue operation has
-   * failed midway through.
+   * These failures mean Review was incomplete, so they happen before the
+   * progress dialog begins.
    */
   if (!pricing) {
     errorMessage.value = t('sellPage.messages.noLockedQuote');
+
     return;
   }
 
   if (!voucherAddress) {
     errorMessage.value = t('sellPage.messages.noVoucherAddress');
+
     return;
   }
 
   if (!issueOperationId) {
     errorMessage.value = t('sellPage.messages.noIssueOperation');
+
     return;
   }
 
   if (!feeOutputPlan || !treasuryFundingPreview) {
     errorMessage.value = t('sellPage.messages.fundingIntentNotReady');
+
     return;
   }
 
-  /**
-   * From this point onward, this Issue operation owns the UI until it either
-   * succeeds or terminates with an error.
-   */
   isIssueOperationRunning.value = true;
   isSubmitting.value = true;
 
   isConfirmDialogOpen.value = false;
 
   resetIssueProgressSteps();
+
   isProgressDialogOpen.value = true;
 
   /**
-   * This tracks the real operation currently in progress.
+   * The currently-running real operation.
    *
-   * If an exception occurs, only the step that was actually running receives
-   * the red error marker.
+   * If an exception occurs, this tells the dialog which step should receive
+   * the red error state.
    */
-  let activeIssueProgressStep: 'quote' | 'wallet' | 'funding' | 'store' =
-    'quote';
+  let activeIssueProgressStep:
+    | 'quote'
+    | 'wallet'
+    | 'funding'
+    | 'store'
+    | 'broadcast'
+    | 'confirmFunding' = 'quote';
+
+  /**
+   * True when this Issue action discovers an already-saved voucher instead
+   * of creating another record.
+   */
+  let reusedExistingVoucher = false;
 
   try {
     /**
+     * ================================================================
      * DURABLE IDEMPOTENCY RECOVERY
+     * ================================================================
      *
-     * If this exact merchant Issue operation has already saved a voucher,
-     * reuse that existing record rather than creating/signing anything again.
+     * If this exact merchant Issue operation has already crossed the durable
+     * persistence boundary, reuse that record.
+     *
+     * We must never create or sign a second transaction for the same Issue
+     * operation.
      */
     const existingVoucher = await getVoucherRecordByIssueOperationId(
       issueOperationId
     );
 
+    let savedVoucher: VoucherRecord;
+
     if (existingVoucher) {
+      reusedExistingVoucher = true;
+
+      /**
+       * These stages already happened before the durable record was created.
+       */
       setIssueProgressStepStatus('quote', 'complete');
+
       setIssueProgressStepStatus('wallet', 'complete');
+
       setIssueProgressStepStatus('funding', 'complete');
+
       setIssueProgressStepStatus('store', 'complete');
 
+      savedVoucher = existingVoucher;
+    } else {
+      /**
+       * ================================================================
+       * STEP 1 — CONFIRM LOCKED QUOTE
+       * ================================================================
+       */
+      activeIssueProgressStep = 'quote';
+
+      setIssueProgressStepStatus('quote', 'active');
+
+      const quoteIssueSafety = getTopupQuoteIssueSafety(pricing);
+
+      if (quoteIssueSafety.status !== 'valid') {
+        throw new Error(t('sellPage.messages.quoteExpired'));
+      }
+
+      setIssueProgressStepStatus('quote', 'complete');
+
+      /**
+       * ================================================================
+       * STEP 2 — PREPARE VOUCHER WALLET
+       * ================================================================
+       *
+       * The wallet was derived during Review. Here we verify that the exact
+       * address/derivation information still exists.
+       */
+      activeIssueProgressStep = 'wallet';
+
+      setIssueProgressStepStatus('wallet', 'active');
+
+      if (!voucherAddress.address || voucherAddress.derivationIndex < 0) {
+        throw new Error(t('sellPage.messages.noVoucherAddress'));
+      }
+
+      setIssueProgressStepStatus('wallet', 'complete');
+
+      /**
+       * ================================================================
+       * STEP 3 — PREPARE EXACT FUNDING TRANSACTION
+       * ================================================================
+       *
+       * This creates:
+       *
+       * - exact treasury inputs
+       * - exact voucher/platform/change outputs
+       * - signed raw transaction
+       * - actual miner fee
+       * - deterministic transaction ID
+       *
+       * NOTHING is broadcast here.
+       */
+      activeIssueProgressStep = 'funding';
+
+      setIssueProgressStepStatus('funding', 'active');
+
+      const fundingIntent = await prepareTopupFundingIntent({
+        operationId: issueOperationId,
+
+        treasuryFundingPreview,
+
+        feeOutputPlan,
+      });
+
+      /**
+       * Signing can take time, so verify the locked quote once more before
+       * allowing the signed transaction to become durable.
+       *
+       * It is still safe to abort here because nothing has been broadcast.
+       */
+      const finalQuoteIssueSafety = getTopupQuoteIssueSafety(pricing);
+
+      if (finalQuoteIssueSafety.status !== 'valid') {
+        throw new Error(t('sellPage.messages.quoteExpired'));
+      }
+
+      setIssueProgressStepStatus('funding', 'complete');
+
+      /**
+       * ================================================================
+       * STEP 4 — SECURE DURABLE TRANSACTION RECORD
+       * ================================================================
+       */
+      activeIssueProgressStep = 'store';
+
+      setIssueProgressStepStatus('store', 'active');
+
+      const feeModelSnapshot = createTopupFeeModelV1Snapshot(pricing, {
+        estimatedNetworkFeeSats: treasuryFundingPreview.estimatedFeeSats,
+      });
+
+      const voucher = createDraftVoucherRecord(
+        pricing.customerPaysMinor,
+        pricing.fiatCurrency,
+        pricing,
+        {
+          addressData: {
+            derivationIndex: voucherAddress.derivationIndex,
+
+            address: voucherAddress.address,
+          },
+
+          keyMetadata: pendingKeyMetadata.value,
+
+          feeModel: feeModelSnapshot,
+
+          feeOutputPlan,
+
+          treasuryFundingPreview,
+
+          issueOperationId,
+
+          fundingIntent,
+        }
+      );
+
+      /**
+       * ================================================================
+       * CRITICAL WRITE-AHEAD BOUNDARY
+       * ================================================================
+       *
+       * After this succeeds we have durably stored:
+       *
+       * - one Issue operation ID
+       * - one exact signed transaction
+       * - one exact deterministic txid
+       *
+       * Only this persisted transaction may ever be broadcast.
+       */
+      const savedResult = await addVoucherRecordIdempotently(voucher);
+
+      savedVoucher = savedResult.record;
+
+      reusedExistingVoucher = !savedResult.created;
+
+      setIssueProgressStepStatus('store', 'complete');
+    }
+
+    /**
+     * ================================================================
+     * DEVELOPMENT SAFETY BOUNDARY
+     * ================================================================
+     *
+     * While real broadcasting is globally disabled, stop here.
+     *
+     * We deliberately DO NOT call the funding lifecycle service at all.
+     * That means this development flow cannot accidentally submit BCH.
+     *
+     * The progress dialog explicitly shows that both network stages were
+     * skipped rather than pretending they succeeded.
+     */
+    const fundingSafety = getFundingSafetyStatus();
+
+    if (!fundingSafety.realBroadcastEnabled) {
+      setIssueProgressStepStatus('broadcast', 'skipped');
+
+      setIssueProgressStepStatus('confirmFunding', 'skipped');
+
+      /**
+       * Preserve the existing development/testing accounting behaviour while
+       * live broadcast remains intentionally disabled.
+       *
+       * B5.7 will later finalise production funding/failure semantics.
+       */
+      await recordCashOnHandForIssuedTopup(savedVoucher);
+
+      /**
+       * Leave the four completed ticks plus two skipped network stages visible
+       * briefly so the merchant can see exactly what happened.
+       */
       await waitForUiDelay(300);
 
-      lastIssuedVoucher.value = existingVoucher;
+      lastIssuedVoucher.value = savedVoucher;
 
-      await recordCashOnHandForIssuedTopup(existingVoucher);
+      /**
+       * Clear the completed Review/Issue state.
+       */
+      pendingPricing.value = null;
+
+      pendingFeeOutputPlan.value = null;
+
+      pendingTreasuryFundingPreview.value = null;
+
+      pendingFundingBroadcast.value = null;
+
+      pendingVoucherAddress.value = null;
+
+      pendingKeyMetadata.value = null;
+
+      pendingIssueOperationId.value = null;
 
       isProgressDialogOpen.value = false;
+
       isReceiptPreviewDialogOpen.value = true;
 
-      warningMessage.value = t('sellPage.messages.issueOperationAlreadySaved');
+      if (reusedExistingVoucher) {
+        warningMessage.value = t(
+          'sellPage.messages.issueOperationAlreadySaved'
+        );
+      }
+
+      await loadTreasuryWallet();
 
       return;
     }
 
     /**
-     * STEP 1 — CONFIRM LOCKED QUOTE
-     */
-    activeIssueProgressStep = 'quote';
-    setIssueProgressStepStatus('quote', 'active');
-
-    const quoteIssueSafety = getTopupQuoteIssueSafety(pricing);
-
-    if (quoteIssueSafety.status !== 'valid') {
-      throw new Error(t('sellPage.messages.quoteExpired'));
-    }
-
-    setIssueProgressStepStatus('quote', 'complete');
-
-    /**
-     * STEP 2 — PREPARE VOUCHER WALLET
+     * ================================================================
+     * STEP 5 / STEP 6 — DURABLE BCH FUNDING LIFECYCLE
+     * ================================================================
      *
-     * The address and derivation index were prepared during Review. Here we
-     * verify that the exact wallet information needed for this Issue operation
-     * still exists and is sane.
-     */
-    activeIssueProgressStep = 'wallet';
-    setIssueProgressStepStatus('wallet', 'active');
-
-    if (!voucherAddress.address || voucherAddress.derivationIndex < 0) {
-      throw new Error(t('sellPage.messages.noVoucherAddress'));
-    }
-
-    setIssueProgressStepStatus('wallet', 'complete');
-
-    /**
-     * STEP 3 — PREPARE FUNDING TRANSACTION
+     * This branch is unreachable while REAL_BROADCAST_ENABLED is false.
      *
-     * This creates the transaction plan and signed transaction draft and
-     * captures the exact funding intent.
+     * Once intentionally enabled later, the lifecycle:
      *
-     * IMPORTANT:
-     * Nothing is broadcast here.
+     * 1. reconciles the exact saved txid BEFORE any broadcast;
+     * 2. broadcasts only fundingIntent.rawTransactionHex if required;
+     * 3. persists the broadcast result;
+     * 4. reconciles the same txid again;
+     * 5. never creates or signs a replacement transaction.
      */
-    activeIssueProgressStep = 'funding';
-    setIssueProgressStepStatus('funding', 'active');
+    activeIssueProgressStep = 'broadcast';
 
-    const fundingIntent = await prepareTopupFundingIntent({
-      operationId: issueOperationId,
-      treasuryFundingPreview,
-      feeOutputPlan,
-    });
+    setIssueProgressStepStatus('broadcast', 'active');
 
-    /**
-     * Transaction preparation may have taken some time.
-     *
-     * Re-check the locked quote before allowing the signed funding intent to
-     * become the durable transaction record.
-     *
-     * It is still safe to abort here because nothing has been broadcast.
-     */
-    const finalQuoteIssueSafety = getTopupQuoteIssueSafety(pricing);
+    const lifecycleResult = await advanceTopupFundingLifecycle(
+      savedVoucher.id,
+      undefined,
+      (phase) => {
+        /**
+         * The pre-broadcast reconciliation belongs to the submission stage:
+         * we first check whether this exact transaction is already visible
+         * before deciding whether another submission is necessary.
+         */
+        if (phase === 'pre_broadcast_reconciliation' || phase === 'broadcast') {
+          activeIssueProgressStep = 'broadcast';
 
-    if (finalQuoteIssueSafety.status !== 'valid') {
-      throw new Error(t('sellPage.messages.quoteExpired'));
-    }
+          setIssueProgressStepStatus('broadcast', 'active');
 
-    setIssueProgressStepStatus('funding', 'complete');
+          return;
+        }
 
-    /**
-     * STEP 4 — SAVE DURABLE FUNDING INTENT
-     */
-    activeIssueProgressStep = 'store';
-    setIssueProgressStepStatus('store', 'active');
+        /**
+         * A post-broadcast reconciliation means transaction submission has
+         * finished and we're now checking network visibility.
+         */
+        setIssueProgressStepStatus('broadcast', 'complete');
 
-    const feeModelSnapshot = createTopupFeeModelV1Snapshot(pricing, {
-      estimatedNetworkFeeSats: treasuryFundingPreview.estimatedFeeSats,
-    });
+        activeIssueProgressStep = 'confirmFunding';
 
-    const voucher = createDraftVoucherRecord(
-      pricing.customerPaysMinor,
-      pricing.fiatCurrency,
-      pricing,
-      {
-        addressData: {
-          derivationIndex: voucherAddress.derivationIndex,
-
-          address: voucherAddress.address,
-        },
-
-        keyMetadata: pendingKeyMetadata.value,
-
-        feeModel: feeModelSnapshot,
-
-        feeOutputPlan,
-
-        treasuryFundingPreview,
-
-        issueOperationId,
-
-        fundingIntent,
+        setIssueProgressStepStatus('confirmFunding', 'active');
       }
     );
 
+    pendingFundingBroadcast.value = lifecycleResult.broadcastResult ?? null;
+
+    savedVoucher = lifecycleResult.record;
+
+    switch (lifecycleResult.outcome) {
+      case 'funded': {
+        /**
+         * If no broadcast result exists, pre-broadcast reconciliation found
+         * the exact transaction already on the network.
+         *
+         * In that case we truthfully show that a new submission was skipped.
+         */
+        if (lifecycleResult.broadcastResult) {
+          setIssueProgressStepStatus('broadcast', 'complete');
+        } else {
+          setIssueProgressStepStatus('broadcast', 'skipped');
+        }
+
+        setIssueProgressStepStatus('confirmFunding', 'complete');
+
+        break;
+      }
+
+      case 'blocked': {
+        activeIssueProgressStep = 'broadcast';
+
+        setIssueProgressStepStatus('broadcast', 'error');
+
+        setIssueProgressStepStatus('confirmFunding', 'skipped');
+
+        throw new Error(
+          lifecycleResult.broadcastResult?.errorMessage ??
+            'Funding transaction broadcast was blocked.'
+        );
+      }
+
+      case 'definitely_not_broadcast': {
+        activeIssueProgressStep = 'broadcast';
+
+        setIssueProgressStepStatus('broadcast', 'error');
+
+        setIssueProgressStepStatus('confirmFunding', 'skipped');
+
+        throw new Error(
+          lifecycleResult.broadcastResult?.errorMessage ??
+            'Funding transaction was not submitted to the BCH network.'
+        );
+      }
+
+      case 'broadcasted_pending_detection': {
+        setIssueProgressStepStatus('broadcast', 'complete');
+
+        activeIssueProgressStep = 'confirmFunding';
+
+        setIssueProgressStepStatus('confirmFunding', 'error');
+
+        throw new Error(
+          'The funding transaction was submitted successfully, but the exact transaction is not yet visible during reconciliation. The saved transaction must be checked again before proceeding.'
+        );
+      }
+
+      case 'uncertain': {
+        /**
+         * The request was attempted but its network outcome could not be
+         * proven, and reconciliation still cannot see the exact txid.
+         *
+         * This MUST NOT trigger construction of another transaction.
+         */
+        setIssueProgressStepStatus('broadcast', 'error');
+
+        activeIssueProgressStep = 'confirmFunding';
+
+        setIssueProgressStepStatus('confirmFunding', 'error');
+
+        throw new Error(
+          'The funding broadcast outcome is uncertain. The exact saved transaction must be reconciled before any further funding action.'
+        );
+      }
+    }
+
     /**
-     * CRITICAL B5 WRITE-AHEAD BOUNDARY
-     *
-     * The signed transaction intent becomes durable here.
-     *
-     * B5.5 broadcast code must only ever operate on a transaction that has
-     * already successfully passed this persistence boundary.
-     */
-    const savedResult = await addVoucherRecordIdempotently(voucher);
-
-    const savedVoucher = savedResult.record;
-
-    setIssueProgressStepStatus('store', 'complete');
-
-    /**
-     * Cash on Hand is recorded only after the durable voucher record exists.
-     * The Cash on Hand store already deduplicates by linked Topup ID.
+     * Only positive network evidence reaches this point when real broadcasting
+     * is enabled.
      */
     await recordCashOnHandForIssuedTopup(savedVoucher);
 
-    /**
-     * Leave all four green ticks visible very briefly before closing the
-     * progress dialog automatically.
-     */
     await waitForUiDelay(300);
 
     lastIssuedVoucher.value = savedVoucher;
 
-    /**
-     * Clear the completed Review/Issue state.
-     */
     pendingPricing.value = null;
+
     pendingFeeOutputPlan.value = null;
+
     pendingTreasuryFundingPreview.value = null;
+
     pendingFundingBroadcast.value = null;
+
     pendingVoucherAddress.value = null;
+
     pendingKeyMetadata.value = null;
+
     pendingIssueOperationId.value = null;
 
-    /**
-     * Successful Issue:
-     *
-     * close progress automatically and continue to the existing development
-     * receipt-preview flow.
-     *
-     * B5.8 will later harden actual WIF reveal/print finality.
-     */
     isProgressDialogOpen.value = false;
+
     isReceiptPreviewDialogOpen.value = true;
 
-    if (!savedResult.created) {
+    if (reusedExistingVoucher) {
       warningMessage.value = t('sellPage.messages.issueOperationAlreadySaved');
     }
 
@@ -1083,10 +1328,10 @@ async function handleCreateDraftVoucher(): Promise<void> {
     console.error(error);
 
     /**
-     * During B5 development we intentionally display the exact internal error
-     * so transaction-preparation faults can be diagnosed accurately.
+     * During B5 development, expose the exact internal error so safety-path
+     * failures can be diagnosed accurately.
      *
-     * Before release these will become merchant-safe messages.
+     * These will become merchant-safe messages before release.
      */
     errorMessage.value =
       error instanceof Error
@@ -1094,14 +1339,15 @@ async function handleCreateDraftVoucher(): Promise<void> {
         : t('sellPage.messages.couldNotIssueVoucher');
 
     /**
-     * Turn the step that was actually running red.
+     * Ensure the operation that actually failed is no longer left spinning.
      *
-     * Because no step remains "active", IssueProgressDialog will now allow
-     * the merchant to dismiss the failed operation using its X or backdrop.
+     * Once there is no active step and at least one error, the progress dialog
+     * becomes dismissible via its X/backdrop.
      */
     setIssueProgressStepStatus(activeIssueProgressStep, 'error');
   } finally {
     isSubmitting.value = false;
+
     isIssueOperationRunning.value = false;
   }
 }

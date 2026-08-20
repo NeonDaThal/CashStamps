@@ -11,6 +11,8 @@ import type { TreasuryTransactionDraft } from 'src/types/treasury-transaction-dr
 import type { TreasuryTransactionPlan } from 'src/types/treasury-transaction';
 import type { VoucherRecord } from 'src/types/voucher';
 
+const TEST_TRANSACTION_ID = '11'.repeat(32);
+
 function createPlan(): TreasuryTransactionPlan {
   return {
     status: 'valid',
@@ -54,6 +56,7 @@ function createDraft(): TreasuryTransactionDraft {
     plan: createPlan(),
 
     rawTransactionHex: '01020304',
+    txid: TEST_TRANSACTION_ID,
 
     rawTransactionBytesLength: 4,
 
@@ -140,6 +143,8 @@ function createVoucher(id: string, operationId: string): VoucherRecord {
   assert.equal(intent.status, 'prepared');
 
   assert.equal(intent.rawTransactionHex, '01020304');
+
+  assert.equal(intent.txid, TEST_TRANSACTION_ID);
 
   assert.equal(intent.actualFeeSats, 520);
   assert.equal(intent.actualChangeSats, 4_480);

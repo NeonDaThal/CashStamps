@@ -3,6 +3,7 @@ import {
   encodeTransaction,
   generateTransaction,
   getMinimumFee,
+  hashTransaction,
 } from '@bitauth/libauth';
 
 import { ELECTRUM_SERVERS } from 'src/config';
@@ -301,11 +302,29 @@ export async function createTreasuryTransactionDraftFromPlan(
       );
     }
 
+    /**
+     * The transaction is now fully signed and stabilised.
+     *
+     * Calculate its deterministic transaction ID from these exact final bytes
+     * before anything is persisted or ever offered to a broadcast service.
+     */
+    const txid = hashTransaction(encodedTransaction).trim().toLowerCase();
+
+    if (!/^[0-9a-f]{64}$/.test(txid)) {
+      return createInvalidDraft(
+        plan,
+        'Could not calculate a valid deterministic transaction ID.'
+      );
+    }
+
     return {
       status: 'created',
       plan,
 
       rawTransactionHex: binToHex(encodedTransaction),
+
+      txid,
+
       rawTransactionBytesLength: encodedTransaction.length,
 
       actualFeeSats,

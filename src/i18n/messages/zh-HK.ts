@@ -128,20 +128,36 @@ const zhHK = {
     },
     issueSteps: {
       quote: {
-        label: '確認已鎖定報價',
-        description: '使用確認前鎖定的 BCH/GBP 報價。',
+        label: 'Confirm locked quote',
+        description: 'Use the BCH/GBP quote locked before confirmation.',
       },
+
       wallet: {
-        label: '準備增值券錢包',
-        description: '使用確認前已準備的增值券地址。',
+        label: 'Prepare voucher wallet',
+        description: 'Use the voucher address prepared before confirmation.',
       },
+
       funding: {
-        label: '準備資金計劃',
-        description: '檢查已準備的資金計劃，同時即時廣播仍受保護。',
+        label: 'Prepare funding transaction',
+        description: 'Build and sign the exact BCH transaction for this Topup.',
       },
+
       store: {
-        label: '儲存增值券記錄',
-        description: '在本機儲存增值券銷售記錄。',
+        label: 'Secure transaction record',
+        description:
+          'Save the signed transaction and deterministic transaction ID before any broadcast.',
+      },
+
+      broadcast: {
+        label: 'Submit funding transaction',
+        description:
+          'Check for the saved transaction, then submit the exact transaction if required.',
+      },
+
+      confirmFunding: {
+        label: 'Verify network funding',
+        description:
+          'Confirm that the exact saved transaction is visible on the BCH network.',
       },
     },
     receiptDialog: {

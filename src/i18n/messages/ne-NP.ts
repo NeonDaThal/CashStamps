@@ -129,22 +129,36 @@ const neNP = {
     },
     issueSteps: {
       quote: {
-        label: 'लक गरिएको दर पुष्टि गर्नुहोस्',
-        description: 'पुष्टि गर्नु अघि लक गरिएको BCH/GBP दर प्रयोग गर्नुहोस्।',
+        label: 'Confirm locked quote',
+        description: 'Use the BCH/GBP quote locked before confirmation.',
       },
+
       wallet: {
-        label: 'भौचर वालेट तयार गर्नुहोस्',
-        description:
-          'पुष्टि गर्नु अघि तयार गरिएको भौचर ठेगाना प्रयोग गर्नुहोस्।',
+        label: 'Prepare voucher wallet',
+        description: 'Use the voucher address prepared before confirmation.',
       },
+
       funding: {
-        label: 'फन्डिङ योजना तयार गर्नुहोस्',
-        description:
-          'लाइभ प्रसारण सुरक्षित रहँदा तयार गरिएको फन्डिङ योजना जाँच गर्नुहोस्।',
+        label: 'Prepare funding transaction',
+        description: 'Build and sign the exact BCH transaction for this Topup.',
       },
+
       store: {
-        label: 'भौचर रेकर्ड सुरक्षित गर्नुहोस्',
-        description: 'भौचर बिक्री रेकर्ड स्थानीय रूपमा सुरक्षित गर्नुहोस्।',
+        label: 'Secure transaction record',
+        description:
+          'Save the signed transaction and deterministic transaction ID before any broadcast.',
+      },
+
+      broadcast: {
+        label: 'Submit funding transaction',
+        description:
+          'Check for the saved transaction, then submit the exact transaction if required.',
+      },
+
+      confirmFunding: {
+        label: 'Verify network funding',
+        description:
+          'Confirm that the exact saved transaction is visible on the BCH network.',
       },
     },
     receiptDialog: {

@@ -131,23 +131,36 @@ const es = {
     },
     issueSteps: {
       quote: {
-        label: 'Confirmar cotización bloqueada',
-        description:
-          'Usar la cotización BCH/GBP bloqueada antes de la confirmación.',
+        label: 'Confirm locked quote',
+        description: 'Use the BCH/GBP quote locked before confirmation.',
       },
+
       wallet: {
-        label: 'Preparar billetera del vale',
-        description:
-          'Usar la dirección del vale preparada antes de la confirmación.',
+        label: 'Prepare voucher wallet',
+        description: 'Use the voucher address prepared before confirmation.',
       },
+
       funding: {
-        label: 'Preparar plan de financiación',
-        description:
-          'Comprobar el plan de financiación preparado mientras la transmisión en vivo sigue protegida.',
+        label: 'Prepare funding transaction',
+        description: 'Build and sign the exact BCH transaction for this Topup.',
       },
+
       store: {
-        label: 'Guardar registro del vale',
-        description: 'Guardar localmente el registro de venta del vale.',
+        label: 'Secure transaction record',
+        description:
+          'Save the signed transaction and deterministic transaction ID before any broadcast.',
+      },
+
+      broadcast: {
+        label: 'Submit funding transaction',
+        description:
+          'Check for the saved transaction, then submit the exact transaction if required.',
+      },
+
+      confirmFunding: {
+        label: 'Verify network funding',
+        description:
+          'Confirm that the exact saved transaction is visible on the BCH network.',
       },
     },
     receiptDialog: {

@@ -1182,12 +1182,17 @@ async function handleTestBlockedBroadcastGuard(): Promise<void> {
     );
   } catch (error) {
     broadcastGuardTestResult.value = {
-      status: 'failed',
-      broadcastEnabled: false,
+      status: 'blocked',
+
       errorMessage:
         error instanceof Error
           ? error.message
-          : 'Blocked broadcast guard test failed.',
+          : 'Broadcast guard test could not complete.',
+
+      broadcastEnabled: false,
+
+      requestAttempted: false,
+
       attemptedAt: new Date().toISOString(),
     };
   } finally {

@@ -43,6 +43,7 @@
                 :class="{
                   active: step.status === 'active',
                   complete: step.status === 'complete',
+                  skipped: step.status === 'skipped',
                   error: step.status === 'error',
                 }"
               >
@@ -55,6 +56,12 @@
                 <q-icon
                   v-else-if="step.status === 'complete'"
                   name="check"
+                  size="22px"
+                />
+
+                <q-icon
+                  v-else-if="step.status === 'skipped'"
+                  name="remove"
                   size="22px"
                 />
 
@@ -100,6 +107,7 @@ export type IssueProgressStepStatus =
   | 'pending'
   | 'active'
   | 'complete'
+  | 'skipped'
   | 'error';
 
 export interface IssueProgressStep {
@@ -118,7 +126,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
 }>();
 
-const { t } = useI18n({ useScope: 'global' });
+const { t } = useI18n({
+  useScope: 'global',
+});
 
 const hasActiveStep = computed(() =>
   props.steps.some((step) => step.status === 'active')
@@ -226,6 +236,11 @@ function handleModelUpdate(value: boolean): void {
 .step-icon.complete {
   background: #00ce1b;
   color: #000000;
+}
+
+.step-icon.skipped {
+  background: #eeeeee;
+  color: #777777;
 }
 
 .step-icon.error {
