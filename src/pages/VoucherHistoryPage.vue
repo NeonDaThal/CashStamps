@@ -151,7 +151,6 @@
               />
 
               <q-btn
-                v-if="isDevelopmentBuild"
                 class="secondary-button"
                 label="Preview Funding Recovery"
                 icon="sync_problem"
@@ -183,7 +182,6 @@
       template structure completely unambiguous.
     -->
     <IssueProgressDialog
-      v-if="isDevelopmentBuild"
       v-model="isFundingRecoveryPreviewOpen"
       :steps="fundingRecoveryPreviewSteps"
       :funding-recovery-available="true"
@@ -226,8 +224,6 @@ const checkingFundingVoucherId = ref<string | null>(null);
 const isFundingRecoveryPreviewOpen = ref(false);
 
 const isFundingRecoveryPreviewChecking = ref(false);
-
-const isDevelopmentBuild = import.meta.env.DEV;
 
 const fundingRecoveryPreviewSteps: IssueProgressStep[] = [
   {
