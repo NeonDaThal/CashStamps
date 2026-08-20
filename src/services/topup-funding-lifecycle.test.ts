@@ -2,6 +2,7 @@ import { strict as assert } from 'assert';
 
 import {
   advanceTopupFundingLifecycle,
+  reconcileExistingTopupFunding,
   type TopupFundingLifecycleDependencies,
 } from './topup-funding-lifecycle';
 
@@ -195,6 +196,18 @@ function createDependencies(input: {
       return reconciliation;
     },
 
+    async reconcileTreasuryBroadcastWithRetry() {
+      const reconciliation = input.reconciliations[reconciliationIndex];
+
+      reconciliationIndex += 1;
+
+      if (!reconciliation) {
+        throw new Error('Test ran out of reconciliation responses.');
+      }
+
+      return reconciliation;
+    },
+
     async updateVoucherFundingReconciliation(_id, reconciliation) {
       currentRecord = applyVoucherFundingReconciliation(
         currentRecord,
@@ -377,7 +390,30 @@ async function runTests(): Promise<void> {
     );
   }
 
-  console.log('\nAll 6 Topup funding lifecycle tests passed successfully.');
+  {
+    const test = createDependencies({
+      reconciliations: [createReconciliation('mempool')],
+
+      broadcastResult: createBroadcastResult('broadcasted'),
+    });
+
+    const result = await reconcileExistingTopupFunding(
+      'voucher-lifecycle-test',
+      test.dependencies
+    );
+
+    assert.equal(result.reconciliation.status, 'mempool');
+
+    assert.equal(result.record.status, 'funded');
+
+    assert.equal(test.getBroadcastCallCount(), 0);
+
+    console.log(
+      '✓ Existing funding voucher can be reconciled without any broadcast'
+    );
+  }
+
+  console.log('\nAll 7 Topup funding lifecycle tests passed successfully.');
 }
 
 void runTests();

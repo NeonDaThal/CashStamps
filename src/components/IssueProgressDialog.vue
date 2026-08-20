@@ -35,6 +35,57 @@
       <q-separator />
 
       <q-card-section class="progress-body">
+        <!--
+          EXCEPTIONAL FUNDING RECOVERY
+
+          Deliberately comes BEFORE the progress rows so the merchant sees the
+          recovery action immediately without scrolling.
+        -->
+        <q-card
+          v-if="fundingRecoveryAvailable"
+          flat
+          bordered
+          class="funding-recovery-card q-mb-md"
+        >
+          <q-card-section class="recovery-section">
+            <div class="recovery-heading-row">
+              <div class="recovery-icon">
+                <q-icon name="sync_problem" size="28px" />
+              </div>
+
+              <div class="recovery-content">
+                <div class="recovery-title">
+                  Funding verification is taking longer than expected
+                </div>
+
+                <div class="recovery-message">
+                  {{
+                    fundingRecoveryMessage ||
+                    'The transaction has been saved safely. Check the same transaction again before continuing. No replacement transaction will be created.'
+                  }}
+                </div>
+              </div>
+            </div>
+
+            <q-btn
+              class="recovery-button q-mt-md"
+              label="Check funding again"
+              icon="sync"
+              unelevated
+              no-caps
+              :loading="isRetryingFunding"
+              :disable="isRetryingFunding"
+              @click="emit('retryFunding')"
+            />
+          </q-card-section>
+        </q-card>
+
+        <!--
+          NORMAL PROGRESS INFORMATION
+
+          Still visible underneath recovery so the merchant can see precisely
+          which stage failed.
+        -->
         <q-list class="progress-list">
           <q-item v-for="step in steps" :key="step.key" class="progress-item">
             <q-item-section avatar>
@@ -42,8 +93,11 @@
                 class="step-icon"
                 :class="{
                   active: step.status === 'active',
+
                   complete: step.status === 'complete',
+
                   skipped: step.status === 'skipped',
+
                   error: step.status === 'error',
                 }"
               >
@@ -117,13 +171,35 @@ export interface IssueProgressStep {
   status: IssueProgressStepStatus;
 }
 
-const props = defineProps<{
-  modelValue: boolean;
-  steps: IssueProgressStep[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    steps: IssueProgressStep[];
+
+    /**
+     * Only true when a durable funding transaction already exists and the
+     * safe operation available to the merchant is to reconcile that SAME
+     * transaction again.
+     */
+    fundingRecoveryAvailable?: boolean;
+
+    isRetryingFunding?: boolean;
+
+    fundingRecoveryMessage?: string;
+  }>(),
+  {
+    fundingRecoveryAvailable: false,
+
+    isRetryingFunding: false,
+
+    fundingRecoveryMessage: '',
+  }
+);
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
+
+  retryFunding: [];
 }>();
 
 const { t } = useI18n({
@@ -139,15 +215,15 @@ const hasErrorStep = computed(() =>
 );
 
 /**
- * While an Issue operation is still running, the dialog is intentionally
- * locked.
+ * While an Issue operation or funding reconciliation is running, the dialog
+ * is intentionally locked.
  *
- * If the operation terminates with an error, the merchant may dismiss the
- * dialog either with the close button or by clicking outside it.
- *
+ * If an operation terminates with an error, the merchant may close it.
  * Successful operations are closed automatically by the parent flow.
  */
-const canDismiss = computed(() => hasErrorStep.value && !hasActiveStep.value);
+const canDismiss = computed(
+  () => hasErrorStep.value && !hasActiveStep.value && !props.isRetryingFunding
+);
 
 function requestClose(): void {
   if (!canDismiss.value) {
@@ -228,11 +304,7 @@ function handleModelUpdate(value: boolean): void {
   width: 38px;
 }
 
-.step-icon.active {
-  background: #00ce1b;
-  color: #000000;
-}
-
+.step-icon.active,
 .step-icon.complete {
   background: #00ce1b;
   color: #000000;
@@ -253,10 +325,98 @@ function handleModelUpdate(value: boolean): void {
   font-weight: 850;
 }
 
+.funding-recovery-card {
+  background: #fff7df;
+  border-color: #e8c76a;
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.1);
+  color: #5d4300;
+  overflow: hidden;
+}
+
+.recovery-section {
+  padding: 18px;
+}
+
+.recovery-heading-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+
+.recovery-icon {
+  align-items: center;
+  background: #ffe8a3;
+  border-radius: 999px;
+  color: #6f5000;
+  display: flex;
+  flex: 0 0 42px;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.recovery-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.recovery-title {
+  color: #111111;
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.recovery-message {
+  color: #594b24;
+  line-height: 1.45;
+  margin-top: 5px;
+}
+
+.recovery-button {
+  background: #00ce1b;
+  border-radius: 14px;
+  color: #000000;
+  font-weight: 850;
+  min-height: 42px;
+  padding: 0 18px;
+}
+
+.recovery-content {
+  width: 100%;
+}
+
+.recovery-title {
+  color: #111111;
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.recovery-message {
+  color: #594b24;
+  line-height: 1.45;
+  margin-top: 5px;
+}
+
+.recovery-button {
+  background: #00ce1b;
+  border-radius: 14px;
+  color: #000000;
+  font-weight: 850;
+  min-height: 42px;
+  padding: 0 18px;
+}
+
 @media (max-width: 640px) {
   .progress-header,
   .progress-body {
     padding: 18px;
+  }
+
+  .recovery-button {
+    width: 100%;
   }
 }
 </style>

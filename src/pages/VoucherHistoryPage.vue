@@ -3,8 +3,14 @@
     <div class="history-container">
       <section class="history-hero">
         <div>
-          <p class="eyebrow">{{ t('historyPage.hero.eyebrow') }}</p>
-          <h1>{{ t('historyPage.hero.title') }}</h1>
+          <p class="eyebrow">
+            {{ t('historyPage.hero.eyebrow') }}
+          </p>
+
+          <h1>
+            {{ t('historyPage.hero.title') }}
+          </h1>
+
           <p class="intro">
             {{ t('historyPage.hero.intro') }}
           </p>
@@ -26,7 +32,10 @@
             <div class="summary-label">
               {{ t('historyPage.summary.totalVouchers') }}
             </div>
-            <div class="summary-value">{{ voucherRecords.length }}</div>
+
+            <div class="summary-value">
+              {{ voucherRecords.length }}
+            </div>
           </q-card-section>
         </q-card>
 
@@ -35,7 +44,10 @@
             <div class="summary-label">
               {{ t('historyPage.summary.openActive') }}
             </div>
-            <div class="summary-value">{{ activeVoucherCount }}</div>
+
+            <div class="summary-value">
+              {{ activeVoucherCount }}
+            </div>
           </q-card-section>
         </q-card>
 
@@ -44,13 +56,24 @@
             <div class="summary-label">
               {{ t('historyPage.summary.sweptRedeemed') }}
             </div>
-            <div class="summary-value">{{ redeemedVoucherCount }}</div>
+
+            <div class="summary-value">
+              {{ redeemedVoucherCount }}
+            </div>
           </q-card-section>
         </q-card>
       </section>
 
       <q-banner v-if="successMessage" class="bg-green-1 text-green-9" rounded>
         {{ successMessage }}
+      </q-banner>
+
+      <q-banner
+        v-if="warningMessage"
+        class="bg-orange-1 text-orange-10"
+        rounded
+      >
+        {{ warningMessage }}
       </q-banner>
 
       <q-banner v-if="errorMessage" class="bg-red-1 text-red-9" rounded>
@@ -68,6 +91,7 @@
               <div class="text-h6">
                 {{ t('historyPage.records.title') }}
               </div>
+
               <p class="text-grey-7 q-mb-none">
                 {{ t('historyPage.records.subtitle') }}
               </p>
@@ -81,9 +105,11 @@
           <VoucherHistoryList
             :voucher-records="voucherRecords"
             :checking-redemption-voucher-id="checkingRedemptionVoucherId"
+            :checking-funding-voucher-id="checkingFundingVoucherId"
             @mark-manual-redemption="handleMarkManualRedemption"
             @clear-manual-redemption="handleClearManualRedemption"
             @check-on-chain-redemption="handleCheckOnChainRedemption"
+            @check-funding="handleCheckFunding"
           />
         </q-card-section>
       </q-card>
@@ -123,6 +149,16 @@
                 no-caps
                 @click="handleClearTestRecords"
               />
+
+              <q-btn
+                v-if="isDevelopmentBuild"
+                class="secondary-button"
+                label="Preview Funding Recovery"
+                icon="sync_problem"
+                outline
+                no-caps
+                @click="isFundingRecoveryPreviewOpen = true"
+              />
             </div>
           </q-card-section>
         </q-expansion-item>
@@ -136,6 +172,25 @@
         {{ t('historyPage.safetyNotice') }}
       </q-banner>
     </div>
+
+    <!--
+      DEV-ONLY PREVIEW.
+
+      Deliberately outside history-container so its component hierarchy cannot
+      accidentally interact with cards/banners on the History page.
+
+      QDialog is teleported by Quasar anyway, but keeping it here also makes the
+      template structure completely unambiguous.
+    -->
+    <IssueProgressDialog
+      v-if="isDevelopmentBuild"
+      v-model="isFundingRecoveryPreviewOpen"
+      :steps="fundingRecoveryPreviewSteps"
+      :funding-recovery-available="true"
+      :is-retrying-funding="isFundingRecoveryPreviewChecking"
+      funding-recovery-message="The transaction has been saved safely. Check the same transaction again before continuing. No replacement transaction will be created."
+      @retry-funding="handlePreviewFundingRetry"
+    />
   </q-page>
 </template>
 
@@ -144,6 +199,9 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import VoucherHistoryList from 'src/components/VoucherHistoryList.vue';
+import IssueProgressDialog, {
+  type IssueProgressStep,
+} from 'src/components/IssueProgressDialog.vue';
 import type { VoucherRecord } from 'src/types/voucher';
 import {
   addVoucherRecord,
@@ -155,6 +213,7 @@ import {
 } from 'src/services/voucher-store';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import { detectVoucherRedemptionStatus } from 'src/services/voucher-redemption-detector';
+import { reconcileExistingTopupFunding } from 'src/services/topup-funding-lifecycle';
 import { topupIcon } from 'src/icons/custom-icons';
 
 const { t } = useI18n({ useScope: 'global' });
@@ -163,6 +222,59 @@ const voucherRecords = ref<VoucherRecord[]>([]);
 const errorMessage = ref('');
 const successMessage = ref('');
 const checkingRedemptionVoucherId = ref<string | null>(null);
+const checkingFundingVoucherId = ref<string | null>(null);
+const isFundingRecoveryPreviewOpen = ref(false);
+
+const isFundingRecoveryPreviewChecking = ref(false);
+
+const isDevelopmentBuild = import.meta.env.DEV;
+
+const fundingRecoveryPreviewSteps: IssueProgressStep[] = [
+  {
+    key: 'quote',
+    label: 'Confirm locked quote',
+    description: 'Use the BCH/GBP quote locked before confirmation.',
+    status: 'complete',
+  },
+
+  {
+    key: 'wallet',
+    label: 'Prepare voucher wallet',
+    description: 'Use the voucher address prepared before confirmation.',
+    status: 'complete',
+  },
+
+  {
+    key: 'funding',
+    label: 'Prepare funding transaction',
+    description: 'Build and sign the exact BCH transaction for this Topup.',
+    status: 'complete',
+  },
+
+  {
+    key: 'store',
+    label: 'Secure transaction record',
+    description:
+      'Save the signed transaction and deterministic transaction ID before any broadcast.',
+    status: 'complete',
+  },
+
+  {
+    key: 'broadcast',
+    label: 'Submit funding transaction',
+    description: 'Submit the exact saved transaction.',
+    status: 'complete',
+  },
+
+  {
+    key: 'confirmFunding',
+    label: 'Verify network funding',
+    description:
+      'Confirm that the exact saved transaction is visible on the BCH network.',
+    status: 'error',
+  },
+];
+const warningMessage = ref('');
 
 const redeemedVoucherCount = computed(() => {
   return voucherRecords.value.filter((voucher) => {
@@ -180,6 +292,7 @@ const activeVoucherCount = computed(() => {
 
 async function loadVoucherRecords(): Promise<void> {
   errorMessage.value = '';
+  warningMessage.value = '';
 
   try {
     voucherRecords.value = await getVoucherRecords();
@@ -303,6 +416,74 @@ async function handleCheckOnChainRedemption(voucherId: string): Promise<void> {
         : t('historyPage.messages.couldNotCheckVoucherRedemptionStatus');
   } finally {
     checkingRedemptionVoucherId.value = null;
+  }
+}
+
+async function handleCheckFunding(voucherId: string): Promise<void> {
+  errorMessage.value = '';
+  successMessage.value = '';
+  warningMessage.value = '';
+
+  checkingFundingVoucherId.value = voucherId;
+
+  try {
+    /**
+     * This is deliberately READ-ONLY with respect to BCH.
+     *
+     * It checks only the exact deterministic txid already persisted on the
+     * voucher record.
+     *
+     * It does not:
+     *
+     * - construct another transaction
+     * - sign another transaction
+     * - broadcast anything
+     */
+    const result = await reconcileExistingTopupFunding(voucherId);
+
+    await loadVoucherRecords();
+
+    if (
+      result.reconciliation.status === 'mempool' ||
+      result.reconciliation.status === 'confirmed'
+    ) {
+      successMessage.value = `Funding verified for ${result.record.serial}.`;
+
+      return;
+    }
+
+    warningMessage.value =
+      `Funding for ${result.record.serial} is still pending verification. ` +
+      'The saved transaction remains unchanged and no new transaction was sent.';
+  } catch (error) {
+    console.error(error);
+
+    errorMessage.value =
+      error instanceof Error ? error.message : 'Could not check Topup funding.';
+  } finally {
+    checkingFundingVoucherId.value = null;
+  }
+}
+
+async function handlePreviewFundingRetry(): Promise<void> {
+  if (isFundingRecoveryPreviewChecking.value) {
+    return;
+  }
+
+  isFundingRecoveryPreviewChecking.value = true;
+
+  try {
+    /**
+     * DEV VISUAL PREVIEW ONLY.
+     *
+     * No wallet, IndexedDB, Electrum, transaction or funding operation occurs.
+     * This short delay merely allows the loading-state design to be inspected.
+     */
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 1_000);
+    });
+  } finally {
+    isFundingRecoveryPreviewChecking.value = false;
   }
 }
 

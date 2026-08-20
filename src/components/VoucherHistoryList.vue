@@ -88,6 +88,23 @@
           </q-card-section>
         </q-card>
 
+        <q-banner
+          v-if="canCheckFunding(voucher)"
+          class="bg-orange-1 text-orange-10 q-mt-md"
+          rounded
+        >
+          <template #avatar>
+            <q-icon name="sync" />
+          </template>
+
+          <div class="text-weight-bold">Funding verification pending</div>
+
+          <div>
+            The exact saved transaction can be checked again. This check does
+            not send or create another transaction.
+          </div>
+        </q-banner>
+
         <div class="action-row q-mt-md">
           <q-btn
             class="primary-button"
@@ -108,6 +125,17 @@
             @click="emit('checkOnChainRedemption', voucher.id)"
           />
         </div>
+
+        <q-btn
+          v-if="canCheckFunding(voucher)"
+          class="secondary-button"
+          label="Check funding"
+          icon="sync"
+          outline
+          no-caps
+          :loading="checkingFundingVoucherId === voucher.id"
+          @click="emit('checkFunding', voucher.id)"
+        />
       </q-card-section>
 
       <q-separator />
@@ -743,11 +771,12 @@ import {
   isTopupFeeModelV1,
 } from 'src/services/topup-record-values';
 
-type VoucherStatusKey = 'redeemed' | 'funded' | 'error' | 'issued';
+type VoucherStatusKey = 'redeemed' | 'funded' | 'funding' | 'error' | 'issued';
 
 const props = defineProps<{
   voucherRecords: VoucherRecord[];
   checkingRedemptionVoucherId?: string | null;
+  checkingFundingVoucherId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -758,8 +787,12 @@ const emit = defineEmits<{
       note?: string;
     }
   ];
+
   clearManualRedemption: [voucherId: string];
+
   checkOnChainRedemption: [voucherId: string];
+
+  checkFunding: [voucherId: string];
 }>();
 
 const { t } = useI18n({ useScope: 'global' });
@@ -815,6 +848,10 @@ function handleReceiptPreviewDialogHide(): void {
   selectedReceiptVoucher.value = null;
 }
 
+function canCheckFunding(voucher: VoucherRecord): boolean {
+  return voucher.status === 'funding' && Boolean(voucher.fundingIntent?.txid);
+}
+
 function getVoucherStatusKey(voucher: VoucherRecord): VoucherStatusKey {
   if (
     voucher.status === 'redeemed' ||
@@ -831,6 +868,10 @@ function getVoucherStatusKey(voucher: VoucherRecord): VoucherStatusKey {
     return 'funded';
   }
 
+  if (voucher.status === 'funding') {
+    return 'funding';
+  }
+
   if (voucher.status === 'error') {
     return 'error';
   }
@@ -839,7 +880,13 @@ function getVoucherStatusKey(voucher: VoucherRecord): VoucherStatusKey {
 }
 
 function getVoucherStatusLabel(voucher: VoucherRecord): string {
-  return t(`historyList.status.${getVoucherStatusKey(voucher)}`);
+  const status = getVoucherStatusKey(voucher);
+
+  if (status === 'funding') {
+    return 'Funding verification';
+  }
+
+  return t(`historyList.status.${status}`);
 }
 
 function getRedemptionLabel(voucher: VoucherRecord): string {
@@ -978,6 +1025,11 @@ function formatDate(value: string): string {
 
 .status-badge.funded {
   background: #00ce1b;
+}
+
+.status-badge.funding {
+  background: #fff3cd;
+  color: #7a5200;
 }
 
 .status-badge.redeemed {

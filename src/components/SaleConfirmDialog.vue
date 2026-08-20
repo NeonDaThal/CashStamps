@@ -209,12 +209,7 @@
                     <q-item-label caption>Platform fee</q-item-label>
                     <q-item-label>
                       {{ formatBchSats(feeOutputPlan.platformFeeSats) }}
-                      /
-                      {{
-                        formatBasisPointsAsPercent(
-                          feeOutputPlan.platformFeeBasisPoints
-                        )
-                      }}
+                      · 50% of service fee
                       <span v-if="feeOutputPlan.platformFeeAddress">
                         · output configured
                       </span>
@@ -225,18 +220,13 @@
 
                 <q-item>
                   <q-item-section>
-                    <q-item-label caption
-                      >Merchant service fee share</q-item-label
-                    >
+                    <q-item-label caption>
+                      Merchant service fee share
+                    </q-item-label>
                     <q-item-label>
                       {{ formatBchSats(feeOutputPlan.merchantRetainedSats) }}
-                      /
-                      {{
-                        formatBasisPointsAsPercent(
-                          feeOutputPlan.merchantRetainedBasisPoints
-                        )
-                      }}
-                      · retained by merchant/accounting, not a separate output
+                      · 50% of service fee · retained by merchant/accounting,
+                      not a separate output
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -1010,7 +1000,6 @@ import { createVoucherFeeOutputPlanV1 } from 'src/services/voucher-fee-plan-v1';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
 import type { VoucherKeyMetadata } from 'src/types/voucher';
 import {
-  formatBasisPointsAsPercent,
   formatBchSats,
   formatMarketRate,
   formatMinorFiatAmount,

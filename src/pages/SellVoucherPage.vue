@@ -395,6 +395,10 @@
       <IssueProgressDialog
         v-model="isProgressDialogOpen"
         :steps="issueProgressSteps"
+        :funding-recovery-available="recoverableFundingVoucherId !== null"
+        :is-retrying-funding="isRetryingFunding"
+        :funding-recovery-message="fundingRecoveryMessage"
+        @retry-funding="handleRetryFunding"
       />
 
       <q-dialog v-model="isReceiptPreviewDialogOpen">
@@ -486,7 +490,10 @@ import { TOPUP_PRICE_QUOTE_TTL_MILLISECONDS } from 'src/services/pricing-config'
 import { getTopupQuoteIssueSafety } from 'src/services/topup-issue-safety';
 import { getFundingSafetyStatus } from 'src/services/funding-safety';
 
-import { advanceTopupFundingLifecycle } from 'src/services/topup-funding-lifecycle';
+import {
+  advanceTopupFundingLifecycle,
+  reconcileExistingTopupFunding,
+} from 'src/services/topup-funding-lifecycle';
 
 const { t, locale } = useI18n({ useScope: 'global' });
 
@@ -503,6 +510,11 @@ const isConfirmDialogOpen = ref(false);
 const isProgressDialogOpen = ref(false);
 const isReceiptPreviewDialogOpen = ref(false);
 const isTreasuryDialogOpen = ref(false);
+const recoverableFundingVoucherId = ref<string | null>(null);
+
+const isRetryingFunding = ref(false);
+
+const fundingRecoveryMessage = ref('');
 
 const pendingPricing = ref<TopupPricingV1 | null>(null);
 const pendingFeeOutputPlan = ref<VoucherFeeOutputPlan | null>(null);
@@ -700,6 +712,11 @@ async function handleReviewVoucher(
   fiatCurrency: string
 ): Promise<void> {
   clearMessages();
+  recoverableFundingVoucherId.value = null;
+
+  isRetryingFunding.value = false;
+
+  fundingRecoveryMessage.value = '';
   lastIssuedVoucher.value = null;
   isReceiptPreviewDialogOpen.value = false;
   pendingPricing.value = null;
@@ -852,6 +869,11 @@ async function handleCreateDraftVoucher(): Promise<void> {
   }
 
   clearMessages();
+  recoverableFundingVoucherId.value = null;
+
+  isRetryingFunding.value = false;
+
+  fundingRecoveryMessage.value = '';
 
   lastIssuedVoucher.value = null;
   isReceiptPreviewDialogOpen.value = false;
@@ -1261,6 +1283,10 @@ async function handleCreateDraftVoucher(): Promise<void> {
       }
 
       case 'broadcasted_pending_detection': {
+        recoverableFundingVoucherId.value = savedVoucher.id;
+
+        fundingRecoveryMessage.value =
+          'The transaction was submitted successfully, but network verification has not completed yet. Check the same saved transaction again before continuing.';
         setIssueProgressStepStatus('broadcast', 'complete');
 
         activeIssueProgressStep = 'confirmFunding';
@@ -1273,6 +1299,10 @@ async function handleCreateDraftVoucher(): Promise<void> {
       }
 
       case 'uncertain': {
+        recoverableFundingVoucherId.value = savedVoucher.id;
+
+        fundingRecoveryMessage.value =
+          'The broadcast outcome could not be proven yet. Check the exact saved transaction again before continuing. No replacement transaction will be created.';
         /**
          * The request was attempted but its network outcome could not be
          * proven, and reconciliation still cannot see the exact txid.
@@ -1349,6 +1379,103 @@ async function handleCreateDraftVoucher(): Promise<void> {
     isSubmitting.value = false;
 
     isIssueOperationRunning.value = false;
+  }
+}
+
+async function handleRetryFunding(): Promise<void> {
+  const voucherId = recoverableFundingVoucherId.value;
+
+  if (!voucherId || isRetryingFunding.value) {
+    return;
+  }
+
+  clearMessages();
+
+  isRetryingFunding.value = true;
+
+  /**
+   * This action is verification-only.
+   *
+   * It cannot:
+   *
+   * - create a transaction
+   * - sign a transaction
+   * - broadcast a transaction
+   *
+   * It only checks the exact deterministic txid already stored against this
+   * voucher record.
+   */
+  setIssueProgressStepStatus('confirmFunding', 'active');
+
+  try {
+    const result = await reconcileExistingTopupFunding(voucherId);
+
+    const isFunded =
+      result.reconciliation.status === 'mempool' ||
+      result.reconciliation.status === 'confirmed';
+
+    if (!isFunded) {
+      setIssueProgressStepStatus('confirmFunding', 'error');
+
+      fundingRecoveryMessage.value =
+        'Funding is still not visible yet. The saved transaction has not been changed or resent. You can check the same transaction again.';
+
+      return;
+    }
+
+    /**
+     * Positive evidence of the exact persisted transaction resolves both an
+     * earlier "broadcasted but not detected" state and an earlier uncertain
+     * broadcast-response state.
+     */
+    setIssueProgressStepStatus('broadcast', 'complete');
+
+    setIssueProgressStepStatus('confirmFunding', 'complete');
+
+    recoverableFundingVoucherId.value = null;
+
+    fundingRecoveryMessage.value = '';
+
+    /**
+     * Continue the SAME successful Issue flow that would have occurred if
+     * automatic reconciliation had succeeded immediately.
+     */
+    await recordCashOnHandForIssuedTopup(result.record);
+
+    await waitForUiDelay(300);
+
+    lastIssuedVoucher.value = result.record;
+
+    pendingPricing.value = null;
+
+    pendingFeeOutputPlan.value = null;
+
+    pendingTreasuryFundingPreview.value = null;
+
+    pendingFundingBroadcast.value = null;
+
+    pendingVoucherAddress.value = null;
+
+    pendingKeyMetadata.value = null;
+
+    pendingIssueOperationId.value = null;
+
+    isProgressDialogOpen.value = false;
+
+    isReceiptPreviewDialogOpen.value = true;
+
+    await loadTreasuryWallet();
+  } catch (error) {
+    console.error(error);
+
+    setIssueProgressStepStatus('confirmFunding', 'error');
+
+    fundingRecoveryMessage.value =
+      error instanceof Error
+        ? `Funding could not be verified yet: ${error.message}`
+        : 'Funding could not be verified yet. Check the same saved transaction again.';
+  } finally {
+    isRetryingFunding.value = false;
   }
 }
 
