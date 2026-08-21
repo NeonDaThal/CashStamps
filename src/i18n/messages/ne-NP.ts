@@ -1338,6 +1338,53 @@ const neNP = {
         'भौचर ठेगाना निर्यात गरिएको भौचर कुञ्जी ठेगानासँग मेल खाँदैन।',
     },
   },
+  cashOutReceipt: {
+    print: {
+      title: 'भौतिक क्यास-आउट रसिद',
+      copy: 'यसले ग्राहकका लागि सुरक्षित पुष्टि रसिद प्रिन्ट गर्छ। यसमा भौचर WIF, निजी कुञ्जी, seed phrase वा sweep QR हुँदैन।',
+      button: 'भौतिक रसिद प्रिन्ट गर्नुहोस्',
+      printing: 'रसिद प्रिन्ट हुँदैछ...',
+      androidOnly: 'प्रिन्टिङ Android APK भित्र मात्र उपलब्ध छ।',
+    },
+    receiptTitle: 'क्यास-आउट रसिद',
+    printerSubtitle: 'क्यास-आउट रसिद',
+    receiptSubtitle: 'ग्राहक क्यास-आउट प्रमाण',
+    labels: {
+      cashPaidOut: 'तिरेको नगद',
+      bchReceived: 'BCH प्राप्त भयो',
+      reference: 'सन्दर्भ',
+      issued: 'जारी गरिएको',
+      customerSent: 'ग्राहकले पठाएको',
+      serviceFee: 'सेवा शुल्क',
+      exchangeRate: 'विनिमय दर',
+      treasuryReceivingAddress: 'ट्रेजरी प्राप्त गर्ने ठेगाना',
+      transactionId: 'कारोबार ID',
+    },
+    statusNote:
+      'नगद तिर्नु अघि BCH प्राप्त भयो। ग्राहकको भुक्तानी व्यापारीको ट्रेजरी वालेटमा पत्ता लाग्यो।',
+    supportNote:
+      'यो रसिद क्यास-आउट कारोबारको प्रमाणको रूपमा सुरक्षित राख्नुहोस्।',
+    footerNote: 'नगद तिर्नु अघि BCH प्राप्त भयो।',
+    complete: 'क्यास-आउट पूरा भयो',
+    couldNotBuildPreview: 'क्यास-आउट रसिद पूर्वावलोकन बनाउन सकिएन।',
+    messages: {
+      notReady: 'रसिद डेटा अझै तयार छैन।',
+      sending: 'प्रिन्टरमा जडान गरी रसिद पठाउँदै...',
+      sent: 'रसिद प्रिन्टरमा पठाइयो।',
+      printFailed:
+        'प्रिन्टरमा जडान गर्न सकिएन। प्रिन्टर अन छ, नजिकै छ, र अर्को एपसँग जडान भएको छैन भनेर जाँच गर्नुहोस्।',
+    },
+    errors: {
+      missingSerial: 'क्यास-आउटमा सन्दर्भ नम्बर छैन।',
+      missingFiatCurrency: 'क्यास-आउटमा fiat मुद्रा छैन।',
+      invalidCashAmount: 'क्यास-आउटमा मान्य नगद रकम छैन।',
+      invalidBchReceived: 'क्यास-आउटमा मान्य BCH प्राप्त रकम छैन।',
+      missingTreasuryReceivingAddress:
+        'क्यास-आउटमा ट्रेजरी प्राप्त गर्ने ठेगाना छैन।',
+      paymentNotDetected:
+        'क्यास-आउट भुक्तानी अझै पत्ता लागेको छैन। रसिद बनाउन सकिँदैन।',
+    },
+  },
 };
 
 export default neNP;

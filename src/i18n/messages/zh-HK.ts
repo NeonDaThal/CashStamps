@@ -1302,6 +1302,50 @@ const zhHK = {
       addressMismatch: '增值券地址與匯出的增值券密鑰地址不相符。',
     },
   },
+  cashOutReceipt: {
+    print: {
+      title: '實體兌現收據',
+      copy: '呢張係顧客安全嘅確認收據。唔包含增值券 WIF、私鑰、seed phrase 或 sweep QR。',
+      button: '打印實體收據',
+      printing: '正在打印收據...',
+      androidOnly: '打印只可喺 Android APK 入面使用。',
+    },
+    receiptTitle: '兌現收據',
+    printerSubtitle: '兌現收據',
+    receiptSubtitle: '顧客兌現證明',
+    labels: {
+      cashPaidOut: '已支付現金',
+      bchReceived: '已收到 BCH',
+      reference: '參考編號',
+      issued: '發出時間',
+      customerSent: '顧客已發送',
+      serviceFee: '服務費',
+      exchangeRate: '匯率',
+      treasuryReceivingAddress: '資金錢包收款地址',
+      transactionId: '交易 ID',
+    },
+    statusNote:
+      '已先收到 BCH，然後才支付現金。顧客付款已喺商戶資金錢包中偵測到。',
+    supportNote: '請保留此收據，作為兌現交易證明。',
+    footerNote: '先收到 BCH，後支付現金。',
+    complete: '兌現完成',
+    couldNotBuildPreview: '無法建立兌現收據預覽。',
+    messages: {
+      notReady: '收據資料尚未準備好。',
+      sending: '正在連接打印機並發送收據...',
+      sent: '收據已發送到打印機。',
+      printFailed:
+        '無法連接打印機。請檢查打印機已開啟、在附近，並且沒有連接到其他應用程式。',
+    },
+    errors: {
+      missingSerial: '兌現記錄沒有參考編號。',
+      missingFiatCurrency: '兌現記錄沒有 fiat 貨幣。',
+      invalidCashAmount: '兌現記錄沒有有效現金金額。',
+      invalidBchReceived: '兌現記錄沒有有效嘅 BCH 收款金額。',
+      missingTreasuryReceivingAddress: '兌現記錄沒有資金錢包收款地址。',
+      paymentNotDetected: '尚未偵測到兌現付款，無法建立收據。',
+    },
+  },
 };
 
 export default zhHK;

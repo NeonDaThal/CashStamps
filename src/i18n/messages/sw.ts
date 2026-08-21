@@ -1356,6 +1356,55 @@ const sw = {
         'Anwani ya vocha hailingani na anwani kutoka kwenye funguo ya vocha iliyohamishwa.',
     },
   },
+  cashOutReceipt: {
+    print: {
+      title: 'Risiti halisi ya kutoa fedha',
+      copy: 'Hii huchapisha risiti salama ya uthibitisho kwa mteja. Haina WIF ya vocha, funguo binafsi, maneno ya seed, au QR ya kufagia fedha.',
+      button: 'Chapisha risiti halisi',
+      printing: 'Inachapisha risiti...',
+      androidOnly: 'Uchapishaji unapatikana tu ndani ya APK ya Android.',
+    },
+    receiptTitle: 'Risiti ya kutoa fedha',
+    printerSubtitle: 'Risiti ya kutoa fedha',
+    receiptSubtitle: 'Uthibitisho wa mteja wa kutoa fedha',
+    labels: {
+      cashPaidOut: 'Pesa taslimu zilizolipwa',
+      bchReceived: 'BCH imepokelewa',
+      reference: 'Rejeleo',
+      issued: 'Imetolewa',
+      customerSent: 'Mteja alituma',
+      serviceFee: 'Ada ya huduma',
+      exchangeRate: 'Kiwango cha kubadilisha',
+      treasuryReceivingAddress: 'Anwani ya kupokea ya hazina',
+      transactionId: 'Kitambulisho cha muamala',
+    },
+    statusNote:
+      'BCH ilipokelewa kabla ya pesa taslimu kulipwa. Malipo ya mteja yaligunduliwa kwenye pochi ya hazina ya mfanyabiashara.',
+    supportNote:
+      'Hifadhi risiti hii kama uthibitisho wa muamala wa kutoa fedha.',
+    footerNote: 'BCH imepokelewa kabla ya pesa taslimu kulipwa.',
+    complete: 'Kutoa fedha kumekamilika',
+    couldNotBuildPreview:
+      'Haikuwezekana kuunda onyesho la awali la risiti ya kutoa fedha.',
+    messages: {
+      notReady: 'Data ya risiti haiko tayari bado.',
+      sending: 'Inaunganisha kwenye printa na kutuma risiti...',
+      sent: 'Risiti imetumwa kwenye printa.',
+      printFailed:
+        'Haikuwezekana kuunganisha kwenye printa. Hakikisha printa imewashwa, iko karibu, na haijaunganishwa kwenye programu nyingine.',
+    },
+    errors: {
+      missingSerial: 'Cash-out haina nambari ya rejeleo.',
+      missingFiatCurrency: 'Cash-out haina sarafu ya fiat.',
+      invalidCashAmount: 'Cash-out haina kiasi halali cha pesa taslimu.',
+      invalidBchReceived:
+        'Cash-out haina kiasi halali cha BCH kilichopokelewa.',
+      missingTreasuryReceivingAddress:
+        'Cash-out haina anwani ya kupokea ya hazina.',
+      paymentNotDetected:
+        'Malipo ya cash-out bado hayajagunduliwa. Risiti haiwezi kuundwa.',
+    },
+  },
 };
 
 export default sw;

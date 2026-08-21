@@ -1,5 +1,56 @@
 <template>
   <div class="cash-out-receipt-preview">
+    <q-banner v-if="receiptData" class="print-warning q-mb-md" rounded>
+      <template #avatar>
+        <q-icon name="print" />
+      </template>
+
+      <div class="print-warning-content">
+        <div class="print-warning-title">
+          {{ text('print.title', 'Physical cash-out receipt') }}
+        </div>
+        <div class="print-warning-copy">
+          {{
+            text(
+              'print.copy',
+              'This prints a customer-safe confirmation receipt. It does not contain a voucher WIF, private key, seed phrase, or sweep QR.'
+            )
+          }}
+        </div>
+
+        <q-btn
+          class="print-receipt-button q-mt-sm"
+          icon="print"
+          :label="
+            isPrintingReceipt
+              ? text('print.printing', 'Printing receipt...')
+              : text('print.button', 'Print physical receipt')
+          "
+          unelevated
+          no-caps
+          :disable="!isPrinterBridgeAvailable || isPrintingReceipt"
+          :loading="isPrintingReceipt"
+          @click="handlePrintReceipt"
+        />
+
+        <div v-if="printStatusMessage" class="print-status-message q-mt-xs">
+          {{ printStatusMessage }}
+        </div>
+
+        <div
+          v-if="!isPrinterBridgeAvailable"
+          class="print-warning-small q-mt-xs"
+        >
+          {{
+            text(
+              'print.androidOnly',
+              'Printing is only available inside the Android APK.'
+            )
+          }}
+        </div>
+      </div>
+    </q-banner>
+
     <q-card flat bordered class="cash-out-receipt-preview-card">
       <q-card-section v-if="errorMessage">
         <q-banner class="bg-red-1 text-red-9" rounded>
@@ -16,18 +67,23 @@
           <div class="receipt-header">
             <div class="receipt-brand">Bitcoin Cash</div>
             <div class="receipt-title">{{ receiptData.title }}</div>
-            <div class="receipt-subtitle">Customer cash-out proof</div>
+            <div class="receipt-subtitle">
+              {{ text('receiptSubtitle', 'Customer cash-out proof') }}
+            </div>
           </div>
 
           <div class="receipt-divider"></div>
 
           <div class="receipt-value">
-            <div class="receipt-value-label">Cash paid out</div>
+            <div class="receipt-value-label">
+              {{ text('labels.cashPaidOut', 'Cash paid out') }}
+            </div>
             <div class="receipt-value-main">
               {{ receiptData.cashPaidOutLabel }}
             </div>
             <div class="receipt-bch">
-              BCH received: {{ receiptData.bchReceivedLabel }}
+              {{ text('labels.bchReceived', 'BCH received') }}:
+              {{ receiptData.bchReceivedLabel }}
             </div>
           </div>
 
@@ -38,22 +94,22 @@
           <div class="receipt-divider"></div>
 
           <div class="receipt-row">
-            <span>Reference</span>
+            <span>{{ text('labels.reference', 'Reference') }}</span>
             <strong>{{ receiptData.serial }}</strong>
           </div>
 
           <div class="receipt-row">
-            <span>Issued</span>
+            <span>{{ text('labels.issued', 'Issued') }}</span>
             <strong>{{ receiptData.issuedAtLabel }}</strong>
           </div>
 
           <div class="receipt-row">
-            <span>Customer sent</span>
+            <span>{{ text('labels.customerSent', 'Customer sent') }}</span>
             <strong>{{ receiptData.customerSentFiatEquivalentLabel }}</strong>
           </div>
 
           <div class="receipt-row">
-            <span>Service fee</span>
+            <span>{{ text('labels.serviceFee', 'Service fee') }}</span>
             <strong>
               {{ receiptData.serviceFeeLabel }}
               /
@@ -62,21 +118,30 @@
           </div>
 
           <div class="receipt-row">
-            <span>Rate</span>
+            <span>{{ text('labels.exchangeRate', 'Exchange rate') }}</span>
             <strong>{{ receiptData.exchangeRateLabel }}</strong>
           </div>
 
           <div class="receipt-divider"></div>
 
           <div class="receipt-block">
-            <div class="receipt-label">Treasury receiving address</div>
+            <div class="receipt-label">
+              {{
+                text(
+                  'labels.treasuryReceivingAddress',
+                  'Treasury receiving address'
+                )
+              }}
+            </div>
             <div class="receipt-address">
               {{ receiptData.treasuryReceivingAddress }}
             </div>
           </div>
 
           <div class="receipt-block">
-            <div class="receipt-label">Transaction ID</div>
+            <div class="receipt-label">
+              {{ text('labels.transactionId', 'Transaction ID') }}
+            </div>
             <div class="receipt-address">
               {{ receiptData.txid ?? receiptData.txidShort }}
             </div>
@@ -92,56 +157,174 @@
             {{ receiptData.supportNote }}
           </p>
 
-          <div class="receipt-footer">Cash-out complete</div>
+          <div class="receipt-footer">
+            {{ text('complete', 'Cash-out complete') }}
+          </div>
         </div>
       </q-card-section>
     </q-card>
-
-    <q-banner class="bg-grey-2 text-grey-9 q-mt-md" rounded>
-      <template #avatar>
-        <q-icon name="info" />
-      </template>
-
-      Physical cash-out printing will be connected in the next printer step.
-      This preview does not contain a voucher WIF, private key, seed phrase, or
-      sweep QR.
-    </q-banner>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 
 import type { CashOutRecord } from 'src/types/cash-out';
 import {
   buildCashOutReceiptData,
   type CashOutReceiptData,
 } from 'src/services/cash-out-receipt';
+import {
+  isAndroidPrinterBridgeAvailable,
+  printBluetoothCashOutReceipt,
+} from 'src/services/android-printer';
 
 const props = defineProps<{
   cashOut: CashOutRecord;
 }>();
 
+const $q = useQuasar();
+const { locale, t, te } = useI18n({ useScope: 'global' });
+
 const receiptData = ref<CashOutReceiptData | null>(null);
 const errorMessage = ref('');
+const isPrintingReceipt = ref(false);
+const printStatusMessage = ref('');
+
+const isPrinterBridgeAvailable = computed(() =>
+  isAndroidPrinterBridgeAvailable()
+);
+
+function text(key: string, fallback: string): string {
+  const fullKey = `cashOutReceipt.${key}`;
+
+  if (te(fullKey)) {
+    return t(fullKey);
+  }
+
+  return fallback;
+}
 
 function buildReceiptPreview(): void {
   errorMessage.value = '';
   receiptData.value = null;
+  printStatusMessage.value = '';
 
   try {
-    receiptData.value = buildCashOutReceiptData(props.cashOut);
+    receiptData.value = buildCashOutReceiptData(props.cashOut, {
+      title: text('receiptTitle', 'Cash-out Receipt'),
+      printerSubtitle: text('printerSubtitle', 'Cash-out Receipt'),
+      statusNote: text(
+        'statusNote',
+        'BCH received before cash paid. Customer payment was detected in the merchant Treasury Wallet.'
+      ),
+      supportNote: text(
+        'supportNote',
+        'Keep this receipt as proof of the cash-out transaction.'
+      ),
+      footerNote: text('footerNote', 'BCH received before cash paid.'),
+      printLabels: {
+        cashPaidOut: text('labels.cashPaidOut', 'Cash paid out'),
+        bchReceived: text('labels.bchReceived', 'BCH received'),
+        reference: text('labels.reference', 'Reference'),
+        issued: text('labels.issued', 'Issued'),
+        customerSent: text('labels.customerSent', 'Customer sent'),
+        serviceFee: text('labels.serviceFee', 'Service fee'),
+        exchangeRate: text('labels.exchangeRate', 'Exchange rate'),
+        treasuryReceivingAddress: text(
+          'labels.treasuryReceivingAddress',
+          'Treasury receiving address'
+        ),
+        transactionId: text('labels.transactionId', 'Transaction ID'),
+      },
+      errors: {
+        missingSerial: text(
+          'errors.missingSerial',
+          'Cash-out does not have a reference number.'
+        ),
+        missingFiatCurrency: text(
+          'errors.missingFiatCurrency',
+          'Cash-out does not have a fiat currency.'
+        ),
+        invalidCashAmount: text(
+          'errors.invalidCashAmount',
+          'Cash-out does not have a valid cash amount.'
+        ),
+        invalidBchReceived: text(
+          'errors.invalidBchReceived',
+          'Cash-out does not have a valid BCH received amount.'
+        ),
+        missingTreasuryReceivingAddress: text(
+          'errors.missingTreasuryReceivingAddress',
+          'Cash-out does not have a treasury receiving address.'
+        ),
+        paymentNotDetected: text(
+          'errors.paymentNotDetected',
+          'Cash-out payment has not been detected yet. Receipt cannot be built.'
+        ),
+      },
+    });
   } catch (error) {
     console.error(error);
     errorMessage.value =
       error instanceof Error
         ? error.message
-        : 'Could not build cash-out receipt preview.';
+        : text('couldNotBuildPreview', 'Could not build cash-out receipt preview.');
+  }
+}
+
+async function handlePrintReceipt(): Promise<void> {
+  if (!receiptData.value) {
+    $q.notify({
+      type: 'negative',
+      message: text('messages.notReady', 'Receipt data is not ready yet.'),
+    });
+    return;
+  }
+
+  isPrintingReceipt.value = true;
+  printStatusMessage.value = text(
+    'messages.sending',
+    'Connecting to printer and sending receipt...'
+  );
+
+  try {
+    const result = await printBluetoothCashOutReceipt(receiptData.value);
+
+    printStatusMessage.value = text(
+      'messages.sent',
+      'Receipt sent to printer.'
+    );
+
+    $q.notify({
+      type: 'positive',
+      message: result.message || text('messages.sent', 'Receipt sent to printer.'),
+    });
+  } catch (error) {
+    console.error(error);
+
+    const fallbackMessage = text(
+      'messages.printFailed',
+      'Could not connect to printer. Check the printer is switched on, nearby, and not connected to another app.'
+    );
+
+    const message = error instanceof Error ? error.message : fallbackMessage;
+
+    printStatusMessage.value = message;
+
+    $q.notify({
+      type: 'negative',
+      message,
+    });
+  } finally {
+    isPrintingReceipt.value = false;
   }
 }
 
 watch(
-  () => props.cashOut,
+  [() => props.cashOut, () => locale.value],
   () => {
     buildReceiptPreview();
   },
@@ -155,6 +338,38 @@ watch(
 <style scoped>
 .cash-out-receipt-preview {
   width: 100%;
+}
+
+.print-warning {
+  background: #fff4df;
+  color: #8a4b00;
+}
+
+.print-warning-content {
+  width: 100%;
+}
+
+.print-warning-title {
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.print-warning-copy,
+.print-warning-small,
+.print-status-message {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.print-status-message {
+  font-weight: 800;
+}
+
+.print-receipt-button {
+  background: #00ce1b;
+  border-radius: 14px;
+  color: #000000;
+  font-weight: 850;
 }
 
 .cash-out-receipt-preview-card {

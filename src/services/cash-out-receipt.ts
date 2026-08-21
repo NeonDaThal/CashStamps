@@ -5,8 +5,21 @@ import {
   formatCashOutMinorFiatAmount,
 } from 'src/services/cash-out-pricing';
 
+export interface CashOutReceiptPrintLabels {
+  cashPaidOut: string;
+  bchReceived: string;
+  reference: string;
+  issued: string;
+  customerSent: string;
+  serviceFee: string;
+  exchangeRate: string;
+  treasuryReceivingAddress: string;
+  transactionId: string;
+}
+
 export interface CashOutReceiptData {
   title: string;
+  printerSubtitle: string;
   serial: string;
 
   issuedAt: string;
@@ -34,6 +47,11 @@ export interface CashOutReceiptData {
   txid?: string;
   txidShort: string;
 
+  /**
+   * Labels used by the native Bluetooth ESC/POS receipt printer.
+   */
+  printLabels?: CashOutReceiptPrintLabels;
+
   statusNote: string;
   supportNote: string;
   footerNote: string;
@@ -50,13 +68,17 @@ export interface CashOutReceiptErrorMessages {
 
 export interface BuildCashOutReceiptDataOptions {
   title?: string;
+  printerSubtitle?: string;
   statusNote?: string;
   supportNote?: string;
   footerNote?: string;
+  printLabels?: Partial<CashOutReceiptPrintLabels>;
   errors?: Partial<CashOutReceiptErrorMessages>;
 }
 
 const DEFAULT_RECEIPT_TITLE = 'Cash-out Receipt';
+
+const DEFAULT_PRINTER_SUBTITLE = 'Cash-out Receipt';
 
 const DEFAULT_STATUS_NOTE =
   'BCH received before cash paid. Customer payment was detected in the merchant Treasury Wallet.';
@@ -65,6 +87,18 @@ const DEFAULT_SUPPORT_NOTE =
   'Keep this receipt as proof of the cash-out transaction.';
 
 const DEFAULT_FOOTER_NOTE = 'BCH received before cash paid.';
+
+const DEFAULT_PRINT_LABELS: CashOutReceiptPrintLabels = {
+  cashPaidOut: 'Cash paid out',
+  bchReceived: 'BCH received',
+  reference: 'Reference',
+  issued: 'Issued',
+  customerSent: 'Customer sent',
+  serviceFee: 'Service fee',
+  exchangeRate: 'Exchange rate',
+  treasuryReceivingAddress: 'Treasury receiving address',
+  transactionId: 'Transaction ID',
+};
 
 const DEFAULT_ERROR_MESSAGES: CashOutReceiptErrorMessages = {
   missingSerial: 'Cash-out does not have a reference number.',
@@ -171,6 +205,7 @@ export function buildCashOutReceiptData(
 
   return {
     title: options.title ?? DEFAULT_RECEIPT_TITLE,
+    printerSubtitle: options.printerSubtitle ?? DEFAULT_PRINTER_SUBTITLE,
     serial: cashOut.serial,
 
     issuedAt,
@@ -215,6 +250,11 @@ export function buildCashOutReceiptData(
     txidShort: cashOut.receivedTxid
       ? shortenMiddle(cashOut.receivedTxid, 10, 10)
       : 'Not available',
+
+    printLabels: {
+      ...DEFAULT_PRINT_LABELS,
+      ...options.printLabels,
+    },
 
     statusNote: options.statusNote ?? DEFAULT_STATUS_NOTE,
     supportNote: options.supportNote ?? DEFAULT_SUPPORT_NOTE,

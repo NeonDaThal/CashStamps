@@ -32,6 +32,20 @@ export interface WatchTreasuryIncomingPaymentOptions {
   onError?: (error: Error) => void;
 }
 
+export interface CheckTreasuryIncomingPaymentOptions {
+  treasuryAddress: string;
+  requiredSats: number;
+
+  /**
+   * Use the watcher baseline when reconciling after the Android app resumes.
+   *
+   * This matters because if we simply restart the watcher after the customer
+   * has already paid, the new baseline can include the incoming payment and the
+   * app can miss the completed cash-out.
+   */
+  baselineBalanceSats?: number;
+}
+
 interface TreasuryBalanceSnapshot {
   confirmedSats: number;
   unconfirmedSats: number;
@@ -143,6 +157,57 @@ async function disconnectElectrum(electrum: ElectrumService): Promise<void> {
   }
 }
 
+export async function checkTreasuryIncomingPaymentOnce(
+  options: CheckTreasuryIncomingPaymentOptions
+): Promise<TreasuryIncomingPaymentDetection | null> {
+  const treasuryAddress = options.treasuryAddress.trim();
+  const requiredSats = Math.round(options.requiredSats);
+  const baselineBalanceSats = Math.max(
+    0,
+    Math.round(options.baselineBalanceSats ?? 0)
+  );
+
+  if (!treasuryAddress) {
+    throw new Error('Treasury address is required for payment detection.');
+  }
+
+  if (!Number.isFinite(requiredSats) || requiredSats <= 0) {
+    throw new Error('Required payment amount must be greater than zero.');
+  }
+
+  const electrum = await createStartedElectrum();
+
+  try {
+    const currentSnapshot = await getTreasuryBalanceSnapshot(
+      electrum,
+      treasuryAddress
+    );
+
+    const receivedSats = currentSnapshot.totalBalanceSats - baselineBalanceSats;
+
+    if (receivedSats < requiredSats) {
+      return null;
+    }
+
+    const txid = await getCandidateIncomingTxid(electrum, treasuryAddress);
+
+    return {
+      treasuryAddress,
+      requiredSats,
+      baselineBalanceSats,
+      currentBalanceSats: currentSnapshot.totalBalanceSats,
+      receivedSats,
+      txid,
+      detectedAt: new Date().toISOString(),
+      message: 'Incoming BCH payment detected in merchant treasury wallet.',
+    };
+  } catch (error) {
+    throw normalizeError(error, 'Could not check treasury incoming payment.');
+  } finally {
+    await disconnectElectrum(electrum);
+  }
+}
+
 export async function watchTreasuryIncomingPayment(
   options: WatchTreasuryIncomingPaymentOptions
 ): Promise<TreasuryIncomingPaymentWatcher> {
@@ -225,30 +290,15 @@ export async function watchTreasuryIncomingPayment(
     isChecking = true;
 
     try {
-      const currentSnapshot = await getTreasuryBalanceSnapshot(
-        electrum,
-        treasuryAddress
-      );
-
-      const receivedSats =
-        currentSnapshot.totalBalanceSats - baselineSnapshot.totalBalanceSats;
-
-      if (receivedSats < requiredSats) {
-        return;
-      }
-
-      const txid = await getCandidateIncomingTxid(electrum, treasuryAddress);
-
-      const detection: TreasuryIncomingPaymentDetection = {
+      const detection = await checkTreasuryIncomingPaymentOnce({
         treasuryAddress,
         requiredSats,
         baselineBalanceSats: baselineSnapshot.totalBalanceSats,
-        currentBalanceSats: currentSnapshot.totalBalanceSats,
-        receivedSats,
-        txid,
-        detectedAt: new Date().toISOString(),
-        message: 'Incoming BCH payment detected in merchant treasury wallet.',
-      };
+      });
+
+      if (!detection) {
+        return;
+      }
 
       await stopWatcher();
       await options.onDetected(detection);

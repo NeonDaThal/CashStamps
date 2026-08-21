@@ -201,6 +201,26 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
         doPrintVoucherReceipt(call);
     }
 
+
+    @PluginMethod
+    public void printCashOutReceipt(PluginCall call) {
+        if (!ensureBluetoothPrinterPermission(call, "printCashOutReceiptPermissionCallback")) {
+            return;
+        }
+
+        doPrintCashOutReceipt(call);
+    }
+
+    @PermissionCallback
+    private void printCashOutReceiptPermissionCallback(PluginCall call) {
+        if (!hasBluetoothPrinterPermission()) {
+            call.reject("Bluetooth permission was not granted.");
+            return;
+        }
+
+        doPrintCashOutReceipt(call);
+    }
+
     private void doGetPairedDevices(PluginCall call) {
         try {
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
@@ -457,6 +477,122 @@ voucherAddressLabel
                 call.resolve(result);
             } catch (Exception error) {
                 call.reject("Voucher receipt print failed: " + error.getMessage());
+            }
+        }).start();
+    }
+
+    private void doPrintCashOutReceipt(PluginCall call) {
+        final String printerAddress = normalisePrinterAddress(
+            call.getString("address", DEFAULT_PRINTER_ADDRESS)
+        );
+        final String printerName = call.getString("name", DEFAULT_PRINTER_NAME);
+
+        final String title = safeString(call.getString("title", "Cash-out Receipt"));
+        final String printerSubtitle = safeString(call.getString("printerSubtitle", "Cash-out Receipt"));
+        final String serial = safeString(call.getString("serial", "UNKNOWN"));
+        final String issuedAtLabel = safeString(call.getString("issuedAtLabel", ""));
+        final String cashPaidOutLabel = safeString(call.getString("cashPaidOutLabel", ""));
+        final String customerSentFiatEquivalentLabel = safeString(call.getString("customerSentFiatEquivalentLabel", ""));
+        final String serviceFeeLabel = safeString(call.getString("serviceFeeLabel", ""));
+        final String serviceFeePercentLabel = safeString(call.getString("serviceFeePercentLabel", ""));
+        final String bchReceivedLabel = safeString(call.getString("bchReceivedLabel", ""));
+        final String exchangeRateLabel = safeString(call.getString("exchangeRateLabel", ""));
+        final String treasuryReceivingAddress = safeString(call.getString("treasuryReceivingAddress", ""));
+        final String txid = safeString(call.getString("txid", ""));
+        final String statusNote = safeString(call.getString("statusNote", ""));
+        final String supportNote = safeString(call.getString("supportNote", ""));
+        final String footerNote = safeString(call.getString("footerNote", ""));
+
+        final String cashPaidOutFieldLabel = getStringWithFallback(
+            call,
+            "cashPaidOutFieldLabel",
+            "Cash paid out"
+        );
+        final String bchReceivedFieldLabel = getStringWithFallback(
+            call,
+            "bchReceivedFieldLabel",
+            "BCH received"
+        );
+        final String referenceLabel = getStringWithFallback(
+            call,
+            "referenceLabel",
+            "Reference"
+        );
+        final String issuedLabel = getStringWithFallback(
+            call,
+            "issuedLabel",
+            "Issued"
+        );
+        final String customerSentFieldLabel = getStringWithFallback(
+            call,
+            "customerSentFieldLabel",
+            "Customer sent"
+        );
+        final String serviceFeeFieldLabel = getStringWithFallback(
+            call,
+            "serviceFeeFieldLabel",
+            "Service fee"
+        );
+        final String exchangeRateFieldLabel = getStringWithFallback(
+            call,
+            "exchangeRateFieldLabel",
+            "Exchange rate"
+        );
+        final String treasuryReceivingAddressLabel = getStringWithFallback(
+            call,
+            "treasuryReceivingAddressLabel",
+            "Treasury receiving address"
+        );
+        final String transactionIdLabel = getStringWithFallback(
+            call,
+            "transactionIdLabel",
+            "Transaction ID"
+        );
+
+        if (!hasText(serial)) {
+            call.reject("Cash-out receipt reference is missing.");
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                byte[] bytes = buildCashOutReceiptBytes(
+                    title,
+                    printerSubtitle,
+                    serial,
+                    issuedAtLabel,
+                    cashPaidOutLabel,
+                    customerSentFiatEquivalentLabel,
+                    serviceFeeLabel,
+                    serviceFeePercentLabel,
+                    bchReceivedLabel,
+                    exchangeRateLabel,
+                    treasuryReceivingAddress,
+                    txid,
+                    statusNote,
+                    supportNote,
+                    footerNote,
+                    cashPaidOutFieldLabel,
+                    bchReceivedFieldLabel,
+                    referenceLabel,
+                    issuedLabel,
+                    customerSentFieldLabel,
+                    serviceFeeFieldLabel,
+                    exchangeRateFieldLabel,
+                    treasuryReceivingAddressLabel,
+                    transactionIdLabel
+                );
+
+                sendBytesToPrinter(printerAddress, bytes);
+
+                JSObject result = new JSObject();
+                result.put("success", true);
+                result.put("printerName", printerName);
+                result.put("address", printerAddress);
+                result.put("message", "Cash-out receipt sent to printer.");
+                call.resolve(result);
+            } catch (Exception error) {
+                call.reject("Cash-out receipt print failed: " + error.getMessage());
             }
         }).start();
     }
@@ -935,6 +1071,254 @@ String voucherAddressLabel
         writeFeedLines(output, 3);
 
         return output.toByteArray();
+    }
+
+    private byte[] buildCashOutReceiptBytes(
+        String title,
+        String printerSubtitle,
+        String serial,
+        String issuedAtLabel,
+        String cashPaidOutLabel,
+        String customerSentFiatEquivalentLabel,
+        String serviceFeeLabel,
+        String serviceFeePercentLabel,
+        String bchReceivedLabel,
+        String exchangeRateLabel,
+        String treasuryReceivingAddress,
+        String txid,
+        String statusNote,
+        String supportNote,
+        String footerNote,
+        String cashPaidOutFieldLabel,
+        String bchReceivedFieldLabel,
+        String referenceLabel,
+        String issuedLabel,
+        String customerSentFieldLabel,
+        String serviceFeeFieldLabel,
+        String exchangeRateFieldLabel,
+        String treasuryReceivingAddressLabel,
+        String transactionIdLabel
+    ) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        writeInitialize(output);
+
+        writeBrandHeaderBlock(output, title, printerSubtitle, serial);
+        writeCompactDivider(output);
+
+        writeCashOutValueBlock(
+            output,
+            cashPaidOutFieldLabel,
+            cashPaidOutLabel,
+            bchReceivedFieldLabel,
+            bchReceivedLabel
+        );
+
+        if (hasText(footerNote)) {
+            writeRasterSpacer(output, 4);
+            writeBorderedRasterTextBlock(output, footerNote, 22);
+        }
+
+        writeCompactDivider(output);
+
+        writeRasterTextBlock(
+            output,
+            buildCashOutDetailsText(
+                referenceLabel,
+                serial,
+                issuedLabel,
+                issuedAtLabel,
+                customerSentFieldLabel,
+                customerSentFiatEquivalentLabel,
+                serviceFeeFieldLabel,
+                buildServiceFeeValue(serviceFeeLabel, serviceFeePercentLabel),
+                exchangeRateFieldLabel,
+                exchangeRateLabel,
+                treasuryReceivingAddressLabel,
+                treasuryReceivingAddress,
+                transactionIdLabel,
+                txid
+            ),
+            24,
+            false,
+            Layout.Alignment.ALIGN_NORMAL,
+            10,
+            0
+        );
+
+        writeRasterSpacer(output, 4);
+
+        String bottomNote = buildCashOutBottomNote(statusNote, supportNote);
+
+        if (hasText(bottomNote)) {
+            writeCompactDivider(output);
+            writeRasterSpacer(output, 8);
+            writeRasterTextBlock(
+                output,
+                bottomNote,
+                22,
+                false,
+                Layout.Alignment.ALIGN_CENTER,
+                10,
+                0
+            );
+        }
+
+        writeRasterTextBlock(
+            output,
+            RECEIPT_WEBSITE,
+            23,
+            false,
+            Layout.Alignment.ALIGN_CENTER,
+            8,
+            0
+        );
+
+        writeFeedLines(output, 3);
+
+        return output.toByteArray();
+    }
+
+    private void writeCashOutValueBlock(
+        ByteArrayOutputStream output,
+        String cashPaidOutFieldLabel,
+        String cashPaidOutLabel,
+        String bchReceivedFieldLabel,
+        String bchReceivedLabel
+    ) throws IOException {
+        int widthPx = RECEIPT_WIDTH_PX;
+        int textSizePx = 25;
+        int lineHeightPx = 33;
+        int topPaddingPx = 7;
+        int bottomPaddingPx = 9;
+        int lineCount = 2 + (hasText(bchReceivedLabel) ? 1 : 0);
+        int heightPx = topPaddingPx + (lineCount * lineHeightPx) + bottomPaddingPx;
+
+        Bitmap bitmap = Bitmap.createBitmap(
+            widthPx,
+            heightPx,
+            Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.WHITE);
+
+        Paint textPaint = new Paint(
+            Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+        );
+        textPaint.setColor(Color.BLACK);
+        textPaint.setTextSize(textSizePx);
+        textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+        textPaint.setTextAlign(Paint.Align.CENTER);
+
+        drawCenteredTextLine(
+            canvas,
+            safeString(cashPaidOutFieldLabel),
+            textPaint,
+            topPaddingPx,
+            lineHeightPx,
+            0
+        );
+
+        if (hasText(cashPaidOutLabel)) {
+            drawCenteredTextLine(
+                canvas,
+                cashPaidOutLabel,
+                textPaint,
+                topPaddingPx,
+                lineHeightPx,
+                1
+            );
+        }
+
+        if (hasText(bchReceivedLabel)) {
+            drawBchAmountLine(
+                canvas,
+                safeString(bchReceivedFieldLabel) + ": " + bchReceivedLabel,
+                textPaint,
+                topPaddingPx,
+                lineHeightPx,
+                2
+            );
+        }
+
+        try {
+            writeAlignCenter(output);
+            writeRasterBitmap(output, bitmap);
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    private String buildCashOutDetailsText(
+        String referenceLabel,
+        String serial,
+        String issuedLabel,
+        String issuedAtLabel,
+        String customerSentFieldLabel,
+        String customerSentFiatEquivalentLabel,
+        String serviceFeeFieldLabel,
+        String serviceFeeValue,
+        String exchangeRateFieldLabel,
+        String exchangeRateLabel,
+        String treasuryReceivingAddressLabel,
+        String treasuryReceivingAddress,
+        String transactionIdLabel,
+        String txid
+    ) {
+        StringBuilder builder = new StringBuilder();
+
+        appendLabelValue(builder, referenceLabel, serial);
+        appendLabelValue(builder, issuedLabel, issuedAtLabel);
+        appendLabelValue(builder, customerSentFieldLabel, customerSentFiatEquivalentLabel);
+        appendLabelValue(builder, serviceFeeFieldLabel, serviceFeeValue);
+        appendLabelValue(builder, exchangeRateFieldLabel, exchangeRateLabel);
+
+        if (hasText(treasuryReceivingAddress)) {
+            appendBlankLine(builder);
+            builder.append(treasuryReceivingAddressLabel).append(":\n");
+            builder.append(treasuryReceivingAddress);
+        }
+
+        if (hasText(txid)) {
+            appendBlankLine(builder);
+            builder.append(transactionIdLabel).append(":\n");
+            builder.append(txid);
+        }
+
+        return builder.toString();
+    }
+
+    private String buildServiceFeeValue(
+        String serviceFeeLabel,
+        String serviceFeePercentLabel
+    ) {
+        if (hasText(serviceFeeLabel) && hasText(serviceFeePercentLabel)) {
+            return serviceFeeLabel + " / " + serviceFeePercentLabel;
+        }
+
+        if (hasText(serviceFeeLabel)) {
+            return serviceFeeLabel;
+        }
+
+        return serviceFeePercentLabel;
+    }
+
+    private String buildCashOutBottomNote(String statusNote, String supportNote) {
+        StringBuilder builder = new StringBuilder();
+
+        if (hasText(statusNote)) {
+            builder.append(statusNote);
+        }
+
+        if (hasText(supportNote)) {
+            if (builder.length() > 0) {
+                builder.append("\n");
+            }
+
+            builder.append(supportNote);
+        }
+
+        return builder.toString().trim();
     }
 
     private void writeBrandHeaderBlock(

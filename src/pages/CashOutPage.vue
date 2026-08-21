@@ -268,6 +268,7 @@ import {
   formatCashOutMinorFiatAmount,
 } from 'src/services/cash-out-pricing';
 import {
+  checkTreasuryIncomingPaymentOnce,
   watchTreasuryIncomingPayment,
   type TreasuryIncomingPaymentDetection,
   type TreasuryIncomingPaymentWatcher,
@@ -284,6 +285,7 @@ const cashAmountInput = ref('100');
 const isSubmitting = ref(false);
 const isWatchingForPayment = ref(false);
 const isPreparingReceipt = ref(false);
+const isReconcilingPaymentOnResume = ref(false);
 
 const successMessage = ref('');
 const warningMessage = ref('');
@@ -413,6 +415,82 @@ async function stopPaymentWatcher(): Promise<void> {
   }
 
   await watcher.stop();
+}
+
+async function reconcilePendingCashOutPaymentOnResume(): Promise<void> {
+  const currentCashOut = pendingCashOut.value;
+
+  if (
+    !currentCashOut ||
+    currentCashOut.status !== 'awaiting_payment' ||
+    isReconcilingPaymentOnResume.value
+  ) {
+    return;
+  }
+
+  isReconcilingPaymentOnResume.value = true;
+  paymentDetectionError.value = '';
+
+  try {
+    const detection = await checkTreasuryIncomingPaymentOnce({
+      treasuryAddress: currentCashOut.treasuryReceivingAddress,
+      requiredSats: currentCashOut.bchSatsRequired,
+      baselineBalanceSats: paymentWatcher.value?.baselineBalanceSats ?? 0,
+    });
+
+    if (detection) {
+      await stopPaymentWatcher();
+      await handleDetectedPayment(detection);
+      return;
+    }
+
+    if (pendingCashOut.value?.status === 'awaiting_payment') {
+      await startPaymentWatcher(pendingCashOut.value);
+    }
+  } catch (error) {
+    console.error(error);
+
+    const normalizedError =
+      error instanceof Error
+        ? error
+        : new Error('Could not reconcile cash-out payment after app resume.');
+
+    if (isTransientElectrumDisconnectError(normalizedError)) {
+      paymentDetectionError.value = '';
+
+      try {
+        if (pendingCashOut.value?.status === 'awaiting_payment') {
+          await startPaymentWatcher(pendingCashOut.value);
+        }
+      } catch (restartError) {
+        console.error(restartError);
+
+        paymentDetectionError.value =
+          restartError instanceof Error
+            ? restartError.message
+            : 'Could not restart treasury payment detector after app resume.';
+      }
+
+      return;
+    }
+
+    paymentDetectionError.value = normalizedError.message;
+  } finally {
+    isReconcilingPaymentOnResume.value = false;
+  }
+}
+
+function handleVisibilityChange(): void {
+  if (
+    typeof document !== 'undefined' &&
+    document.visibilityState === 'visible'
+  ) {
+    void reconcilePendingCashOutPaymentOnResume();
+  }
+}
+
+function handleWindowFocus(): void {
+  void reconcilePendingCashOutPaymentOnResume();
 }
 
 async function handleDetectedPayment(
@@ -666,9 +744,25 @@ function formatPercent(basisPoints: number): string {
 
 onMounted(() => {
   void loadTreasuryWallet();
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('focus', handleWindowFocus);
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+  }
 });
 
 onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('focus', handleWindowFocus);
+  }
+
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }
+
   void stopPaymentWatcher();
 });
 </script>

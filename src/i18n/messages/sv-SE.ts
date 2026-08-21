@@ -1352,6 +1352,53 @@ const svSE = {
         'Värdekodsadressen matchar inte adressen från den exporterade värdekodsnyckeln.',
     },
   },
+  cashOutReceipt: {
+    print: {
+      title: 'Fysiskt cash-out-kvitto',
+      copy: 'Detta skriver ut ett kundsäkert bekräftelsekvitto. Det innehåller ingen voucher-WIF, privat nyckel, seed-fras eller sweep-QR.',
+      button: 'Skriv ut fysiskt kvitto',
+      printing: 'Skriver ut kvitto...',
+      androidOnly: 'Utskrift är endast tillgänglig i Android-APK:n.',
+    },
+    receiptTitle: 'Cash-out-kvitto',
+    printerSubtitle: 'Cash-out-kvitto',
+    receiptSubtitle: 'Kundens cash-out-bevis',
+    labels: {
+      cashPaidOut: 'Kontanter utbetalda',
+      bchReceived: 'BCH mottaget',
+      reference: 'Referens',
+      issued: 'Utfärdat',
+      customerSent: 'Kunden skickade',
+      serviceFee: 'Serviceavgift',
+      exchangeRate: 'Växelkurs',
+      treasuryReceivingAddress: 'Mottagningsadress för treasury',
+      transactionId: 'Transaktions-ID',
+    },
+    statusNote:
+      'BCH mottogs innan kontanter betalades ut. Kundens betalning upptäcktes i handlarens treasury-plånbok.',
+    supportNote: 'Spara detta kvitto som bevis på cash-out-transaktionen.',
+    footerNote: 'BCH mottaget före kontantutbetalning.',
+    complete: 'Cash-out slutförd',
+    couldNotBuildPreview:
+      'Kunde inte skapa förhandsvisning av cash-out-kvitto.',
+    messages: {
+      notReady: 'Kvittodata är inte redo än.',
+      sending: 'Ansluter till skrivaren och skickar kvittot...',
+      sent: 'Kvitto skickat till skrivaren.',
+      printFailed:
+        'Kunde inte ansluta till skrivaren. Kontrollera att skrivaren är påslagen, i närheten och inte ansluten till en annan app.',
+    },
+    errors: {
+      missingSerial: 'Cash-out saknar referensnummer.',
+      missingFiatCurrency: 'Cash-out saknar fiatvaluta.',
+      invalidCashAmount: 'Cash-out har inget giltigt kontantbelopp.',
+      invalidBchReceived: 'Cash-out har inget giltigt mottaget BCH-belopp.',
+      missingTreasuryReceivingAddress:
+        'Cash-out saknar mottagningsadress för treasury.',
+      paymentNotDetected:
+        'Cash-out-betalningen har inte upptäckts än. Kvittot kan inte skapas.',
+    },
+  },
 };
 
 export default svSE;

@@ -1362,6 +1362,55 @@ const pt = {
         'O endereço do vale não corresponde ao endereço da chave do vale exportada.',
     },
   },
+  cashOutReceipt: {
+    print: {
+      title: 'Recibo físico de cash-out',
+      copy: 'Isto imprime um recibo de confirmação seguro para o cliente. Não contém WIF de voucher, chave privada, frase seed nem QR de sweep.',
+      button: 'Imprimir recibo físico',
+      printing: 'Imprimindo recibo...',
+      androidOnly: 'A impressão só está disponível dentro do APK Android.',
+    },
+    receiptTitle: 'Recibo de cash-out',
+    printerSubtitle: 'Recibo de cash-out',
+    receiptSubtitle: 'Comprovativo de cash-out do cliente',
+    labels: {
+      cashPaidOut: 'Dinheiro pago',
+      bchReceived: 'BCH recebido',
+      reference: 'Referência',
+      issued: 'Emitido',
+      customerSent: 'Cliente enviou',
+      serviceFee: 'Taxa de serviço',
+      exchangeRate: 'Taxa de câmbio',
+      treasuryReceivingAddress: 'Endereço de receção da tesouraria',
+      transactionId: 'ID da transação',
+    },
+    statusNote:
+      'BCH recebido antes de o dinheiro ser pago. O pagamento do cliente foi detetado na carteira de tesouraria do comerciante.',
+    supportNote:
+      'Guarde este recibo como comprovativo da transação de cash-out.',
+    footerNote: 'BCH recebido antes do pagamento em dinheiro.',
+    complete: 'Cash-out concluído',
+    couldNotBuildPreview:
+      'Não foi possível criar a pré-visualização do recibo de cash-out.',
+    messages: {
+      notReady: 'Os dados do recibo ainda não estão prontos.',
+      sending: 'A ligar à impressora e a enviar o recibo...',
+      sent: 'Recibo enviado para a impressora.',
+      printFailed:
+        'Não foi possível ligar à impressora. Verifique se está ligada, por perto e não ligada a outra aplicação.',
+    },
+    errors: {
+      missingSerial: 'O cash-out não tem número de referência.',
+      missingFiatCurrency: 'O cash-out não tem moeda fiduciária.',
+      invalidCashAmount: 'O cash-out não tem um valor em dinheiro válido.',
+      invalidBchReceived:
+        'O cash-out não tem uma quantidade válida de BCH recebido.',
+      missingTreasuryReceivingAddress:
+        'O cash-out não tem endereço de receção da tesouraria.',
+      paymentNotDetected:
+        'O pagamento do cash-out ainda não foi detetado. O recibo não pode ser criado.',
+    },
+  },
 };
 
 export default pt;

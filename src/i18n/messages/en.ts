@@ -1336,6 +1336,53 @@ const en = {
         'Voucher address does not match the exported voucher key address.',
     },
   },
+  cashOutReceipt: {
+  print: {
+    title: 'Physical cash-out receipt',
+    copy:
+      'This prints a customer-safe confirmation receipt. It does not contain a voucher WIF, private key, seed phrase, or sweep QR.',
+    button: 'Print physical receipt',
+    printing: 'Printing receipt...',
+    androidOnly: 'Printing is only available inside the Android APK.',
+  },
+  receiptTitle: 'Cash-out Receipt',
+  printerSubtitle: 'Cash-out Receipt',
+  receiptSubtitle: 'Customer cash-out proof',
+  labels: {
+    cashPaidOut: 'Cash paid out',
+    bchReceived: 'BCH received',
+    reference: 'Reference',
+    issued: 'Issued',
+    customerSent: 'Customer sent',
+    serviceFee: 'Service fee',
+    exchangeRate: 'Exchange rate',
+    treasuryReceivingAddress: 'Treasury receiving address',
+    transactionId: 'Transaction ID',
+  },
+  statusNote:
+    'BCH received before cash paid. Customer payment was detected in the merchant Treasury Wallet.',
+  supportNote: 'Keep this receipt as proof of the cash-out transaction.',
+  footerNote: 'BCH received before cash paid.',
+  complete: 'Cash-out complete',
+  couldNotBuildPreview: 'Could not build cash-out receipt preview.',
+  messages: {
+    notReady: 'Receipt data is not ready yet.',
+    sending: 'Connecting to printer and sending receipt...',
+    sent: 'Receipt sent to printer.',
+    printFailed:
+      'Could not connect to printer. Check the printer is switched on, nearby, and not connected to another app.',
+  },
+  errors: {
+    missingSerial: 'Cash-out does not have a reference number.',
+    missingFiatCurrency: 'Cash-out does not have a fiat currency.',
+    invalidCashAmount: 'Cash-out does not have a valid cash amount.',
+    invalidBchReceived: 'Cash-out does not have a valid BCH received amount.',
+    missingTreasuryReceivingAddress:
+      'Cash-out does not have a treasury receiving address.',
+    paymentNotDetected:
+      'Cash-out payment has not been detected yet. Receipt cannot be built.',
+  },
+},
 };
 
 export default en;

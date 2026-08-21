@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
+import type { CashOutReceiptData } from 'src/services/cash-out-receipt';
 import type { VoucherReceiptData } from 'src/services/voucher-receipt';
 
 export interface AndroidPrinterDevice {
@@ -72,6 +73,35 @@ interface BluetoothEscPosPrinterPlugin {
     serviceFeeFieldLabel: string;
     voucherAddressLabel: string;
   }): Promise<AndroidPrinterResult>;
+
+  printCashOutReceipt(options: {
+    name?: string;
+    address?: string;
+    title: string;
+    printerSubtitle: string;
+    serial: string;
+    issuedAtLabel: string;
+    cashPaidOutLabel: string;
+    customerSentFiatEquivalentLabel: string;
+    serviceFeeLabel: string;
+    serviceFeePercentLabel: string;
+    bchReceivedLabel: string;
+    exchangeRateLabel: string;
+    treasuryReceivingAddress: string;
+    txid: string;
+    statusNote: string;
+    supportNote: string;
+    footerNote: string;
+    cashPaidOutFieldLabel: string;
+    bchReceivedFieldLabel: string;
+    referenceLabel: string;
+    issuedLabel: string;
+    customerSentFieldLabel: string;
+    serviceFeeFieldLabel: string;
+    exchangeRateFieldLabel: string;
+    treasuryReceivingAddressLabel: string;
+    transactionIdLabel: string;
+  }): Promise<AndroidPrinterResult>;
 }
 
 export const DEFAULT_JK_5803P_PRINTER = {
@@ -84,6 +114,7 @@ const BluetoothEscPosPrinter = registerPlugin<BluetoothEscPosPrinterPlugin>(
 );
 
 const DEFAULT_PRINTER_SUBTITLE = 'Topup Voucher';
+const DEFAULT_CASH_OUT_PRINTER_SUBTITLE = 'Cash-out Receipt';
 
 const DEFAULT_PRINT_LABELS = {
   valueLoaded: 'Value loaded',
@@ -93,6 +124,18 @@ const DEFAULT_PRINT_LABELS = {
   customerPaid: 'Customer Paid',
   serviceFee: 'Service Fee',
   voucherAddress: 'Voucher Address',
+} as const;
+
+const DEFAULT_CASH_OUT_PRINT_LABELS = {
+  cashPaidOut: 'Cash paid out',
+  bchReceived: 'BCH received',
+  reference: 'Reference',
+  issued: 'Issued',
+  customerSent: 'Customer sent',
+  serviceFee: 'Service fee',
+  exchangeRate: 'Exchange rate',
+  treasuryReceivingAddress: 'Treasury receiving address',
+  transactionId: 'Transaction ID',
 } as const;
 
 export function isAndroidPrinterBridgeAvailable(): boolean {
@@ -241,5 +284,55 @@ export async function printBluetoothVoucherReceipt(
     customerPaidFieldLabel: printLabels.customerPaid,
     serviceFeeFieldLabel: printLabels.serviceFee,
     voucherAddressLabel: printLabels.voucherAddress,
+  });
+}
+
+export async function printBluetoothCashOutReceipt(
+  receiptData: CashOutReceiptData,
+  options?: {
+    name?: string;
+    address?: string;
+  }
+): Promise<AndroidPrinterResult> {
+  if (!isAndroidPrinterBridgeAvailable()) {
+    throw new Error(
+      'Android Bluetooth printer bridge is only available in the Android app.'
+    );
+  }
+
+  const printLabels = {
+    ...DEFAULT_CASH_OUT_PRINT_LABELS,
+    ...receiptData.printLabels,
+  };
+
+  return BluetoothEscPosPrinter.printCashOutReceipt({
+    name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
+    address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
+    title: receiptData.title,
+    printerSubtitle:
+      receiptData.printerSubtitle || DEFAULT_CASH_OUT_PRINTER_SUBTITLE,
+    serial: receiptData.serial,
+    issuedAtLabel: receiptData.issuedAtLabel,
+    cashPaidOutLabel: receiptData.cashPaidOutLabel,
+    customerSentFiatEquivalentLabel:
+      receiptData.customerSentFiatEquivalentLabel,
+    serviceFeeLabel: receiptData.serviceFeeLabel,
+    serviceFeePercentLabel: receiptData.serviceFeePercentLabel,
+    bchReceivedLabel: receiptData.bchReceivedLabel,
+    exchangeRateLabel: receiptData.exchangeRateLabel,
+    treasuryReceivingAddress: receiptData.treasuryReceivingAddress,
+    txid: receiptData.txid ?? receiptData.txidShort,
+    statusNote: receiptData.statusNote,
+    supportNote: receiptData.supportNote,
+    footerNote: receiptData.footerNote,
+    cashPaidOutFieldLabel: printLabels.cashPaidOut,
+    bchReceivedFieldLabel: printLabels.bchReceived,
+    referenceLabel: printLabels.reference,
+    issuedLabel: printLabels.issued,
+    customerSentFieldLabel: printLabels.customerSent,
+    serviceFeeFieldLabel: printLabels.serviceFee,
+    exchangeRateFieldLabel: printLabels.exchangeRate,
+    treasuryReceivingAddressLabel: printLabels.treasuryReceivingAddress,
+    transactionIdLabel: printLabels.transactionId,
   });
 }

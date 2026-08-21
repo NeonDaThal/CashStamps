@@ -1367,6 +1367,54 @@ const de = {
         'Die Voucher-Adresse stimmt nicht mit der Adresse des exportierten Voucher-Schlüssels überein.',
     },
   },
+  cashOutReceipt: {
+    print: {
+      title: 'Physischer Cash-out-Beleg',
+      copy: 'Dies druckt einen kundensicheren Bestätigungsbeleg. Er enthält keinen Voucher-WIF, keinen privaten Schlüssel, keine Seed-Phrase und keinen Sweep-QR.',
+      button: 'Physischen Beleg drucken',
+      printing: 'Beleg wird gedruckt...',
+      androidOnly: 'Drucken ist nur in der Android-APK verfügbar.',
+    },
+    receiptTitle: 'Cash-out-Beleg',
+    printerSubtitle: 'Cash-out-Beleg',
+    receiptSubtitle: 'Kundennachweis für Cash-out',
+    labels: {
+      cashPaidOut: 'Ausgezahltes Bargeld',
+      bchReceived: 'BCH erhalten',
+      reference: 'Referenz',
+      issued: 'Ausgestellt',
+      customerSent: 'Kunde gesendet',
+      serviceFee: 'Servicegebühr',
+      exchangeRate: 'Wechselkurs',
+      treasuryReceivingAddress: 'Empfangsadresse der Treasury',
+      transactionId: 'Transaktions-ID',
+    },
+    statusNote:
+      'BCH wurde vor der Barauszahlung erhalten. Die Kundenzahlung wurde in der Treasury-Wallet des Händlers erkannt.',
+    supportNote:
+      'Bewahren Sie diesen Beleg als Nachweis der Cash-out-Transaktion auf.',
+    footerNote: 'BCH erhalten vor Barauszahlung.',
+    complete: 'Cash-out abgeschlossen',
+    couldNotBuildPreview:
+      'Cash-out-Belegvorschau konnte nicht erstellt werden.',
+    messages: {
+      notReady: 'Belegdaten sind noch nicht bereit.',
+      sending: 'Verbindung zum Drucker wird hergestellt und Beleg gesendet...',
+      sent: 'Beleg an Drucker gesendet.',
+      printFailed:
+        'Verbindung zum Drucker fehlgeschlagen. Prüfen Sie, ob der Drucker eingeschaltet, in der Nähe und nicht mit einer anderen App verbunden ist.',
+    },
+    errors: {
+      missingSerial: 'Cash-out hat keine Referenznummer.',
+      missingFiatCurrency: 'Cash-out hat keine Fiat-Währung.',
+      invalidCashAmount: 'Cash-out hat keinen gültigen Bargeldbetrag.',
+      invalidBchReceived: 'Cash-out hat keinen gültigen BCH-Eingangsbetrag.',
+      missingTreasuryReceivingAddress:
+        'Cash-out hat keine Treasury-Empfangsadresse.',
+      paymentNotDetected:
+        'Cash-out-Zahlung wurde noch nicht erkannt. Beleg kann nicht erstellt werden.',
+    },
+  },
 };
 
 export default de;

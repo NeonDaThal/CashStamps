@@ -1359,6 +1359,56 @@ const es = {
         'La dirección del vale no coincide con la dirección de la clave de vale exportada.',
     },
   },
+  cashOutReceipt: {
+    print: {
+      title: 'Recibo físico de retiro',
+      copy: 'Esto imprime un recibo de confirmación seguro para el cliente. No contiene WIF de voucher, clave privada, frase semilla ni QR de barrido.',
+      button: 'Imprimir recibo físico',
+      printing: 'Imprimiendo recibo...',
+      androidOnly:
+        'La impresión solo está disponible dentro de la APK de Android.',
+    },
+    receiptTitle: 'Recibo de retiro',
+    printerSubtitle: 'Recibo de retiro',
+    receiptSubtitle: 'Comprobante de retiro del cliente',
+    labels: {
+      cashPaidOut: 'Efectivo pagado',
+      bchReceived: 'BCH recibido',
+      reference: 'Referencia',
+      issued: 'Emitido',
+      customerSent: 'Cliente envió',
+      serviceFee: 'Comisión de servicio',
+      exchangeRate: 'Tipo de cambio',
+      treasuryReceivingAddress: 'Dirección de recepción de tesorería',
+      transactionId: 'ID de transacción',
+    },
+    statusNote:
+      'BCH recibido antes de pagar el efectivo. El pago del cliente fue detectado en la billetera de tesorería del comerciante.',
+    supportNote:
+      'Conserve este recibo como comprobante de la transacción de retiro.',
+    footerNote: 'BCH recibido antes de pagar el efectivo.',
+    complete: 'Retiro completado',
+    couldNotBuildPreview:
+      'No se pudo crear la vista previa del recibo de retiro.',
+    messages: {
+      notReady: 'Los datos del recibo aún no están listos.',
+      sending: 'Conectando con la impresora y enviando el recibo...',
+      sent: 'Recibo enviado a la impresora.',
+      printFailed:
+        'No se pudo conectar con la impresora. Compruebe que esté encendida, cerca y no conectada a otra app.',
+    },
+    errors: {
+      missingSerial: 'El retiro no tiene número de referencia.',
+      missingFiatCurrency: 'El retiro no tiene moneda fiat.',
+      invalidCashAmount: 'El retiro no tiene un importe en efectivo válido.',
+      invalidBchReceived:
+        'El retiro no tiene una cantidad válida de BCH recibido.',
+      missingTreasuryReceivingAddress:
+        'El retiro no tiene una dirección de recepción de tesorería.',
+      paymentNotDetected:
+        'El pago del retiro aún no ha sido detectado. No se puede crear el recibo.',
+    },
+  },
 };
 
 export default es;
