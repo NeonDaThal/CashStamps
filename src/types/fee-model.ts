@@ -9,7 +9,7 @@ export interface TopupFeeSchedule {
    * Highest principal amount that still uses the flat minimum fee.
    *
    * GBP v1:
-   * £40.00 = 4000 minor units.
+   * £5.00 = 500 minor units.
    */
   minimumTierMaximumPrincipalMinor: number;
 
@@ -79,7 +79,12 @@ export interface TopupFeeModelV1Calculation extends FeeSplit {
   percentageBasisPoints: number;
 
   /**
-   * Customer total before the separate BCH network-fee recovery is added.
+   * Customer cash total before considering miner-fee accounting.
+   *
+   * The property name is retained for Fee Model v1 compatibility.
+   *
+   * Under the current Topup launch model the merchant absorbs the BCH miner fee,
+   * so no miner-fee recovery is added to the customer total.
    */
   customerTotalBeforeNetworkFeeMinor: number;
 
@@ -132,10 +137,12 @@ export interface FeeModelNetworkFeeSnapshot {
   feeSats?: number;
 
   /**
-   * Fiat minor units recovered from the customer for the network fee.
+   * Fiat minor units recovered from the customer for the blockchain miner fee.
    *
-   * For example, a non-zero BCH network fee costing less than £0.01 may
-   * eventually result in a 1-penny GBP recovery.
+   * Under the current Topup v1 launch model the merchant absorbs the miner fee,
+   * so a final Topup network-fee snapshot stores this explicitly as 0.
+   *
+   * Older snapshots and other fee models may leave this undefined.
    */
   recoveryMinor?: number;
 }
@@ -156,10 +163,15 @@ export interface TopupFeeModelV1Snapshot extends TopupFeeModelV1Calculation {
   networkFee: FeeModelNetworkFeeSnapshot;
 
   /**
-   * Final physical cash amount paid by the customer once network-fee recovery
-   * is known.
+   * Final physical cash amount paid by the customer.
    *
-   * This may remain undefined until the network fee has been calculated.
+   * Under the current Topup v1 launch model this is:
+   *
+   * principal + service fee
+   *
+   * The merchant absorbs the BCH miner fee, so no miner-fee recovery is added.
+   *
+   * Older or non-final snapshots may leave this undefined.
    */
   customerTotalMinor?: number;
 }

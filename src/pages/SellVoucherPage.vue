@@ -1067,7 +1067,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
       setIssueProgressStepStatus('store', 'active');
 
       const feeModelSnapshot = createTopupFeeModelV1Snapshot(pricing, {
-        estimatedNetworkFeeSats: treasuryFundingPreview.estimatedFeeSats,
+        actualNetworkFeeSats: fundingIntent.actualFeeSats,
       });
 
       const voucher = createDraftVoucherRecord(

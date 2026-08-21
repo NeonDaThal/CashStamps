@@ -197,6 +197,41 @@ function buildVoucherTotals(
     (value) => value.serviceFeeMinor > 0 && !value.feeSplitKnown
   ).length;
 
+  const actualMinerFeeSats = values.reduce(
+    (total, value) => total + (value.actualMinerFeeSats ?? 0),
+    0
+  );
+
+  const estimatedMinerFeeSats = values.reduce(
+    (total, value) => total + (value.estimatedMinerFeeSats ?? 0),
+    0
+  );
+
+  const finalMinerFeeCount = values.filter(
+    (value) => value.networkFeeStatus === 'final'
+  ).length;
+
+  const estimatedMinerFeeCount = values.filter(
+    (value) => value.networkFeeStatus === 'estimated'
+  ).length;
+
+  const networkFeeNotCalculatedCount = values.filter(
+    (value) => value.networkFeeStatus === 'not_calculated'
+  ).length;
+
+  const networkFeeUnknownCount = values.filter(
+    (value) => value.networkFeeStatus === 'unknown'
+  ).length;
+
+  const customerNetworkFeeRecoveryMinor = values.reduce(
+    (total, value) => total + (value.customerNetworkFeeRecoveryMinor ?? 0),
+    0
+  );
+
+  const customerNetworkFeeRecoveryKnownCount = values.filter(
+    (value) => value.customerNetworkFeeRecoveryMinor !== null
+  ).length;
+
   const marketBchSats = voucherRecords.reduce(
     (total, voucher) => total + safeNumber(voucher.marketBchSats),
     0
@@ -216,6 +251,16 @@ function buildVoucherTotals(
     merchantFeeRevenueMinor,
     platformFeeMinor,
     feeSplitUnknownCount,
+    actualMinerFeeSats,
+    estimatedMinerFeeSats,
+
+    finalMinerFeeCount,
+    estimatedMinerFeeCount,
+    networkFeeNotCalculatedCount,
+    networkFeeUnknownCount,
+
+    customerNetworkFeeRecoveryMinor,
+    customerNetworkFeeRecoveryKnownCount,
 
     // Existing report consumers still use these names during B4a.
     grossFiatRevenueMinor: customerCashCollectedMinor,
@@ -321,6 +366,28 @@ function buildOverallTotals(input: {
 
     topupFeeSplitUnknownCount:
       primaryCurrencyTotals?.voucherFeeSplitUnknownCount ?? 0,
+    /**
+     * BCH miner-fee metrics are taken from the complete Topup totals rather than
+     * only the primary fiat currency because satoshis are currency-independent.
+     */
+    topupActualMinerFeeSats: input.vouchers.actualMinerFeeSats,
+
+    topupEstimatedMinerFeeSats: input.vouchers.estimatedMinerFeeSats,
+
+    topupFinalMinerFeeCount: input.vouchers.finalMinerFeeCount,
+
+    topupEstimatedMinerFeeCount: input.vouchers.estimatedMinerFeeCount,
+
+    topupNetworkFeeNotCalculatedCount:
+      input.vouchers.networkFeeNotCalculatedCount,
+
+    topupNetworkFeeUnknownCount: input.vouchers.networkFeeUnknownCount,
+
+    topupCustomerNetworkFeeRecoveryMinor:
+      primaryCurrencyTotals?.voucherCustomerNetworkFeeRecoveryMinor ?? 0,
+
+    topupCustomerNetworkFeeRecoveryKnownCount:
+      input.vouchers.customerNetworkFeeRecoveryKnownCount,
 
     bchBoughtByCustomersSats: input.vouchers.finalBchSats,
     bchSoldByCustomersSats: input.cashOuts.bchSatsRequired,
@@ -358,6 +425,32 @@ function buildCurrencyTotals(
 
     if (values.serviceFeeMinor > 0 && !values.feeSplitKnown) {
       totals.voucherFeeSplitUnknownCount += 1;
+    }
+    totals.voucherActualMinerFeeSats += values.actualMinerFeeSats ?? 0;
+
+    totals.voucherEstimatedMinerFeeSats += values.estimatedMinerFeeSats ?? 0;
+
+    if (values.networkFeeStatus === 'final') {
+      totals.voucherFinalMinerFeeCount += 1;
+    }
+
+    if (values.networkFeeStatus === 'estimated') {
+      totals.voucherEstimatedMinerFeeCount += 1;
+    }
+
+    if (values.networkFeeStatus === 'not_calculated') {
+      totals.voucherNetworkFeeNotCalculatedCount += 1;
+    }
+
+    if (values.networkFeeStatus === 'unknown') {
+      totals.voucherNetworkFeeUnknownCount += 1;
+    }
+
+    if (values.customerNetworkFeeRecoveryMinor !== null) {
+      totals.voucherCustomerNetworkFeeRecoveryMinor +=
+        values.customerNetworkFeeRecoveryMinor;
+
+      totals.voucherCustomerNetworkFeeRecoveryKnownCount += 1;
     }
 
     // Compatibility aliases.
@@ -447,6 +540,16 @@ function getOrCreateCurrencyTotals(
     voucherMerchantFeeRevenueMinor: 0,
     voucherPlatformFeeMinor: 0,
     voucherFeeSplitUnknownCount: 0,
+    voucherActualMinerFeeSats: 0,
+    voucherEstimatedMinerFeeSats: 0,
+
+    voucherFinalMinerFeeCount: 0,
+    voucherEstimatedMinerFeeCount: 0,
+    voucherNetworkFeeNotCalculatedCount: 0,
+    voucherNetworkFeeUnknownCount: 0,
+
+    voucherCustomerNetworkFeeRecoveryMinor: 0,
+    voucherCustomerNetworkFeeRecoveryKnownCount: 0,
 
     voucherGrossFiatRevenueMinor: 0,
     voucherNetFiatRevenueMinor: 0,
@@ -497,6 +600,15 @@ function buildActivityItems(
         platformFeeAmountMinor: values.platformFeeMinor ?? undefined,
 
         feeSplitKnown: values.feeSplitKnown,
+
+        networkFeeStatus: values.networkFeeStatus,
+
+        actualMinerFeeSats: values.actualMinerFeeSats ?? undefined,
+
+        estimatedMinerFeeSats: values.estimatedMinerFeeSats ?? undefined,
+
+        customerNetworkFeeRecoveryMinor:
+          values.customerNetworkFeeRecoveryMinor ?? undefined,
 
         bchSats: values.bchLoadedSats,
         status: voucher.status,
@@ -561,6 +673,11 @@ function buildGrowthSummary(
     bchMovementSats: buildGrowthMetric(
       current.overall.totalBchMovementSats,
       previous.overall.totalBchMovementSats
+    ),
+
+    topupActualMinerFeeSats: buildGrowthMetric(
+      current.overall.topupActualMinerFeeSats,
+      previous.overall.topupActualMinerFeeSats
     ),
   };
 }

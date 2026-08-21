@@ -203,7 +203,7 @@ const tests: TopupPricingTest[] = [
   },
 
   {
-    name: 'snapshot stores v1 commercial terms without final network recovery',
+    name: 'snapshot can retain an estimated miner fee for compatibility',
     run: () => {
       const pricing = calculateTopupPricingV1FromLockedQuote(
         10_000,
@@ -229,6 +229,42 @@ const tests: TopupPricingTest[] = [
       assert.equal(snapshot.networkFee.recoveryMinor, undefined);
 
       assert.equal(snapshot.customerTotalMinor, undefined);
+
+      assert.equal(snapshot.snapshotCreatedAt, '2026-08-10T12:05:00.000Z');
+    },
+  },
+
+  {
+    name: 'final snapshot stores the actual signed miner fee as a merchant cost',
+    run: () => {
+      const pricing = calculateTopupPricingV1FromLockedQuote(
+        10_000,
+        createLockedQuote(100)
+      );
+
+      const snapshot = createTopupFeeModelV1Snapshot(pricing, {
+        actualNetworkFeeSats: 437,
+
+        snapshotCreatedAt: '2026-08-10T12:05:00.000Z',
+      });
+
+      assert.equal(snapshot.version, 'topup_v1');
+
+      assert.equal(snapshot.networkFee.status, 'final');
+
+      assert.equal(snapshot.networkFee.feeSats, 437);
+
+      /**
+       * Merchant absorbs the miner fee.
+       */
+      assert.equal(snapshot.networkFee.recoveryMinor, 0);
+
+      /**
+       * £100 principal + £10 service fee.
+       *
+       * Actual miner fee does not increase the customer's cash total.
+       */
+      assert.equal(snapshot.customerTotalMinor, 11_000);
 
       assert.equal(snapshot.snapshotCreatedAt, '2026-08-10T12:05:00.000Z');
     },
@@ -268,6 +304,66 @@ const tests: TopupPricingTest[] = [
           }),
         /Estimated network fee must be a non-negative safe integer/
       );
+    },
+  },
+
+  {
+    name: 'negative actual network fee is rejected',
+    run: () => {
+      const pricing = calculateTopupPricingV1FromLockedQuote(
+        10_000,
+        createLockedQuote()
+      );
+
+      assert.throws(
+        () =>
+          createTopupFeeModelV1Snapshot(pricing, {
+            actualNetworkFeeSats: -1,
+          }),
+        /Actual network fee must be a non-negative safe integer/
+      );
+    },
+  },
+
+  {
+    name: 'snapshot rejects simultaneous estimated and actual miner fees',
+    run: () => {
+      const pricing = calculateTopupPricingV1FromLockedQuote(
+        10_000,
+        createLockedQuote()
+      );
+
+      assert.throws(
+        () =>
+          createTopupFeeModelV1Snapshot(pricing, {
+            estimatedNetworkFeeSats: 500,
+
+            actualNetworkFeeSats: 437,
+          }),
+        /cannot contain both estimated and actual miner fees/
+      );
+    },
+  },
+
+  {
+    name: 'zero actual miner fee is still represented as a final fee',
+    run: () => {
+      const pricing = calculateTopupPricingV1FromLockedQuote(
+        10_000,
+        createLockedQuote()
+      );
+
+      const snapshot = createTopupFeeModelV1Snapshot(pricing, {
+        actualNetworkFeeSats: 0,
+      });
+
+      assert.equal(snapshot.networkFee.status, 'final');
+
+      assert.equal(snapshot.networkFee.feeSats, 0);
+
+      assert.equal(snapshot.networkFee.recoveryMinor, 0);
+
+      assert.equal(snapshot.customerTotalMinor, pricing.customerPaysMinor);
     },
   },
 ];

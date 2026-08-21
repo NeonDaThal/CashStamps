@@ -42,10 +42,14 @@ export interface TopupPricingV1 {
   principalMinor: number;
 
   /**
-   * Compatibility alias used by the current UI until B3.
+   * Final customer cash total under the current Topup v1 commercial model.
    *
-   * This is the principal plus service fee, but does not yet include
-   * customer network-fee recovery.
+   * This is:
+   *
+   * principal + service fee
+   *
+   * The merchant absorbs the BCH miner fee, so no miner-fee recovery is added
+   * to this amount.
    */
   customerPaysMinor: number;
 
@@ -239,11 +243,28 @@ export function calculateTopupPricingV1FromLockedQuote(
 export function createTopupFeeModelV1Snapshot(
   pricing: TopupPricingV1,
   options?: {
+    /**
+     * Compatibility path for older/development callers which only know a
+     * transaction-size estimate.
+     *
+     * New issued Topups should use actualNetworkFeeSats after signing.
+     */
     estimatedNetworkFeeSats?: number;
+
+    /**
+     * Exact miner fee from the final signed transaction.
+     *
+     * New Topups should persist this value from
+     * VoucherFundingIntent.actualFeeSats.
+     */
+    actualNetworkFeeSats?: number;
+
     snapshotCreatedAt?: string;
   }
 ): TopupFeeModelV1Snapshot {
   const estimatedNetworkFeeSats = options?.estimatedNetworkFeeSats;
+
+  const actualNetworkFeeSats = options?.actualNetworkFeeSats;
 
   if (
     estimatedNetworkFeeSats !== undefined &&
@@ -255,14 +276,51 @@ export function createTopupFeeModelV1Snapshot(
     );
   }
 
+  if (
+    actualNetworkFeeSats !== undefined &&
+    (!Number.isSafeInteger(actualNetworkFeeSats) || actualNetworkFeeSats < 0)
+  ) {
+    throw new Error(
+      'Actual network fee must be a non-negative safe integer in satoshis.'
+    );
+  }
+
+  /**
+   * A snapshot must never ambiguously claim that the same miner fee is both
+   * estimated and final.
+   */
+  if (
+    estimatedNetworkFeeSats !== undefined &&
+    actualNetworkFeeSats !== undefined
+  ) {
+    throw new Error(
+      'Network fee snapshot cannot contain both estimated and actual miner fees.'
+    );
+  }
+
   const networkFee =
-    estimatedNetworkFeeSats === undefined
+    actualNetworkFeeSats !== undefined
       ? {
-          status: 'not_calculated' as const,
+          status: 'final' as const,
+
+          feeSats: actualNetworkFeeSats,
+
+          /**
+           * Launch Topup model:
+           *
+           * merchant treasury absorbs the miner fee;
+           * customer is not charged an additional recovery amount.
+           */
+          recoveryMinor: 0,
+        }
+      : estimatedNetworkFeeSats !== undefined
+      ? {
+          status: 'estimated' as const,
+
+          feeSats: estimatedNetworkFeeSats,
         }
       : {
-          status: 'estimated' as const,
-          feeSats: estimatedNetworkFeeSats,
+          status: 'not_calculated' as const,
         };
 
   return {
@@ -273,11 +331,18 @@ export function createTopupFeeModelV1Snapshot(
     networkFee,
 
     /**
-     * Deliberately not populated yet.
+     * Once the actual signed transaction fee is known, the commercial terms
+     * are final.
      *
-     * B5 will add the customer's network-fee recovery and therefore the final
-     * customer cash total.
+     * The customer's physical cash total remains principal + service fee
+     * because the merchant absorbs the BCH miner fee.
+     *
+     * Older estimated/not-calculated snapshot paths remain undefined for
+     * backward compatibility with existing development records.
      */
-    customerTotalMinor: undefined,
+    customerTotalMinor:
+      actualNetworkFeeSats !== undefined
+        ? pricing.customerPaysMinor
+        : undefined,
   };
 }

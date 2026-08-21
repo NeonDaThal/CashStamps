@@ -451,6 +451,28 @@
                     </q-item-label>
                   </q-item-section>
                 </q-item>
+
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption> BCH miner fee </q-item-label>
+
+                    <q-item-label>
+                      {{ formatMinerFee(voucher) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item>
+                  <q-item-section>
+                    <q-item-label caption>
+                      Customer miner-fee recovery
+                    </q-item-label>
+
+                    <q-item-label>
+                      {{ formatMinerFeeRecovery(voucher) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
               </q-list>
 
               <VoucherWifRevealCard
@@ -939,6 +961,51 @@ function formatFee(voucher: VoucherRecord): string {
   const feePercent = `${voucher.fee.basisPoints / 100}%`;
 
   return `${feePercent} / ${feeAmount}`;
+}
+
+function formatMinerFee(voucher: VoucherRecord): string {
+  const values = getTopupRecordValues(voucher);
+
+  if (
+    values.networkFeeStatus === 'final' &&
+    values.actualMinerFeeSats !== null
+  ) {
+    return `${formatBchSats(
+      values.actualMinerFeeSats
+    )} · actual signed transaction fee`;
+  }
+
+  if (
+    values.networkFeeStatus === 'estimated' &&
+    values.estimatedMinerFeeSats !== null
+  ) {
+    return `${formatBchSats(values.estimatedMinerFeeSats)} · estimate only`;
+  }
+
+  if (values.networkFeeStatus === 'not_calculated') {
+    return 'Not calculated';
+  }
+
+  return 'Not available for this record';
+}
+
+function formatMinerFeeRecovery(voucher: VoucherRecord): string {
+  const values = getTopupRecordValues(voucher);
+
+  if (values.customerNetworkFeeRecoveryMinor === null) {
+    return 'Not available for this record';
+  }
+
+  const formattedAmount = formatFiatAmount(
+    values.customerNetworkFeeRecoveryMinor,
+    voucher.fiatCurrency
+  );
+
+  if (values.customerNetworkFeeRecoveryMinor === 0) {
+    return `${formattedAmount} · merchant absorbs miner fee`;
+  }
+
+  return `${formattedAmount} · recovered from customer`;
 }
 
 function getSelectedUtxoCount(voucher: VoucherRecord): number {

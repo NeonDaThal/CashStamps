@@ -1,5 +1,6 @@
 import type { CashOutRecord } from 'src/types/cash-out';
 import type { VoucherRecord } from 'src/types/voucher';
+import type { NetworkFeeSnapshotStatus } from 'src/types/fee-model';
 
 export type MerchantReportRange =
   | 'today'
@@ -11,6 +12,10 @@ export type MerchantReportRange =
 export type MerchantReportActivityType = 'voucher' | 'cash_out';
 
 export type MerchantReportGrowthDirection = 'up' | 'down' | 'flat' | 'new';
+
+export type MerchantReportTopupNetworkFeeStatus =
+  | NetworkFeeSnapshotStatus
+  | 'unknown';
 
 export interface MerchantReportPeriod {
   range: MerchantReportRange;
@@ -48,6 +53,8 @@ export interface MerchantReportGrowthSummary {
   feeRevenueMinor: MerchantReportGrowthMetric;
 
   bchMovementSats: MerchantReportGrowthMetric;
+
+  topupActualMinerFeeSats: MerchantReportGrowthMetric;
 }
 
 export interface MerchantReportVoucherTotals {
@@ -90,6 +97,56 @@ export interface MerchantReportVoucherTotals {
    * cannot be reconstructed safely.
    */
   feeSplitUnknownCount: number;
+
+  /**
+   * Sum of exact miner fees from final signed Topup transactions.
+   *
+   * Estimates and unknown historical fees are deliberately excluded.
+   */
+  actualMinerFeeSats: number;
+
+  /**
+   * Sum of persisted miner-fee estimates for records which do not yet contain
+   * an exact final fee.
+   *
+   * This is informational only and must not be treated as actual merchant cost.
+   */
+  estimatedMinerFeeSats: number;
+
+  /**
+   * Number of Topups with a trustworthy final miner fee.
+   */
+  finalMinerFeeCount: number;
+
+  /**
+   * Number of Topups with only an estimated miner fee.
+   */
+  estimatedMinerFeeCount: number;
+
+  /**
+   * Number of explicit Fee Model records where the miner fee had not yet been
+   * calculated when the snapshot was created.
+   */
+  networkFeeNotCalculatedCount: number;
+
+  /**
+   * Number of legacy or otherwise unclassifiable Topups whose miner fee is not
+   * safely known.
+   */
+  networkFeeUnknownCount: number;
+
+  /**
+   * Explicit customer miner-fee recovery recorded by final snapshots.
+   *
+   * Current launch Topups record zero because the merchant absorbs the fee.
+   */
+  customerNetworkFeeRecoveryMinor: number;
+
+  /**
+   * Number of records whose customer miner-fee recovery value is explicitly
+   * known.
+   */
+  customerNetworkFeeRecoveryKnownCount: number;
 
   /**
    * Compatibility alias for customerCashCollectedMinor.
@@ -143,6 +200,16 @@ export interface MerchantReportCurrencyTotals {
   voucherMerchantFeeRevenueMinor: number;
   voucherPlatformFeeMinor: number;
   voucherFeeSplitUnknownCount: number;
+  voucherActualMinerFeeSats: number;
+  voucherEstimatedMinerFeeSats: number;
+
+  voucherFinalMinerFeeCount: number;
+  voucherEstimatedMinerFeeCount: number;
+  voucherNetworkFeeNotCalculatedCount: number;
+  voucherNetworkFeeUnknownCount: number;
+
+  voucherCustomerNetworkFeeRecoveryMinor: number;
+  voucherCustomerNetworkFeeRecoveryKnownCount: number;
 
   /**
    * Compatibility aliases for existing report consumers.
@@ -200,6 +267,24 @@ export interface MerchantReportOverallTotals {
   topupMerchantFeeRevenueMinor: number;
   topupPlatformFeeMinor: number;
   topupFeeSplitUnknownCount: number;
+  /**
+   * Exact BCH miner fees paid by the merchant treasury for Topups.
+   */
+  topupActualMinerFeeSats: number;
+
+  /**
+   * Non-final miner-fee estimates retained only for historical/informational
+   * purposes.
+   */
+  topupEstimatedMinerFeeSats: number;
+
+  topupFinalMinerFeeCount: number;
+  topupEstimatedMinerFeeCount: number;
+  topupNetworkFeeNotCalculatedCount: number;
+  topupNetworkFeeUnknownCount: number;
+
+  topupCustomerNetworkFeeRecoveryMinor: number;
+  topupCustomerNetworkFeeRecoveryKnownCount: number;
 
   bchBoughtByCustomersSats: number;
   bchSoldByCustomersSats: number;
@@ -234,6 +319,17 @@ export interface MerchantReportActivityItem {
   merchantFeeAmountMinor?: number;
   platformFeeAmountMinor?: number;
   feeSplitKnown?: boolean;
+  /**
+   * Topup miner-fee accounting.
+   *
+   * Cash-out miner-fee semantics will remain separate.
+   */
+  networkFeeStatus?: MerchantReportTopupNetworkFeeStatus;
+
+  actualMinerFeeSats?: number;
+  estimatedMinerFeeSats?: number;
+
+  customerNetworkFeeRecoveryMinor?: number;
 
   bchSats: number;
   status: string;
