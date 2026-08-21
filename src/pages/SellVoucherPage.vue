@@ -396,6 +396,7 @@
         v-model="isProgressDialogOpen"
         :steps="issueProgressSteps"
         :funding-recovery-available="recoverableFundingVoucherId !== null"
+        :funding-recovery-mode="fundingRecoveryMode"
         :is-retrying-funding="isRetryingFunding"
         :funding-recovery-message="fundingRecoveryMessage"
         @retry-funding="handleRetryFunding"
@@ -441,6 +442,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import IssueProgressDialog, {
+  type IssueProgressFundingRecoveryMode,
   type IssueProgressStep,
 } from 'src/components/IssueProgressDialog.vue';
 import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
@@ -511,6 +513,8 @@ const isProgressDialogOpen = ref(false);
 const isReceiptPreviewDialogOpen = ref(false);
 const isTreasuryDialogOpen = ref(false);
 const recoverableFundingVoucherId = ref<string | null>(null);
+
+const fundingRecoveryMode = ref<IssueProgressFundingRecoveryMode>('check');
 
 const isRetryingFunding = ref(false);
 
@@ -714,6 +718,8 @@ async function handleReviewVoucher(
   clearMessages();
   recoverableFundingVoucherId.value = null;
 
+  fundingRecoveryMode.value = 'check';
+
   isRetryingFunding.value = false;
 
   fundingRecoveryMessage.value = '';
@@ -870,6 +876,8 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
   clearMessages();
   recoverableFundingVoucherId.value = null;
+
+  fundingRecoveryMode.value = 'check';
 
   isRetryingFunding.value = false;
 
@@ -1257,6 +1265,15 @@ async function handleCreateDraftVoucher(): Promise<void> {
       }
 
       case 'blocked': {
+        recoverableFundingVoucherId.value = savedVoucher.id;
+
+        fundingRecoveryMode.value = 'resume';
+
+        fundingRecoveryMessage.value =
+          'Funding submission was blocked before the transaction was sent. ' +
+          'The exact signed transaction remains saved safely and can be resumed. ' +
+          'Resume funding will use that same transaction only.';
+
         activeIssueProgressStep = 'broadcast';
 
         setIssueProgressStepStatus('broadcast', 'error');
@@ -1270,6 +1287,15 @@ async function handleCreateDraftVoucher(): Promise<void> {
       }
 
       case 'definitely_not_broadcast': {
+        recoverableFundingVoucherId.value = savedVoucher.id;
+
+        fundingRecoveryMode.value = 'resume';
+
+        fundingRecoveryMessage.value =
+          'The funding transaction was definitely not submitted to the BCH network. ' +
+          'The exact signed transaction remains saved safely and can be resumed. ' +
+          'No replacement transaction will be created.';
+
         activeIssueProgressStep = 'broadcast';
 
         setIssueProgressStepStatus('broadcast', 'error');
@@ -1284,6 +1310,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
       case 'broadcasted_pending_detection': {
         recoverableFundingVoucherId.value = savedVoucher.id;
+        fundingRecoveryMode.value = 'check';
 
         fundingRecoveryMessage.value =
           'The transaction was submitted successfully, but network verification has not completed yet. Check the same saved transaction again before continuing.';
@@ -1300,6 +1327,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
       case 'uncertain': {
         recoverableFundingVoucherId.value = savedVoucher.id;
+        fundingRecoveryMode.value = 'check';
 
         fundingRecoveryMessage.value =
           'The broadcast outcome could not be proven yet. Check the exact saved transaction again before continuing. No replacement transaction will be created.';
@@ -1393,21 +1421,174 @@ async function handleRetryFunding(): Promise<void> {
 
   isRetryingFunding.value = true;
 
-  /**
-   * This action is verification-only.
-   *
-   * It cannot:
-   *
-   * - create a transaction
-   * - sign a transaction
-   * - broadcast a transaction
-   *
-   * It only checks the exact deterministic txid already stored against this
-   * voucher record.
-   */
-  setIssueProgressStepStatus('confirmFunding', 'active');
-
   try {
+    /**
+     * ================================================================
+     * SAFE RESUME
+     * ================================================================
+     *
+     * Only available when B5.7 has proved that the earlier transaction was
+     * never submitted, or submission was blocked before the request began.
+     *
+     * advanceTopupFundingLifecycle():
+     *
+     * - loads the exact durable fundingIntent
+     * - reconciles its deterministic txid first
+     * - may submit only that exact persisted raw transaction
+     * - never creates or signs another transaction
+     */
+    if (fundingRecoveryMode.value === 'resume') {
+      setIssueProgressStepStatus('broadcast', 'active');
+
+      setIssueProgressStepStatus('confirmFunding', 'pending');
+
+      const result = await advanceTopupFundingLifecycle(
+        voucherId,
+        undefined,
+        (phase) => {
+          if (
+            phase === 'pre_broadcast_reconciliation' ||
+            phase === 'broadcast'
+          ) {
+            setIssueProgressStepStatus('broadcast', 'active');
+
+            return;
+          }
+
+          setIssueProgressStepStatus('broadcast', 'complete');
+
+          setIssueProgressStepStatus('confirmFunding', 'active');
+        }
+      );
+
+      if (result.outcome === 'funded') {
+        if (result.broadcastResult) {
+          setIssueProgressStepStatus('broadcast', 'complete');
+        } else {
+          /**
+           * Pre-broadcast reconciliation discovered that the exact saved
+           * transaction was already on the network, so no new submission
+           * occurred during this recovery.
+           */
+          setIssueProgressStepStatus('broadcast', 'skipped');
+        }
+
+        setIssueProgressStepStatus('confirmFunding', 'complete');
+
+        recoverableFundingVoucherId.value = null;
+
+        fundingRecoveryMode.value = 'check';
+
+        fundingRecoveryMessage.value = '';
+
+        await recordCashOnHandForIssuedTopup(result.record);
+
+        await waitForUiDelay(300);
+
+        lastIssuedVoucher.value = result.record;
+
+        pendingPricing.value = null;
+        pendingFeeOutputPlan.value = null;
+        pendingTreasuryFundingPreview.value = null;
+
+        pendingFundingBroadcast.value = null;
+
+        pendingVoucherAddress.value = null;
+        pendingKeyMetadata.value = null;
+        pendingIssueOperationId.value = null;
+
+        isProgressDialogOpen.value = false;
+
+        isReceiptPreviewDialogOpen.value = true;
+
+        await loadTreasuryWallet();
+
+        return;
+      }
+
+      if (result.outcome === 'blocked') {
+        fundingRecoveryMode.value = 'resume';
+
+        fundingRecoveryMessage.value =
+          'Funding submission is still blocked. No transaction was sent. ' +
+          'The exact signed transaction remains saved safely and may be resumed later.';
+
+        setIssueProgressStepStatus('broadcast', 'error');
+
+        setIssueProgressStepStatus('confirmFunding', 'skipped');
+
+        return;
+      }
+
+      if (result.outcome === 'definitely_not_broadcast') {
+        fundingRecoveryMode.value = 'resume';
+
+        fundingRecoveryMessage.value =
+          'The funding transaction was definitely not submitted. ' +
+          'The exact signed transaction remains saved safely and may be resumed again.';
+
+        setIssueProgressStepStatus('broadcast', 'error');
+
+        setIssueProgressStepStatus('confirmFunding', 'skipped');
+
+        return;
+      }
+
+      if (result.outcome === 'broadcasted_pending_detection') {
+        /**
+         * Submission has now happened.
+         *
+         * From this point onward recovery MUST switch permanently to
+         * verification-only.
+         */
+        fundingRecoveryMode.value = 'check';
+
+        fundingRecoveryMessage.value =
+          'The exact saved transaction was submitted, but network verification ' +
+          'has not completed yet. Check that same transaction again before continuing.';
+
+        setIssueProgressStepStatus('broadcast', 'complete');
+
+        setIssueProgressStepStatus('confirmFunding', 'error');
+
+        return;
+      }
+
+      /**
+       * An uncertain request may have reached the BCH network.
+       *
+       * Never allow Resume from this point onward.
+       */
+      fundingRecoveryMode.value = 'check';
+
+      fundingRecoveryMessage.value =
+        'The funding submission outcome is uncertain. ' +
+        'Only the exact saved transaction may now be checked again. ' +
+        'No further transaction will be submitted by this recovery action.';
+
+      setIssueProgressStepStatus('broadcast', 'error');
+
+      setIssueProgressStepStatus('confirmFunding', 'error');
+
+      return;
+    }
+
+    /**
+     * ================================================================
+     * VERIFICATION-ONLY RECOVERY
+     * ================================================================
+     *
+     * This path cannot:
+     *
+     * - create a transaction
+     * - sign a transaction
+     * - broadcast a transaction
+     *
+     * It checks only the exact deterministic txid already stored against the
+     * voucher record.
+     */
+    setIssueProgressStepStatus('confirmFunding', 'active');
+
     const result = await reconcileExistingTopupFunding(voucherId);
 
     const isFunded =
@@ -1418,28 +1599,22 @@ async function handleRetryFunding(): Promise<void> {
       setIssueProgressStepStatus('confirmFunding', 'error');
 
       fundingRecoveryMessage.value =
-        'Funding is still not visible yet. The saved transaction has not been changed or resent. You can check the same transaction again.';
+        'Funding is still not visible yet. The saved transaction has not ' +
+        'been changed, signed or resent. You can check the same transaction again.';
 
       return;
     }
 
-    /**
-     * Positive evidence of the exact persisted transaction resolves both an
-     * earlier "broadcasted but not detected" state and an earlier uncertain
-     * broadcast-response state.
-     */
     setIssueProgressStepStatus('broadcast', 'complete');
 
     setIssueProgressStepStatus('confirmFunding', 'complete');
 
     recoverableFundingVoucherId.value = null;
 
+    fundingRecoveryMode.value = 'check';
+
     fundingRecoveryMessage.value = '';
 
-    /**
-     * Continue the SAME successful Issue flow that would have occurred if
-     * automatic reconciliation had succeeded immediately.
-     */
     await recordCashOnHandForIssuedTopup(result.record);
 
     await waitForUiDelay(300);
@@ -1447,33 +1622,39 @@ async function handleRetryFunding(): Promise<void> {
     lastIssuedVoucher.value = result.record;
 
     pendingPricing.value = null;
-
     pendingFeeOutputPlan.value = null;
 
     pendingTreasuryFundingPreview.value = null;
 
     pendingFundingBroadcast.value = null;
-
     pendingVoucherAddress.value = null;
-
     pendingKeyMetadata.value = null;
 
     pendingIssueOperationId.value = null;
 
     isProgressDialogOpen.value = false;
-
     isReceiptPreviewDialogOpen.value = true;
 
     await loadTreasuryWallet();
   } catch (error) {
     console.error(error);
 
-    setIssueProgressStepStatus('confirmFunding', 'error');
+    /**
+     * Recovery itself did not reach a safe resolved state.
+     *
+     * Do not manufacture another financial action here. The persisted record
+     * remains the source of truth and can also be inspected from History.
+     */
+    if (fundingRecoveryMode.value === 'resume') {
+      setIssueProgressStepStatus('broadcast', 'error');
+    } else {
+      setIssueProgressStepStatus('confirmFunding', 'error');
+    }
 
     fundingRecoveryMessage.value =
       error instanceof Error
-        ? `Funding could not be verified yet: ${error.message}`
-        : 'Funding could not be verified yet. Check the same saved transaction again.';
+        ? `Funding recovery could not complete: ${error.message}`
+        : 'Funding recovery could not complete. The saved transaction remains unchanged.';
   } finally {
     isRetryingFunding.value = false;
   }

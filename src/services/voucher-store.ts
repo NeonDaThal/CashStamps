@@ -6,6 +6,8 @@ import { applyVoucherFundingReconciliation } from 'src/services/voucher-funding-
 import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
 import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
 
+import { synchroniseTopupFundingState } from 'src/services/topup-funding-state';
+
 import type {
   VoucherManualRedemption,
   VoucherRecord,
@@ -167,7 +169,18 @@ export async function updateVoucherFundingBroadcast(
         return currentRecords;
       }
 
-      const nextRecord = applyVoucherFundingBroadcast(existingRecord, result);
+      const broadcastRecord = applyVoucherFundingBroadcast(
+        existingRecord,
+        result
+      );
+
+      const synchronisedRecord = synchroniseTopupFundingState(broadcastRecord);
+
+      const nextRecord: VoucherRecord = {
+        ...synchronisedRecord,
+
+        updatedAt: new Date().toISOString(),
+      };
 
       updatedRecord = nextRecord;
 
@@ -205,10 +218,68 @@ export async function updateVoucherFundingReconciliation(
         return currentRecords;
       }
 
-      const nextRecord = applyVoucherFundingReconciliation(
+      const reconciliationRecord = applyVoucherFundingReconciliation(
         existingRecord,
         reconciliation
       );
+
+      const synchronisedRecord =
+        synchroniseTopupFundingState(reconciliationRecord);
+
+      const nextRecord: VoucherRecord = {
+        ...synchronisedRecord,
+
+        updatedAt: new Date().toISOString(),
+      };
+
+      updatedRecord = nextRecord;
+
+      return currentRecords.map((record) =>
+        record.id === id ? nextRecord : record
+      );
+    }
+  );
+
+  return updatedRecord;
+}
+
+/**
+ * Re-evaluate one persisted voucher using the B5.7 funding-state classifier
+ * without performing any BCH network operation.
+ *
+ * Used before lifecycle recovery so malformed or contradictory persisted
+ * funding state fails closed before reconciliation/broadcast is attempted.
+ */
+export async function updateVoucherFundingState(
+  id: string
+): Promise<VoucherRecord | undefined> {
+  let updatedRecord: VoucherRecord | undefined;
+
+  await update<VoucherRecord[]>(
+    VOUCHER_RECORDS_KEY,
+
+    (storedRecords = []) => {
+      const currentRecords = Array.isArray(storedRecords) ? storedRecords : [];
+
+      const existingRecord = currentRecords.find((record) => record.id === id);
+
+      if (!existingRecord) {
+        return currentRecords;
+      }
+
+      const synchronisedRecord = synchroniseTopupFundingState(existingRecord);
+
+      if (synchronisedRecord === existingRecord) {
+        updatedRecord = existingRecord;
+
+        return currentRecords;
+      }
+
+      const nextRecord: VoucherRecord = {
+        ...synchronisedRecord,
+
+        updatedAt: new Date().toISOString(),
+      };
 
       updatedRecord = nextRecord;
 

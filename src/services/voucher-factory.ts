@@ -377,11 +377,12 @@ export function createDraftVoucherRecord(
 
     fundingBroadcast,
 
-    status:
-      fundingBroadcast?.status === 'broadcasted'
-        ? 'funded'
-        : fundingIntent
-        ? 'funding'
-        : 'draft',
+    /**
+     * A durable signed funding intent means funding is in progress.
+     *
+     * Broadcast acceptance alone is NOT sufficient to mark a Topup funded.
+     * Only positive reconciliation of the exact deterministic txid may do that.
+     */
+    status: fundingIntent ? 'funding' : 'draft',
   };
 }

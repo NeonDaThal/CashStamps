@@ -109,6 +109,7 @@
             @mark-manual-redemption="handleMarkManualRedemption"
             @clear-manual-redemption="handleClearManualRedemption"
             @check-on-chain-redemption="handleCheckOnChainRedemption"
+            @resume-funding="handleResumeFunding"
             @check-funding="handleCheckFunding"
           />
         </q-card-section>
@@ -211,7 +212,10 @@ import {
 } from 'src/services/voucher-store';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import { detectVoucherRedemptionStatus } from 'src/services/voucher-redemption-detector';
-import { reconcileExistingTopupFunding } from 'src/services/topup-funding-lifecycle';
+import {
+  advanceTopupFundingLifecycle,
+  reconcileExistingTopupFunding,
+} from 'src/services/topup-funding-lifecycle';
 import { topupIcon } from 'src/icons/custom-icons';
 
 const { t } = useI18n({ useScope: 'global' });
@@ -412,6 +416,90 @@ async function handleCheckOnChainRedemption(voucherId: string): Promise<void> {
         : t('historyPage.messages.couldNotCheckVoucherRedemptionStatus');
   } finally {
     checkingRedemptionVoucherId.value = null;
+  }
+}
+
+async function handleResumeFunding(voucherId: string): Promise<void> {
+  errorMessage.value = '';
+  successMessage.value = '';
+  warningMessage.value = '';
+
+  checkingFundingVoucherId.value = voucherId;
+
+  try {
+    /**
+     * B5.7 SAFE RESUME.
+     *
+     * advanceTopupFundingLifecycle() may only reach a broadcast from a state
+     * which the persisted funding-state classifier has proved resumable.
+     *
+     * Even then it:
+     *
+     * - uses the exact persisted fundingIntent
+     * - reconciles the exact txid first
+     * - never constructs another transaction
+     * - never signs another transaction
+     */
+    const result = await advanceTopupFundingLifecycle(voucherId);
+
+    await loadVoucherRecords();
+
+    if (result.outcome === 'funded') {
+      successMessage.value = `Funding verified for ${result.record.serial}.`;
+
+      return;
+    }
+
+    if (result.outcome === 'broadcasted_pending_detection') {
+      warningMessage.value =
+        `Funding for ${result.record.serial} was submitted, but the exact transaction ` +
+        'is still pending network verification. Use Check funding to verify the saved transaction again.';
+
+      return;
+    }
+
+    if (result.outcome === 'uncertain') {
+      warningMessage.value =
+        `The funding submission outcome for ${result.record.serial} is uncertain. ` +
+        'Do not submit another transaction. Use Check funding to verify the exact saved transaction.';
+
+      return;
+    }
+
+    if (result.outcome === 'definitely_not_broadcast') {
+      warningMessage.value =
+        `Funding for ${result.record.serial} was definitely not submitted. ` +
+        'The exact saved transaction remains available to resume safely.';
+
+      return;
+    }
+
+    /**
+     * In the current development build this is also the expected result when
+     * REAL_BROADCAST_ENABLED remains false.
+     */
+    if (result.outcome === 'blocked') {
+      warningMessage.value =
+        `Funding submission for ${result.record.serial} is currently blocked. ` +
+        'No transaction was sent and the exact saved transaction remains unchanged.';
+
+      return;
+    }
+  } catch (error) {
+    console.error(error);
+
+    /**
+     * The B5.7 state synchronisation may have persisted a terminal error
+     * immediately before throwing. Reload so History shows that durable state.
+     */
+    await loadVoucherRecords();
+
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : 'Could not safely resume Topup funding.';
+  } finally {
+    checkingFundingVoucherId.value = null;
   }
 }
 

@@ -6,6 +6,8 @@ import {
   type TopupFundingLifecycleDependencies,
 } from './topup-funding-lifecycle';
 
+import { synchroniseTopupFundingState } from './topup-funding-state';
+
 import { applyVoucherFundingBroadcast } from './voucher-funding-broadcast';
 
 import { applyVoucherFundingReconciliation } from './voucher-funding-reconciliation';
@@ -172,8 +174,10 @@ function createDependencies(input: {
   reconciliations: TreasuryBroadcastReconciliationResult[];
 
   broadcastResult: TreasuryBroadcastResult;
+
+  initialRecord?: VoucherRecord;
 }) {
-  let currentRecord = createVoucher();
+  let currentRecord = input.initialRecord ?? createVoucher();
 
   let reconciliationIndex = 0;
 
@@ -181,6 +185,12 @@ function createDependencies(input: {
 
   const dependencies: TopupFundingLifecycleDependencies = {
     async getVoucherRecordById() {
+      return currentRecord;
+    },
+
+    async updateVoucherFundingState() {
+      currentRecord = synchroniseTopupFundingState(currentRecord);
+
       return currentRecord;
     },
 
@@ -413,7 +423,46 @@ async function runTests(): Promise<void> {
     );
   }
 
-  console.log('\nAll 7 Topup funding lifecycle tests passed successfully.');
+  {
+    const initialRecord = createVoucher();
+
+    initialRecord.fundingBroadcast = {
+      status: 'broadcasted',
+
+      txid: TEST_TXID,
+      serverTxid: TEST_TXID,
+
+      broadcastEnabled: true,
+      requestAttempted: true,
+
+      attemptedAt: BASE_TIME,
+    };
+
+    const test = createDependencies({
+      initialRecord,
+
+      reconciliations: [createReconciliation('mempool')],
+
+      broadcastResult: createBroadcastResult('broadcasted'),
+    });
+
+    const result = await advanceTopupFundingLifecycle(
+      'voucher-lifecycle-test',
+      test.dependencies
+    );
+
+    assert.equal(result.outcome, 'funded');
+
+    assert.equal(test.getBroadcastCallCount(), 0);
+
+    assert.equal(result.record.status, 'funded');
+
+    console.log(
+      '✓ Existing broadcasted voucher uses verification-only recovery and is never rebroadcast'
+    );
+  }
+
+  console.log('\nAll 9 Topup funding lifecycle tests passed successfully.');
 }
 
 void runTests();

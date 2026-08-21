@@ -6,9 +6,15 @@ import {
 } from 'src/services/treasury-broadcast-reconciliation';
 
 import {
+  getTopupFundingState,
+  type TopupFundingStateResult,
+} from 'src/services/topup-funding-state';
+
+import {
   getVoucherRecordById,
   updateVoucherFundingBroadcast,
   updateVoucherFundingReconciliation,
+  updateVoucherFundingState,
 } from 'src/services/voucher-store';
 
 import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
@@ -43,7 +49,7 @@ export interface TopupFundingLifecycleResult {
   /**
    * First reconciliation check performed before any new broadcast attempt.
    */
-  preBroadcastReconciliation: TreasuryBroadcastReconciliationResult;
+  preBroadcastReconciliation?: TreasuryBroadcastReconciliationResult;
 
   broadcastResult?: TreasuryBroadcastResult;
 
@@ -59,6 +65,8 @@ export interface TopupFundingLifecycleResult {
  */
 export interface TopupFundingLifecycleDependencies {
   getVoucherRecordById: (id: string) => Promise<VoucherRecord | undefined>;
+
+  updateVoucherFundingState: (id: string) => Promise<VoucherRecord | undefined>;
 
   /**
    * Single read-only reconciliation.
@@ -97,6 +105,7 @@ export interface TopupFundingLifecycleDependencies {
 
 const defaultDependencies: TopupFundingLifecycleDependencies = {
   getVoucherRecordById,
+  updateVoucherFundingState,
   reconcileTreasuryBroadcast,
   reconcileTreasuryBroadcastWithRetry,
   updateVoucherFundingReconciliation,
@@ -144,6 +153,25 @@ function requireUpdatedVoucher(
   return record;
 }
 
+function requireFundingLifecycleState(
+  record: VoucherRecord
+): TopupFundingStateResult {
+  const state = getTopupFundingState(record);
+
+  if (state.state === 'terminal_error') {
+    throw new Error(
+      record.errorMessage ??
+        'The persisted Topup funding state is invalid and cannot continue automatically.'
+    );
+  }
+
+  if (state.state === 'not_applicable') {
+    throw new Error('Voucher is not in the durable Topup funding lifecycle.');
+  }
+
+  return state;
+}
+
 /**
  * Advance one already-persisted Topup through its funding lifecycle.
  *
@@ -164,11 +192,24 @@ export async function advanceTopupFundingLifecycle(
   dependencies: TopupFundingLifecycleDependencies = defaultDependencies,
   onPhaseChange?: (phase: TopupFundingLifecyclePhase) => void
 ): Promise<TopupFundingLifecycleResult> {
-  const initialRecord = await dependencies.getVoucherRecordById(voucherId);
+  const loadedRecord = await dependencies.getVoucherRecordById(voucherId);
 
-  if (!initialRecord) {
+  if (!loadedRecord) {
     throw new Error('Voucher record could not be found for funding.');
   }
+
+  /**
+   * First make the persisted status/error semantics agree with the B5.7
+   * classifier.
+   *
+   * This is local storage only — no BCH network operation.
+   */
+  const initialRecord = requireUpdatedVoucher(
+    await dependencies.updateVoucherFundingState(loadedRecord.id),
+    'synchronising the persisted funding state'
+  );
+
+  const initialState = requireFundingLifecycleState(initialRecord);
 
   const fundingIntent = requireFundingIntent(initialRecord);
 
@@ -180,16 +221,107 @@ export async function advanceTopupFundingLifecycle(
 
   /**
    * ================================================================
+   * ALREADY FUNDED
+   * ================================================================
+   *
+   * If persisted positive evidence already proves the exact transaction,
+   * there is nothing further to submit or reconcile.
+   */
+  if (initialState.state === 'funded') {
+    return {
+      outcome: 'funded',
+
+      record: initialRecord,
+    };
+  }
+
+  /**
+   * ================================================================
+   * VERIFICATION-ONLY RECOVERY
+   * ================================================================
+   *
+   * A previous request was either:
+   *
+   * - accepted by the broadcast server; or
+   * - attempted with an uncertain outcome.
+   *
+   * NEVER submit again from this state.
+   *
+   * Only check the exact deterministic txid using the read-only,
+   * propagation-tolerant reconciliation path.
+   */
+  if (initialState.state === 'verification_pending') {
+    onPhaseChange?.('post_broadcast_reconciliation');
+
+    const postBroadcastReconciliation =
+      await dependencies.reconcileTreasuryBroadcastWithRetry(txid);
+
+    const currentRecord = requireUpdatedVoucher(
+      await dependencies.updateVoucherFundingReconciliation(
+        initialRecord.id,
+        postBroadcastReconciliation
+      ),
+      'saving verification-only funding reconciliation'
+    );
+
+    /**
+     * This is verification-only recovery of a previously persisted broadcast.
+     *
+     * No new broadcast occurs here, so do not manufacture a
+     * TreasuryBroadcastResult from the historical VoucherFundingBroadcast.
+     */
+    if (hasPositiveNetworkEvidence(currentRecord)) {
+      return {
+        outcome: 'funded',
+
+        record: currentRecord,
+
+        postBroadcastReconciliation,
+      };
+    }
+
+    if (currentRecord.fundingBroadcast?.status === 'broadcasted') {
+      return {
+        outcome: 'broadcasted_pending_detection',
+
+        record: currentRecord,
+
+        postBroadcastReconciliation,
+      };
+    }
+
+    return {
+      outcome: 'uncertain',
+
+      record: currentRecord,
+
+      postBroadcastReconciliation,
+    };
+  }
+
+  /**
+   * From this point onward the classifier has proved that submitting the
+   * SAME persisted transaction is permitted.
+   */
+  if (initialState.state !== 'ready_to_submit') {
+    throw new Error('Voucher funding state cannot be resumed automatically.');
+  }
+
+  /**
+   * ================================================================
    * PRE-BROADCAST RECONCILIATION
    * ================================================================
    *
-   * This is the crash/retry safety check.
+   * Even when the persisted evidence says submission is safe, first look for
+   * the exact transaction.
    *
-   * Before another broadcast request is made, look for the exact transaction
-   * that was already signed and persisted.
+   * This handles:
    *
-   * This check is deliberately a single quick read. If the transaction is
-   * already visible, there is no reason to broadcast it again.
+   * - crash after durable save but before recorded broadcast result;
+   * - stale local persistence;
+   * - prior definitely-not-broadcast retries;
+   *
+   * without ever constructing another transaction.
    */
   onPhaseChange?.('pre_broadcast_reconciliation');
 
@@ -204,10 +336,6 @@ export async function advanceTopupFundingLifecycle(
     'saving pre-broadcast reconciliation'
   );
 
-  /**
-   * If the exact transaction is already observed, there is nothing to
-   * broadcast.
-   */
   if (hasPositiveNetworkEvidence(currentRecord)) {
     return {
       outcome: 'funded',
@@ -223,9 +351,7 @@ export async function advanceTopupFundingLifecycle(
    * BROADCAST EXACT PERSISTED TRANSACTION
    * ================================================================
    *
-   * Only fundingIntent.rawTransactionHex may be submitted.
-   *
-   * No new transaction is constructed here.
+   * No new transaction is created or signed here.
    */
   onPhaseChange?.('broadcast');
 
@@ -269,22 +395,6 @@ export async function advanceTopupFundingLifecycle(
    * ================================================================
    * POST-BROADCAST RECONCILIATION
    * ================================================================
-   *
-   * Both:
-   *
-   * - broadcasted
-   * - uncertain
-   *
-   * are reconciled using the SAME deterministic txid.
-   *
-   * Unlike the pre-broadcast check, this stage uses a short retry/backoff
-   * window because transaction propagation and indexing are not instantaneous.
-   *
-   * These retries are READ-ONLY.
-   *
-   * Nothing is rebuilt.
-   * Nothing is re-signed.
-   * Nothing is re-broadcast.
    */
   onPhaseChange?.('post_broadcast_reconciliation');
 
@@ -299,12 +409,6 @@ export async function advanceTopupFundingLifecycle(
     'saving post-broadcast reconciliation'
   );
 
-  /**
-   * Zero-confirmation success.
-   *
-   * Either mempool or confirmed evidence is sufficient to establish that the
-   * exact persisted Topup funding transaction is visible on the BCH network.
-   */
   if (hasPositiveNetworkEvidence(currentRecord)) {
     return {
       outcome: 'funded',
@@ -319,15 +423,6 @@ export async function advanceTopupFundingLifecycle(
     };
   }
 
-  /**
-   * The broadcast server returned our exact expected txid, but the retry
-   * window still did not obtain independent positive network evidence.
-   *
-   * Do not reveal the customer WIF in the production path yet.
-   *
-   * The persisted transaction can be checked again later using the read-only
-   * recovery operation below.
-   */
   if (broadcastResult.status === 'broadcasted') {
     return {
       outcome: 'broadcasted_pending_detection',
@@ -342,14 +437,6 @@ export async function advanceTopupFundingLifecycle(
     };
   }
 
-  /**
-   * A request was attempted, its result could not be proven, and the exact
-   * transaction is still not visible.
-   *
-   * This remains uncertain.
-   *
-   * Never create a replacement transaction from this state.
-   */
   return {
     outcome: 'uncertain',
 

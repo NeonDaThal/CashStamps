@@ -50,27 +50,24 @@
           <q-card-section class="recovery-section">
             <div class="recovery-heading-row">
               <div class="recovery-icon">
-                <q-icon name="sync_problem" size="28px" />
+                <q-icon :name="recoveryIcon" size="28px" />
               </div>
 
               <div class="recovery-content">
                 <div class="recovery-title">
-                  Funding verification is taking longer than expected
+                  {{ recoveryTitle }}
                 </div>
 
                 <div class="recovery-message">
-                  {{
-                    fundingRecoveryMessage ||
-                    'The transaction has been saved safely. Check the same transaction again before continuing. No replacement transaction will be created.'
-                  }}
+                  {{ fundingRecoveryMessage || defaultRecoveryMessage }}
                 </div>
               </div>
             </div>
 
             <q-btn
               class="recovery-button q-mt-md"
-              label="Check funding again"
-              icon="sync"
+              :label="recoveryButtonLabel"
+              :icon="recoveryButtonIcon"
               unelevated
               no-caps
               :loading="isRetryingFunding"
@@ -171,17 +168,29 @@ export interface IssueProgressStep {
   status: IssueProgressStepStatus;
 }
 
+export type IssueProgressFundingRecoveryMode = 'check' | 'resume';
+
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
     steps: IssueProgressStep[];
 
     /**
-     * Only true when a durable funding transaction already exists and the
-     * safe operation available to the merchant is to reconcile that SAME
-     * transaction again.
+     * True only when a durable funding transaction already exists and B5.7
+     * has identified a safe recovery action for that SAME transaction.
      */
     fundingRecoveryAvailable?: boolean;
+
+    /**
+     * check:
+     *   read-only reconciliation of a transaction which may already have
+     *   reached the BCH network.
+     *
+     * resume:
+     *   first reconcile the exact saved transaction, then submit that SAME
+     *   transaction only if B5.7 proves submission is safe.
+     */
+    fundingRecoveryMode?: IssueProgressFundingRecoveryMode;
 
     isRetryingFunding?: boolean;
 
@@ -189,6 +198,8 @@ const props = withDefaults(
   }>(),
   {
     fundingRecoveryAvailable: false,
+
+    fundingRecoveryMode: 'check',
 
     isRetryingFunding: false,
 
@@ -213,6 +224,43 @@ const hasActiveStep = computed(() =>
 const hasErrorStep = computed(() =>
   props.steps.some((step) => step.status === 'error')
 );
+
+const recoveryTitle = computed(() => {
+  return props.fundingRecoveryMode === 'resume'
+    ? 'Funding can be resumed safely'
+    : 'Funding verification is taking longer than expected';
+});
+
+const recoveryIcon = computed(() => {
+  return props.fundingRecoveryMode === 'resume'
+    ? 'restart_alt'
+    : 'sync_problem';
+});
+
+const recoveryButtonLabel = computed(() => {
+  return props.fundingRecoveryMode === 'resume'
+    ? 'Resume funding'
+    : 'Check funding again';
+});
+
+const recoveryButtonIcon = computed(() => {
+  return props.fundingRecoveryMode === 'resume' ? 'restart_alt' : 'sync';
+});
+
+const defaultRecoveryMessage = computed(() => {
+  if (props.fundingRecoveryMode === 'resume') {
+    return (
+      'The exact signed transaction has been saved safely. ' +
+      'Resume funding will first check that same transaction and may then ' +
+      'submit that exact saved transaction. No replacement transaction will be created.'
+    );
+  }
+
+  return (
+    'The transaction has been saved safely. Check the same transaction ' +
+    'again before continuing. No transaction will be created, signed or broadcast.'
+  );
+});
 
 /**
  * While an Issue operation or funding reconciliation is running, the dialog

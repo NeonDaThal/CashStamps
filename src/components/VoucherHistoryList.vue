@@ -89,19 +89,43 @@
         </q-card>
 
         <q-banner
-          v-if="canCheckFunding(voucher)"
+          v-if="getFundingRecoveryAction(voucher) !== 'none'"
           class="bg-orange-1 text-orange-10 q-mt-md"
           rounded
         >
           <template #avatar>
-            <q-icon name="sync" />
+            <q-icon
+              :name="canResumeFunding(voucher) ? 'restart_alt' : 'sync'"
+            />
           </template>
 
-          <div class="text-weight-bold">Funding verification pending</div>
+          <div class="text-weight-bold">
+            {{ getFundingRecoveryTitle(voucher) }}
+          </div>
 
           <div>
-            The exact saved transaction can be checked again. This check does
-            not send or create another transaction.
+            {{ getFundingRecoveryMessage(voucher) }}
+          </div>
+        </q-banner>
+
+        <q-banner
+          v-else-if="getTopupFundingState(voucher).state === 'terminal_error'"
+          class="bg-red-1 text-red-10 q-mt-md"
+          rounded
+        >
+          <template #avatar>
+            <q-icon name="error" />
+          </template>
+
+          <div class="text-weight-bold">
+            Funding state requires investigation
+          </div>
+
+          <div>
+            {{
+              voucher.errorMessage ||
+              'The saved funding state cannot be continued automatically.'
+            }}
           </div>
         </q-banner>
 
@@ -127,7 +151,18 @@
         </div>
 
         <q-btn
-          v-if="canCheckFunding(voucher)"
+          v-if="canResumeFunding(voucher)"
+          class="secondary-button"
+          label="Resume funding"
+          icon="restart_alt"
+          outline
+          no-caps
+          :loading="checkingFundingVoucherId === voucher.id"
+          @click="emit('resumeFunding', voucher.id)"
+        />
+
+        <q-btn
+          v-else-if="canCheckFunding(voucher)"
           class="secondary-button"
           label="Check funding"
           icon="sync"
@@ -793,6 +828,11 @@ import {
   isTopupFeeModelV1,
 } from 'src/services/topup-record-values';
 
+import {
+  getTopupFundingState,
+  type TopupFundingRecoveryAction,
+} from 'src/services/topup-funding-state';
+
 type VoucherStatusKey = 'redeemed' | 'funded' | 'funding' | 'error' | 'issued';
 
 const props = defineProps<{
@@ -814,6 +854,7 @@ const emit = defineEmits<{
 
   checkOnChainRedemption: [voucherId: string];
 
+  resumeFunding: [voucherId: string];
   checkFunding: [voucherId: string];
 }>();
 
@@ -870,8 +911,42 @@ function handleReceiptPreviewDialogHide(): void {
   selectedReceiptVoucher.value = null;
 }
 
+function getFundingRecoveryAction(
+  voucher: VoucherRecord
+): TopupFundingRecoveryAction {
+  return getTopupFundingState(voucher).recoveryAction;
+}
+
+function canResumeFunding(voucher: VoucherRecord): boolean {
+  return getFundingRecoveryAction(voucher) === 'resume_same_transaction';
+}
+
 function canCheckFunding(voucher: VoucherRecord): boolean {
-  return voucher.status === 'funding' && Boolean(voucher.fundingIntent?.txid);
+  return getFundingRecoveryAction(voucher) === 'check_same_transaction';
+}
+
+function getFundingRecoveryTitle(voucher: VoucherRecord): string {
+  if (canResumeFunding(voucher)) {
+    return 'Funding can be resumed safely';
+  }
+
+  return 'Funding verification pending';
+}
+
+function getFundingRecoveryMessage(voucher: VoucherRecord): string {
+  if (canResumeFunding(voucher)) {
+    return (
+      'The exact signed transaction has been saved safely. ' +
+      'Resume funding will first check that same transaction and may then ' +
+      'submit that exact saved transaction. No replacement transaction will be created.'
+    );
+  }
+
+  return (
+    'The transaction may already have been submitted. ' +
+    'Only the exact saved transaction will be checked again. ' +
+    'No transaction will be created, signed or broadcast.'
+  );
 }
 
 function getVoucherStatusKey(voucher: VoucherRecord): VoucherStatusKey {
