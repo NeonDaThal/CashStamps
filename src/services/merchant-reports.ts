@@ -812,6 +812,35 @@ function getCashOutReportDateIso(cashOut: CashOutRecord): string {
 }
 
 function isReportableVoucher(voucher: VoucherRecord): boolean {
+  /**
+   * Replacement vouchers fulfil an existing customer sale.
+   *
+   * The original voucher remains the one accounting/reporting source.
+   */
+  if (voucher.replacement) {
+    return false;
+  }
+
+  /**
+   * A successfully reclaimed original Printed voucher STILL represents the
+   * real customer sale which occurred.
+   *
+   * Reclaim changes where the failed original BCH ended up; it does not undo:
+   *
+   * - the customer's cash payment
+   * - the service/platform fee
+   * - the sale count
+   * - the customer's BCH entitlement, which was fulfilled by its linked
+   *   replacement voucher
+   */
+  if (
+    voucher.status === 'reclaimed' &&
+    voucher.printedRecovery?.resolution === 'replacement_required' &&
+    voucher.printedRecovery.reclaimStatus === 'reclaimed'
+  ) {
+    return true;
+  }
+
   return REPORTABLE_VOUCHER_STATUSES.includes(voucher.status);
 }
 

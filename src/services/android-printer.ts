@@ -2,6 +2,10 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 
 import type { CashOutReceiptData } from 'src/services/cash-out-receipt';
 import type { VoucherReceiptData } from 'src/services/voucher-receipt';
+import {
+  classifyVoucherPrintFailure,
+  VoucherPrintDeliveryError,
+} from 'src/services/voucher-print-outcome';
 
 export interface AndroidPrinterDevice {
   name: string;
@@ -245,14 +249,22 @@ export async function printBluetoothVoucherReceipt(
     qrImageDataUrl?: string;
   }
 ): Promise<AndroidPrinterResult> {
+  /**
+   * These failures occur before the native printer method can possibly begin
+   * transmitting the bearer voucher.
+   */
   if (!isAndroidPrinterBridgeAvailable()) {
-    throw new Error(
+    throw new VoucherPrintDeliveryError(
+      'definitely_not_printed',
       'Android Bluetooth printer bridge is only available in the Android app.'
     );
   }
 
   if (!receiptData.qrPayload) {
-    throw new Error('Voucher receipt QR payload is missing.');
+    throw new VoucherPrintDeliveryError(
+      'definitely_not_printed',
+      'Voucher receipt QR payload is missing.'
+    );
   }
 
   const printLabels = {
@@ -260,31 +272,59 @@ export async function printBluetoothVoucherReceipt(
     ...receiptData.printLabels,
   };
 
-  return BluetoothEscPosPrinter.printVoucherReceipt({
-    name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
-    address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
-    title: receiptData.title,
-    printerSubtitle: receiptData.printerSubtitle || DEFAULT_PRINTER_SUBTITLE,
-    serial: receiptData.serial,
-    issuedAtLabel: receiptData.issuedAtLabel,
-    customerPaidLabel: receiptData.customerPaidLabel,
-    serviceFeeLabel: receiptData.serviceFeeLabel,
-    loadedFiatLabel: receiptData.loadedFiatLabel,
-    bchAmountLabel: receiptData.bchAmountLabel,
-    voucherAddress: receiptData.address,
-    qrPayload: receiptData.qrPayload,
-    qrImageDataUrl: options?.qrImageDataUrl,
-    redemptionInstruction: receiptData.redemptionInstruction,
-    cashWarning: receiptData.cashWarning,
-    supportNote: receiptData.supportNote,
-    valueLoadedLabel: printLabels.valueLoaded,
-    scanToRedeemLabel: printLabels.scanToRedeem,
-    referenceLabel: printLabels.reference,
-    issuedLabel: printLabels.issued,
-    customerPaidFieldLabel: printLabels.customerPaid,
-    serviceFeeFieldLabel: printLabels.serviceFee,
-    voucherAddressLabel: printLabels.voucherAddress,
-  });
+  try {
+    return await BluetoothEscPosPrinter.printVoucherReceipt({
+      name: options?.name ?? DEFAULT_JK_5803P_PRINTER.name,
+
+      address: options?.address ?? DEFAULT_JK_5803P_PRINTER.address,
+
+      title: receiptData.title,
+
+      printerSubtitle: receiptData.printerSubtitle || DEFAULT_PRINTER_SUBTITLE,
+
+      serial: receiptData.serial,
+
+      issuedAtLabel: receiptData.issuedAtLabel,
+
+      customerPaidLabel: receiptData.customerPaidLabel,
+
+      serviceFeeLabel: receiptData.serviceFeeLabel,
+
+      loadedFiatLabel: receiptData.loadedFiatLabel,
+
+      bchAmountLabel: receiptData.bchAmountLabel,
+
+      voucherAddress: receiptData.address,
+
+      qrPayload: receiptData.qrPayload,
+
+      qrImageDataUrl: options?.qrImageDataUrl,
+
+      redemptionInstruction: receiptData.redemptionInstruction,
+
+      cashWarning: receiptData.cashWarning,
+
+      supportNote: receiptData.supportNote,
+
+      valueLoadedLabel: printLabels.valueLoaded,
+
+      scanToRedeemLabel: printLabels.scanToRedeem,
+
+      referenceLabel: printLabels.reference,
+
+      issuedLabel: printLabels.issued,
+
+      customerPaidFieldLabel: printLabels.customerPaid,
+
+      serviceFeeFieldLabel: printLabels.serviceFee,
+
+      voucherAddressLabel: printLabels.voucherAddress,
+    });
+  } catch (error) {
+    const failure = classifyVoucherPrintFailure(error);
+
+    throw new VoucherPrintDeliveryError(failure.status, failure.message);
+  }
 }
 
 export async function printBluetoothCashOutReceipt(

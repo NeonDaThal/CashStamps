@@ -949,25 +949,52 @@
 
       <q-separator />
 
-      <q-card-actions align="right" class="dialog-actions">
-        <q-btn
-          flat
-          :label="t('common.cancel')"
-          color="grey-8"
-          :disable="isSubmitting"
-          no-caps
-          @click="emit('update:modelValue', false)"
-        />
+      <q-card-actions class="dialog-actions">
+        <div class="delivery-choice-wrap">
+          <div class="delivery-choice-heading">
+            How would the customer like to receive this Topup?
+          </div>
 
-        <q-btn
-          class="primary-button"
-          :label="t('saleConfirm.actions.issueVoucher')"
-          :loading="isSubmitting"
-          :disable="!canPrepareFundingIntent"
-          unelevated
-          no-caps
-          @click="emit('confirm')"
-        />
+          <div class="delivery-choice-copy">
+            Ask the customer before continuing. Once one option is issued, this
+            Topup is permanently locked to that delivery method and cannot be
+            switched to the other method.
+          </div>
+
+          <div class="delivery-choice-buttons">
+            <q-btn
+              class="delivery-button"
+              label="Issue Printed Voucher"
+              icon="print"
+              :loading="isSubmitting"
+              :disable="!canPrepareFundingIntent"
+              unelevated
+              no-caps
+              @click="emit('confirm', 'printed')"
+            />
+
+            <q-btn
+              class="delivery-button"
+              label="Issue Digital Voucher"
+              icon="qr_code_2"
+              :loading="isSubmitting"
+              :disable="!canPrepareFundingIntent"
+              unelevated
+              no-caps
+              @click="emit('confirm', 'digital')"
+            />
+          </div>
+
+          <q-btn
+            flat
+            :label="t('common.cancel')"
+            color="grey-8"
+            :disable="isSubmitting"
+            no-caps
+            class="cancel-button"
+            @click="emit('update:modelValue', false)"
+          />
+        </div>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -998,7 +1025,10 @@ import {
 import { createTreasuryTransactionPlanFromPreview } from 'src/services/treasury-transaction-planner';
 import { createVoucherFeeOutputPlanV1 } from 'src/services/voucher-fee-plan-v1';
 import type { VoucherFeeOutputPlan } from 'src/types/voucher-fees';
-import type { VoucherKeyMetadata } from 'src/types/voucher';
+import type {
+  VoucherDeliveryMethod,
+  VoucherKeyMetadata,
+} from 'src/types/voucher';
 import {
   formatBchSats,
   formatMarketRate,
@@ -1017,7 +1047,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  confirm: [];
+
+  confirm: [deliveryMethod: VoucherDeliveryMethod];
+
   'broadcast-result': [value: TreasuryBroadcastResult | null];
 }>();
 
@@ -1296,7 +1328,46 @@ function formatDateTime(value: string): string {
 }
 
 .dialog-actions {
-  padding: 14px 22px;
+  display: block;
+  padding: 16px 22px 20px;
+}
+
+.delivery-choice-wrap {
+  width: 100%;
+}
+
+.delivery-choice-heading {
+  color: #111111;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+.delivery-choice-copy {
+  color: #666666;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 5px;
+}
+
+.delivery-choice-buttons {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 14px;
+}
+
+.delivery-button {
+  background: #00ce1b;
+  border-radius: 14px;
+  color: #000000;
+  font-weight: 850;
+  min-height: 46px;
+  padding: 0 16px;
+}
+
+.cancel-button {
+  margin-top: 8px;
 }
 
 .primary-button {
@@ -1330,12 +1401,12 @@ function formatDateTime(value: string): string {
     text-align: left;
   }
 
-  .dialog-actions {
-    align-items: stretch;
-    flex-direction: column;
+  .delivery-choice-buttons {
+    grid-template-columns: 1fr;
   }
 
-  .dialog-actions .q-btn {
+  .delivery-choice-buttons .q-btn,
+  .cancel-button {
     width: 100%;
   }
 }

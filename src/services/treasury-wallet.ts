@@ -76,18 +76,41 @@ async function deriveTreasuryWalletAtIndexWithElectrum(
 }
 
 function mapTreasuryUtxos(
-  unspentOutputs: any[],
+  unspentOutputs: unknown[],
   address: string,
   derivationIndex: number
 ): TreasuryUtxo[] {
-  return unspentOutputs.map((utxo) => ({
-    outpointTransactionHash:
-      utxo.outpointTransactionHash ?? utxo.tx_hash ?? utxo.txHash ?? '',
-    outpointIndex: utxo.outpointIndex ?? utxo.tx_pos ?? utxo.vout ?? 0,
-    valueSats: Number(utxo.valueSatoshis ?? utxo.value ?? utxo.satoshis ?? 0),
-    address,
-    derivationIndex,
-  }));
+  return unspentOutputs.map((utxo) => {
+    const utxoLike =
+      typeof utxo === 'object' && utxo !== null
+        ? (utxo as Record<string, unknown>)
+        : {};
+
+    const transactionHash =
+      utxoLike.outpointTransactionHash ??
+      utxoLike.tx_hash ??
+      utxoLike.txHash ??
+      '';
+
+    const outpointIndex =
+      utxoLike.outpointIndex ?? utxoLike.tx_pos ?? utxoLike.vout ?? 0;
+
+    const valueSats =
+      utxoLike.valueSatoshis ?? utxoLike.value ?? utxoLike.satoshis ?? 0;
+
+    return {
+      outpointTransactionHash:
+        typeof transactionHash === 'string' ? transactionHash : '',
+
+      outpointIndex: Number(outpointIndex),
+
+      valueSats: Number(valueSats),
+
+      address,
+
+      derivationIndex,
+    };
+  });
 }
 
 async function getNextTreasuryCashOutDerivationIndex(): Promise<number> {

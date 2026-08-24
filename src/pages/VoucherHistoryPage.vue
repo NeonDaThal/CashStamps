@@ -106,11 +106,16 @@
             :voucher-records="voucherRecords"
             :checking-redemption-voucher-id="checkingRedemptionVoucherId"
             :checking-funding-voucher-id="checkingFundingVoucherId"
+            :reclaiming-voucher-id="reclaimingVoucherId"
+            :issuing-replacement-voucher-id="issuingReplacementVoucherId"
             @mark-manual-redemption="handleMarkManualRedemption"
             @clear-manual-redemption="handleClearManualRedemption"
             @check-on-chain-redemption="handleCheckOnChainRedemption"
             @resume-funding="handleResumeFunding"
             @check-funding="handleCheckFunding"
+            @delivery-updated="handleDeliveryUpdated"
+            @reclaim-voucher="handleReclaimVoucher"
+            @issue-replacement="handleIssueReplacement"
           />
         </q-card-section>
       </q-card>
@@ -210,12 +215,22 @@ import {
   markVoucherManuallyRedeemed,
   updateVoucherRedemptionDetection,
 } from 'src/services/voucher-store';
+
+import { prepareAndStorePrintedReplacement } from 'src/services/printed-replacement-issue';
+
+import { getFundingSafetyStatus } from 'src/services/funding-safety';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import { detectVoucherRedemptionStatus } from 'src/services/voucher-redemption-detector';
 import {
   advanceTopupFundingLifecycle,
   reconcileExistingTopupFunding,
 } from 'src/services/topup-funding-lifecycle';
+import {
+  advanceVoucherReclaimLifecycle,
+  reconcileExistingVoucherReclaim,
+} from 'src/services/voucher-reclaim-lifecycle';
+
+import type { VoucherReclaimRecoveryAction } from 'src/services/voucher-reclaim-state';
 import { topupIcon } from 'src/icons/custom-icons';
 
 const { t } = useI18n({ useScope: 'global' });
@@ -225,6 +240,8 @@ const errorMessage = ref('');
 const successMessage = ref('');
 const checkingRedemptionVoucherId = ref<string | null>(null);
 const checkingFundingVoucherId = ref<string | null>(null);
+const issuingReplacementVoucherId = ref<string | null>(null);
+const reclaimingVoucherId = ref<string | null>(null);
 const isFundingRecoveryPreviewOpen = ref(false);
 
 const isFundingRecoveryPreviewChecking = ref(false);
@@ -287,7 +304,14 @@ const redeemedVoucherCount = computed(() => {
 });
 
 const activeVoucherCount = computed(() => {
-  return Math.max(0, voucherRecords.value.length - redeemedVoucherCount.value);
+  return voucherRecords.value.filter((voucher) => {
+    return (
+      voucher.status !== 'redeemed' &&
+      voucher.status !== 'reclaimed' &&
+      !voucher.manualRedemption &&
+      voucher.redemptionDetection?.status !== 'swept'
+    );
+  }).length;
 });
 
 async function loadVoucherRecords(): Promise<void> {
@@ -501,6 +525,239 @@ async function handleResumeFunding(voucherId: string): Promise<void> {
   } finally {
     checkingFundingVoucherId.value = null;
   }
+}
+
+async function handleIssueReplacement(
+  originalVoucherId: string
+): Promise<void> {
+  if (issuingReplacementVoucherId.value) {
+    return;
+  }
+
+  errorMessage.value = '';
+
+  successMessage.value = '';
+
+  warningMessage.value = '';
+
+  issuingReplacementVoucherId.value = originalVoucherId;
+
+  try {
+    /**
+     * This operation:
+     *
+     * - derives a new voucher key/address
+     * - obtains fresh Treasury UTXOs
+     * - signs one exact replacement transaction
+     * - persists it
+     * - atomically links original → replacement
+     *
+     * It does NOT broadcast inside the preparation service.
+     */
+    const result = await prepareAndStorePrintedReplacement(originalVoucherId);
+
+    await loadVoucherRecords();
+
+    const replacement = result.replacementRecord;
+
+    const fundingSafety = getFundingSafetyStatus();
+
+    /**
+     * Development guard:
+     *
+     * Stop after the durable signed transaction has been created.
+     */
+    if (!fundingSafety.realBroadcastEnabled) {
+      warningMessage.value =
+        `Replacement Topup ${replacement.serial} was prepared and saved safely. ` +
+        'Real BCH broadcasting is disabled, so no replacement funding transaction was sent.';
+
+      return;
+    }
+
+    /**
+     * Production path:
+     *
+     * From here onward the existing B5.7 lifecycle owns the exact persisted
+     * transaction.
+     *
+     * It may never construct or sign another replacement transaction.
+     */
+    const lifecycleResult = await advanceTopupFundingLifecycle(replacement.id);
+
+    await loadVoucherRecords();
+
+    if (lifecycleResult.outcome === 'funded') {
+      successMessage.value =
+        `Replacement Topup ${replacement.serial} is funded. ` +
+        'Print the replacement voucher for the customer from its History record.';
+
+      return;
+    }
+
+    if (lifecycleResult.outcome === 'broadcasted_pending_detection') {
+      warningMessage.value =
+        `Replacement funding for ${replacement.serial} was submitted and is awaiting verification. ` +
+        'Use Check funding on the replacement record.';
+
+      return;
+    }
+
+    if (lifecycleResult.outcome === 'uncertain') {
+      warningMessage.value =
+        `Replacement funding for ${replacement.serial} has an uncertain submission outcome. ` +
+        'Do not create another replacement. Check the exact saved transaction.';
+
+      return;
+    }
+
+    if (lifecycleResult.outcome === 'definitely_not_broadcast') {
+      warningMessage.value =
+        `Replacement funding for ${replacement.serial} was definitely not submitted. ` +
+        'The exact saved transaction may be resumed safely from History.';
+
+      return;
+    }
+
+    if (lifecycleResult.outcome === 'blocked') {
+      warningMessage.value =
+        `Replacement funding for ${replacement.serial} is currently blocked. ` +
+        'No BCH was sent and the exact signed transaction remains saved.';
+
+      return;
+    }
+  } catch (error) {
+    console.error(error);
+
+    await loadVoucherRecords();
+
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : 'Could not safely prepare the replacement Printed Topup.';
+  } finally {
+    issuingReplacementVoucherId.value = null;
+  }
+}
+
+async function handleReclaimVoucher(payload: {
+  voucherId: string;
+  action: VoucherReclaimRecoveryAction;
+}): Promise<void> {
+  if (reclaimingVoucherId.value) {
+    return;
+  }
+
+  errorMessage.value = '';
+  successMessage.value = '';
+  warningMessage.value = '';
+
+  reclaimingVoucherId.value = payload.voucherId;
+
+  try {
+    /**
+     * check_same_transaction is completely read-only with respect to BCH.
+     */
+    if (payload.action === 'check_same_transaction') {
+      const result = await reconcileExistingVoucherReclaim(payload.voucherId);
+
+      await loadVoucherRecords();
+
+      if (
+        result.reconciliation.status === 'mempool' ||
+        result.reconciliation.status === 'confirmed'
+      ) {
+        successMessage.value = `The original Topup amount for ${result.record.serial} has been reclaimed to Treasury.`;
+
+        return;
+      }
+
+      warningMessage.value =
+        `The saved reclaim transaction for ${result.record.serial} is not yet positively visible. ` +
+        'No new transaction was created or sent.';
+
+      return;
+    }
+
+    if (
+      payload.action !== 'prepare_and_resume' &&
+      payload.action !== 'resume_same_transaction'
+    ) {
+      throw new Error(
+        'This Topup does not currently have a safe Reclaim action.'
+      );
+    }
+
+    /**
+     * prepare_and_resume:
+     *   may prepare ONE transaction before the write-ahead boundary.
+     *
+     * resume_same_transaction:
+     *   must use the already-persisted transaction.
+     *
+     * The lifecycle itself enforces both cases.
+     */
+    const result = await advanceVoucherReclaimLifecycle(payload.voucherId);
+
+    await loadVoucherRecords();
+
+    if (result.outcome === 'reclaimed') {
+      successMessage.value = `The original Topup amount for ${result.record.serial} has been reclaimed to Treasury.`;
+
+      return;
+    }
+
+    if (result.outcome === 'blocked') {
+      warningMessage.value =
+        `The reclaim transaction for ${result.record.serial} is prepared and saved safely, but real BCH broadcasting is disabled. ` +
+        'No BCH was sent.';
+
+      return;
+    }
+
+    if (result.outcome === 'definitely_not_broadcast') {
+      warningMessage.value =
+        `The reclaim transaction for ${result.record.serial} was definitely not submitted. ` +
+        'The exact saved transaction can be resumed safely.';
+
+      return;
+    }
+
+    if (result.outcome === 'uncertain') {
+      warningMessage.value =
+        `The reclaim submission outcome for ${result.record.serial} is uncertain. ` +
+        'Do not create another reclaim transaction. Use Check Reclaim to inspect the exact saved transaction.';
+
+      return;
+    }
+
+    if (result.outcome === 'broadcasted_pending_detection') {
+      warningMessage.value =
+        `The reclaim transaction for ${result.record.serial} was submitted but is still awaiting positive network verification. ` +
+        'Use Check Reclaim to verify the exact saved transaction.';
+
+      return;
+    }
+
+    warningMessage.value = `The reclaim transaction for ${result.record.serial} remains pending verification.`;
+  } catch (error) {
+    console.error(error);
+
+    await loadVoucherRecords();
+
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : 'Could not safely reclaim the original Topup amount.';
+  } finally {
+    reclaimingVoucherId.value = null;
+  }
+}
+
+function handleDeliveryUpdated(voucher: VoucherRecord): void {
+  voucherRecords.value = voucherRecords.value.map((record) =>
+    record.id === voucher.id ? voucher : record
+  );
 }
 
 async function handleCheckFunding(voucherId: string): Promise<void> {

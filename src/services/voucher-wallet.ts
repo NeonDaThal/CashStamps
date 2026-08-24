@@ -94,13 +94,34 @@ async function deriveVoucherWalletAtIndexWithElectrum(
   return wallet;
 }
 
-function mapVoucherUtxos(unspentOutputs: any[]): VoucherAddressUtxo[] {
-  return unspentOutputs.map((utxo) => ({
-    outpointTransactionHash:
-      utxo.outpointTransactionHash ?? utxo.tx_hash ?? utxo.txHash ?? '',
-    outpointIndex: utxo.outpointIndex ?? utxo.tx_pos ?? utxo.vout ?? 0,
-    valueSats: Number(utxo.valueSatoshis ?? utxo.value ?? utxo.satoshis ?? 0),
-  }));
+function mapVoucherUtxos(unspentOutputs: unknown[]): VoucherAddressUtxo[] {
+  return unspentOutputs.map((utxo) => {
+    const utxoLike =
+      typeof utxo === 'object' && utxo !== null
+        ? (utxo as Record<string, unknown>)
+        : {};
+
+    const transactionHash =
+      utxoLike.outpointTransactionHash ??
+      utxoLike.tx_hash ??
+      utxoLike.txHash ??
+      '';
+
+    const outpointIndex =
+      utxoLike.outpointIndex ?? utxoLike.tx_pos ?? utxoLike.vout ?? 0;
+
+    const valueSats =
+      utxoLike.valueSatoshis ?? utxoLike.value ?? utxoLike.satoshis ?? 0;
+
+    return {
+      outpointTransactionHash:
+        typeof transactionHash === 'string' ? transactionHash : '',
+
+      outpointIndex: Number(outpointIndex),
+
+      valueSats: Number(valueSats),
+    };
+  });
 }
 
 function tryGetWalletWif(wallet: unknown): string {
@@ -185,6 +206,72 @@ export async function exportVoucherKeyAtIndex(
     wif,
     createdAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Internal signing data for the exceptional Printed-voucher reclaim path.
+ *
+ * This deliberately does NOT expose the voucher WIF.
+ *
+ * The returned input directives are already bound to the internally-derived
+ * voucher private key and are used only to construct the exact reclaim
+ * transaction.
+ */
+export async function getVoucherReclaimSigningDataAtIndex(
+  derivationIndex: number
+) {
+  if (!Number.isSafeInteger(derivationIndex) || derivationIndex < 0) {
+    throw new Error('Voucher reclaim derivation index is invalid.');
+  }
+
+  const electrum = new ElectrumService(ELECTRUM_SERVERS);
+
+  await electrum.start();
+
+  try {
+    const wallet = await deriveVoucherWalletAtIndexWithElectrum(
+      derivationIndex,
+      electrum
+    );
+
+    const inputDirectives = await wallet.getUnspentDirectives();
+
+    /**
+     * getUnspentDirectives() refreshes wallet.unspents from this same wallet
+     * immediately before creating the directives, so these arrays describe the
+     * same signable snapshot.
+     */
+    const utxos = mapVoucherUtxos(wallet.unspents.value);
+
+    if (inputDirectives.length !== utxos.length) {
+      throw new Error(
+        'Voucher reclaim signing inputs do not match the current voucher UTXOs.'
+      );
+    }
+
+    const entries = utxos.map((utxo, index) => {
+      const inputDirective = inputDirectives[index];
+
+      if (!inputDirective) {
+        throw new Error('Voucher reclaim signing directive is missing.');
+      }
+
+      return {
+        utxo,
+        inputDirective,
+      };
+    });
+
+    return {
+      derivationIndex,
+
+      address: wallet.getAddress(),
+
+      entries,
+    };
+  } finally {
+    await electrum.stop();
+  }
 }
 
 export async function getVoucherWalletBalanceAtIndex(

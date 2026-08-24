@@ -222,6 +222,26 @@
 
         <q-separator />
 
+        <q-btn
+          v-if="canRetryLastPrintedVoucher"
+          flat
+          color="primary"
+          label="Retry Printed Voucher"
+          icon="print"
+          no-caps
+          @click="isPrintedVoucherDialogOpen = true"
+        />
+
+        <q-btn
+          v-if="canShowLastDigitalVoucher"
+          flat
+          color="primary"
+          label="Show Digital Voucher"
+          icon="qr_code_2"
+          no-caps
+          @click="isDigitalVoucherDialogOpen = true"
+        />
+
         <q-card-actions align="right">
           <q-btn
             flat
@@ -402,33 +422,46 @@
         @retry-funding="handleRetryFunding"
       />
 
-      <q-dialog v-model="isReceiptPreviewDialogOpen">
-        <q-card style="width: 440px; max-width: 95vw">
+      <q-dialog v-model="isPrintedVoucherDialogOpen" persistent>
+        <q-card style="width: 500px; max-width: 95vw">
+          <q-card-section v-if="lastIssuedVoucher">
+            <PrintedVoucherDelivery
+              :voucher="lastIssuedVoucher"
+              @updated="handlePrintedVoucherUpdated"
+              @close="isPrintedVoucherDialogOpen = false"
+            />
+          </q-card-section>
+        </q-card>
+      </q-dialog>
+
+      <q-dialog v-model="isDigitalVoucherDialogOpen" persistent>
+        <q-card style="width: 460px; max-width: 95vw">
           <q-card-section class="row items-center justify-between">
             <div>
-              <div class="text-h6">
-                {{ t('sellPage.receiptDialog.title') }}
-              </div>
+              <div class="text-h6">Digital Topup</div>
+
               <div class="text-caption text-grey-7">
-                {{ t('sellPage.receiptDialog.subtitle') }}
+                Keep this available until the customer has swept the BCH
               </div>
             </div>
-
-            <q-btn v-close-popup dense flat round icon="close" />
           </q-card-section>
 
           <q-separator />
 
           <q-card-section v-if="lastIssuedVoucher">
-            <VoucherReceiptPreview :voucher="lastIssuedVoucher" />
+            <DigitalVoucherDelivery
+              :voucher="lastIssuedVoucher"
+              @updated="handleDigitalVoucherUpdated"
+            />
           </q-card-section>
 
           <q-card-actions align="right">
             <q-btn
-              v-close-popup
-              color="primary"
               flat
-              :label="t('common.close')"
+              color="grey-8"
+              label="Close for now"
+              no-caps
+              @click="isDigitalVoucherDialogOpen = false"
             />
           </q-card-actions>
         </q-card>
@@ -446,7 +479,8 @@ import IssueProgressDialog, {
   type IssueProgressStep,
 } from 'src/components/IssueProgressDialog.vue';
 import SaleConfirmDialog from 'src/components/SaleConfirmDialog.vue';
-import VoucherReceiptPreview from 'src/components/VoucherReceiptPreview.vue';
+import DigitalVoucherDelivery from 'src/components/DigitalVoucherDelivery.vue';
+import PrintedVoucherDelivery from 'src/components/PrintedVoucherDelivery.vue';
 import VoucherSaleForm from 'src/components/VoucherSaleForm.vue';
 import type {
   TreasuryWalletBalance,
@@ -454,7 +488,11 @@ import type {
 } from 'src/types/treasury';
 import type { TreasuryFundingPreview } from 'src/types/treasury-funding';
 import { createTreasuryFundingPreview } from 'src/services/treasury-funding';
-import type { VoucherKeyMetadata, VoucherRecord } from 'src/types/voucher';
+import type {
+  VoucherDeliveryMethod,
+  VoucherKeyMetadata,
+  VoucherRecord,
+} from 'src/types/voucher';
 import { createDraftVoucherRecord } from 'src/services/voucher-factory';
 import {
   PricingService,
@@ -473,7 +511,9 @@ import {
 import {
   addVoucherRecordIdempotently,
   getVoucherRecordByIssueOperationId,
+  selectVoucherDelivery,
 } from 'src/services/voucher-store';
+import { selectVoucherDeliveryMethod } from 'src/services/voucher-delivery';
 import {
   createTopupIssueOperationId,
   prepareTopupFundingIntent,
@@ -510,7 +550,8 @@ const errorMessage = ref('');
 
 const isConfirmDialogOpen = ref(false);
 const isProgressDialogOpen = ref(false);
-const isReceiptPreviewDialogOpen = ref(false);
+const isDigitalVoucherDialogOpen = ref(false);
+const isPrintedVoucherDialogOpen = ref(false);
 const isTreasuryDialogOpen = ref(false);
 const recoverableFundingVoucherId = ref<string | null>(null);
 
@@ -538,6 +579,22 @@ const treasuryWallet = ref<TreasuryWalletPublicInfo>({
 });
 
 const treasuryBalance = ref<TreasuryWalletBalance | null>(null);
+
+const canShowLastDigitalVoucher = computed(() => {
+  const voucher = lastIssuedVoucher.value;
+
+  return voucher?.delivery?.method === 'digital' && voucher.status === 'funded';
+});
+
+const canRetryLastPrintedVoucher = computed(() => {
+  const voucher = lastIssuedVoucher.value;
+
+  return (
+    voucher?.delivery?.method === 'printed' &&
+    voucher.delivery.status === 'selected' &&
+    voucher.status === 'funded'
+  );
+});
 
 const treasuryWarning = computed(() => {
   if (!pendingPricing.value) {
@@ -724,7 +781,8 @@ async function handleReviewVoucher(
 
   fundingRecoveryMessage.value = '';
   lastIssuedVoucher.value = null;
-  isReceiptPreviewDialogOpen.value = false;
+  isDigitalVoucherDialogOpen.value = false;
+  isPrintedVoucherDialogOpen.value = false;
   pendingPricing.value = null;
   pendingFeeOutputPlan.value = null;
   pendingIssueOperationId.value = null;
@@ -833,9 +891,67 @@ async function handleReviewVoucher(
   }
 }
 
+function handleDigitalVoucherUpdated(voucher: VoucherRecord): void {
+  /**
+   * Keep the current-session copy aligned with the durable delivery state.
+   */
+  lastIssuedVoucher.value = voucher;
+}
+
+function handlePrintedVoucherUpdated(voucher: VoucherRecord): void {
+  /**
+   * Keep the current-session copy aligned with the durable Printed delivery
+   * state.
+   */
+  lastIssuedVoucher.value = voucher;
+}
+
+/**
+ * Enter the correct post-funding delivery route.
+ *
+ * Digital is operational in B5.8B3.
+ *
+ * Printed deliberately remains WIF-hidden until B5.8C removes the native
+ * printer's unsafe whole-voucher automatic retry behaviour.
+ */
+function presentFundedVoucherForDelivery(voucher: VoucherRecord): void {
+  lastIssuedVoucher.value = voucher;
+
+  isDigitalVoucherDialogOpen.value = false;
+
+  isPrintedVoucherDialogOpen.value = false;
+
+  if (!voucher.delivery) {
+    errorMessage.value =
+      'Topup funding completed, but its delivery commitment is missing. Do not expose or print the voucher WIF.';
+
+    return;
+  }
+
+  if (voucher.delivery.method === 'digital') {
+    isDigitalVoucherDialogOpen.value = true;
+
+    return;
+  }
+
+  if (voucher.delivery.method === 'printed') {
+    /**
+     * The Printed component performs all receipt/WIF/QR preparation internally
+     * and never renders the bearer secret on screen.
+     */
+    isPrintedVoucherDialogOpen.value = true;
+
+    return;
+  }
+
+  errorMessage.value =
+    'Topup funding completed, but its delivery method could not be recognised.';
+}
+
 function handleResetLastIssuedVoucher(): void {
   clearMessages();
-  isReceiptPreviewDialogOpen.value = false;
+  isDigitalVoucherDialogOpen.value = false;
+  isPrintedVoucherDialogOpen.value = false;
   lastIssuedVoucher.value = null;
 }
 
@@ -864,7 +980,9 @@ async function recordCashOnHandForIssuedTopup(
   }
 }
 
-async function handleCreateDraftVoucher(): Promise<void> {
+async function handleCreateDraftVoucher(
+  deliveryMethod: VoucherDeliveryMethod
+): Promise<void> {
   /**
    * First line of double-submit protection.
    *
@@ -884,7 +1002,6 @@ async function handleCreateDraftVoucher(): Promise<void> {
   fundingRecoveryMessage.value = '';
 
   lastIssuedVoucher.value = null;
-  isReceiptPreviewDialogOpen.value = false;
 
   /**
    * Capture the exact Review state before async work begins.
@@ -897,6 +1014,13 @@ async function handleCreateDraftVoucher(): Promise<void> {
   const feeOutputPlan = pendingFeeOutputPlan.value;
   const treasuryFundingPreview = pendingTreasuryFundingPreview.value;
   const issueOperationId = pendingIssueOperationId.value;
+  /**
+   * The delivery commitment belongs to this exact Issue action.
+   *
+   * Once the durable voucher record is created, this method can never be
+   * changed to the opposite route.
+   */
+  const deliverySelectedAt = new Date().toISOString();
 
   /**
    * These failures mean Review was incomplete, so they happen before the
@@ -980,14 +1104,33 @@ async function handleCreateDraftVoucher(): Promise<void> {
        * These stages already happened before the durable record was created.
        */
       setIssueProgressStepStatus('quote', 'complete');
-
       setIssueProgressStepStatus('wallet', 'complete');
-
       setIssueProgressStepStatus('funding', 'complete');
-
       setIssueProgressStepStatus('store', 'complete');
 
-      savedVoucher = existingVoucher;
+      /**
+       * B5.8 DELIVERY IDEMPOTENCY
+       *
+       * An existing Issue operation must reuse its already-committed delivery
+       * method.
+       *
+       * - same method => harmless/idempotent
+       * - opposite method => rejected
+       *
+       * Legacy development records without delivery data may acquire the method
+       * here before any further funding action occurs.
+       */
+      const deliveryLockedVoucher = await selectVoucherDelivery(
+        existingVoucher.id,
+        deliveryMethod,
+        existingVoucher.delivery?.selectedAt ?? deliverySelectedAt
+      );
+
+      if (!deliveryLockedVoucher) {
+        throw new Error('Could not persist the Topup delivery method.');
+      }
+
+      savedVoucher = deliveryLockedVoucher;
     } else {
       /**
        * ================================================================
@@ -1104,6 +1247,19 @@ async function handleCreateDraftVoucher(): Promise<void> {
       );
 
       /**
+       * Lock the customer-selected delivery method BEFORE the voucher ever crosses
+       * the durable write-ahead boundary.
+       *
+       * Therefore the first persisted VoucherRecord already knows whether this is a
+       * printed or digital bearer voucher.
+       */
+      const deliveryLockedVoucher = selectVoucherDeliveryMethod(
+        voucher,
+        deliveryMethod,
+        deliverySelectedAt
+      );
+
+      /**
        * ================================================================
        * CRITICAL WRITE-AHEAD BOUNDARY
        * ================================================================
@@ -1116,9 +1272,29 @@ async function handleCreateDraftVoucher(): Promise<void> {
        *
        * Only this persisted transaction may ever be broadcast.
        */
-      const savedResult = await addVoucherRecordIdempotently(voucher);
+      const savedResult = await addVoucherRecordIdempotently(
+        deliveryLockedVoucher
+      );
 
-      savedVoucher = savedResult.record;
+      /**
+       * Race-safe delivery verification.
+       *
+       * If another idempotent invocation somehow won the insertion race, enforce
+       * that the returned durable record has the SAME delivery commitment.
+       */
+      const persistedDeliveryLockedVoucher = await selectVoucherDelivery(
+        savedResult.record.id,
+        deliveryMethod,
+        deliverySelectedAt
+      );
+
+      if (!persistedDeliveryLockedVoucher) {
+        throw new Error(
+          'Could not verify the persisted Topup delivery method.'
+        );
+      }
+
+      savedVoucher = persistedDeliveryLockedVoucher;
 
       reusedExistingVoucher = !savedResult.created;
 
@@ -1179,8 +1355,6 @@ async function handleCreateDraftVoucher(): Promise<void> {
       pendingIssueOperationId.value = null;
 
       isProgressDialogOpen.value = false;
-
-      isReceiptPreviewDialogOpen.value = true;
 
       if (reusedExistingVoucher) {
         warningMessage.value = t(
@@ -1357,8 +1531,6 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
     await waitForUiDelay(300);
 
-    lastIssuedVoucher.value = savedVoucher;
-
     pendingPricing.value = null;
 
     pendingFeeOutputPlan.value = null;
@@ -1375,7 +1547,7 @@ async function handleCreateDraftVoucher(): Promise<void> {
 
     isProgressDialogOpen.value = false;
 
-    isReceiptPreviewDialogOpen.value = true;
+    presentFundedVoucherForDelivery(savedVoucher);
 
     if (reusedExistingVoucher) {
       warningMessage.value = t('sellPage.messages.issueOperationAlreadySaved');
@@ -1485,8 +1657,6 @@ async function handleRetryFunding(): Promise<void> {
 
         await waitForUiDelay(300);
 
-        lastIssuedVoucher.value = result.record;
-
         pendingPricing.value = null;
         pendingFeeOutputPlan.value = null;
         pendingTreasuryFundingPreview.value = null;
@@ -1499,7 +1669,7 @@ async function handleRetryFunding(): Promise<void> {
 
         isProgressDialogOpen.value = false;
 
-        isReceiptPreviewDialogOpen.value = true;
+        presentFundedVoucherForDelivery(result.record);
 
         await loadTreasuryWallet();
 
@@ -1619,8 +1789,6 @@ async function handleRetryFunding(): Promise<void> {
 
     await waitForUiDelay(300);
 
-    lastIssuedVoucher.value = result.record;
-
     pendingPricing.value = null;
     pendingFeeOutputPlan.value = null;
 
@@ -1633,7 +1801,8 @@ async function handleRetryFunding(): Promise<void> {
     pendingIssueOperationId.value = null;
 
     isProgressDialogOpen.value = false;
-    isReceiptPreviewDialogOpen.value = true;
+
+    presentFundedVoucherForDelivery(result.record);
 
     await loadTreasuryWallet();
   } catch (error) {

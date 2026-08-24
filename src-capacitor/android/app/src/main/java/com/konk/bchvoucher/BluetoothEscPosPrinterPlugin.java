@@ -63,6 +63,40 @@ public class BluetoothEscPosPrinterPlugin extends Plugin {
     private static final long PRINT_RETRY_DELAY_MS = 650L;
     private static final long POST_FLUSH_SETTLE_DELAY_MS = 180L;
 
+    /**
+ * B5.8 bearer-voucher print outcomes.
+ *
+ * These codes are consumed by the TypeScript printer boundary.
+ */
+private static final String VOUCHER_PRINT_DEFINITELY_NOT_PRINTED_CODE =
+    "VOUCHER_PRINT_DEFINITELY_NOT_PRINTED";
+
+private static final String VOUCHER_PRINT_OUTCOME_UNCERTAIN_CODE =
+    "VOUCHER_PRINT_OUTCOME_UNCERTAIN";
+
+    /**
+ * Carries the critical distinction between:
+ *
+ * - failure before voucher-byte transmission started; and
+ * - failure after transmission may already have begun.
+ */
+private static final class VoucherPrintIOException extends IOException {
+    private final boolean transmissionStarted;
+
+    VoucherPrintIOException(
+        String message,
+        boolean transmissionStarted,
+        Throwable cause
+    ) {
+        super(message, cause);
+        this.transmissionStarted = transmissionStarted;
+    }
+
+    boolean didTransmissionStart() {
+        return transmissionStarted;
+    }
+}
+
     private static final int RECEIPT_WIDTH_PX = 384;
     private static final int RECEIPT_TEXT_DARK_THRESHOLD = 155;
     private static final String RECEIPT_BRAND_TITLE = "Bitcoin Cash";
@@ -467,17 +501,48 @@ serviceFeeFieldLabel,
 voucherAddressLabel
                 );
 
-                sendBytesToPrinter(printerAddress, bytes);
+                sendVoucherBytesToPrinterOnce(
+    printerAddress,
+    bytes
+);
 
-                JSObject result = new JSObject();
-                result.put("success", true);
-                result.put("printerName", printerName);
-                result.put("address", printerAddress);
-                result.put("message", "Voucher receipt sent to printer.");
-                call.resolve(result);
-            } catch (Exception error) {
-                call.reject("Voucher receipt print failed: " + error.getMessage());
-            }
+JSObject result = new JSObject();
+result.put("success", true);
+result.put("printerName", printerName);
+result.put("address", printerAddress);
+result.put(
+    "message",
+    "Voucher receipt sent to printer."
+);
+call.resolve(result);
+            } catch (VoucherPrintIOException error) {
+    String code =
+        error.didTransmissionStart()
+            ? VOUCHER_PRINT_OUTCOME_UNCERTAIN_CODE
+            : VOUCHER_PRINT_DEFINITELY_NOT_PRINTED_CODE;
+
+    String prefix =
+        error.didTransmissionStart()
+            ? "Voucher receipt print outcome is uncertain: "
+            : "Voucher receipt was not sent to the printer: ";
+
+    call.reject(
+        prefix + error.getMessage(),
+        code
+    );
+} catch (Exception error) {
+    /**
+     * Receipt construction failed before the voucher-specific Bluetooth
+     * transmission method was entered.
+     *
+     * Therefore no physical bearer voucher was sent.
+     */
+    call.reject(
+        "Voucher receipt could not be prepared: " +
+            error.getMessage(),
+        VOUCHER_PRINT_DEFINITELY_NOT_PRINTED_CODE
+    );
+}
         }).start();
     }
 
@@ -620,6 +685,120 @@ voucherAddressLabel
 
         return getPermissionState(BLUETOOTH_PRINTER_ALIAS) == PermissionState.GRANTED;
     }
+
+    /**
+ * Single-attempt transport for a REAL bearer Topup voucher.
+ *
+ * Unlike ordinary/test printing, this MUST NOT automatically retry after a
+ * write has begun because doing so could create multiple physical copies of
+ * the same spendable private key.
+ *
+ * Receipt construction/layout is deliberately outside this method and is not
+ * changed by B5.8.
+ */
+private void sendVoucherBytesToPrinterOnce(
+    String address,
+    byte[] bytes
+) throws VoucherPrintIOException {
+    boolean transmissionStarted = false;
+
+    BluetoothSocket socket = null;
+
+    try {
+        BluetoothAdapter adapter =
+            BluetoothAdapter.getDefaultAdapter();
+
+        if (adapter == null) {
+            throw new VoucherPrintIOException(
+                "Bluetooth is not available on this device.",
+                false,
+                null
+            );
+        }
+
+        if (!adapter.isEnabled()) {
+            throw new VoucherPrintIOException(
+                "Bluetooth is turned off.",
+                false,
+                null
+            );
+        }
+
+        BluetoothDevice device =
+            adapter.getRemoteDevice(address);
+
+        adapter.cancelDiscovery();
+
+        socket =
+            createBluetoothSocket(device);
+
+        socket.connect();
+
+        OutputStream outputStream =
+            socket.getOutputStream();
+
+        /**
+         * CRITICAL B5.8 BOUNDARY
+         *
+         * From this exact point onward an IOException cannot prove that zero
+         * voucher bytes reached the printer.
+         */
+        transmissionStarted = true;
+
+        outputStream.write(bytes);
+        outputStream.flush();
+
+        try {
+            Thread.sleep(
+                POST_FLUSH_SETTLE_DELAY_MS
+            );
+        } catch (InterruptedException ignored) {
+            Thread.currentThread()
+                .interrupt();
+        }
+    } catch (VoucherPrintIOException error) {
+        throw error;
+    } catch (SecurityException error) {
+        throw new VoucherPrintIOException(
+            "Bluetooth permission error. Check Nearby devices permission is allowed.",
+            transmissionStarted,
+            error
+        );
+    } catch (IOException error) {
+        String message =
+            error.getMessage() != null
+                ? error.getMessage()
+                : "Unknown Bluetooth socket error.";
+
+        throw new VoucherPrintIOException(
+            message,
+            transmissionStarted,
+            error
+        );
+    } catch (Exception error) {
+        String message =
+            error.getMessage() != null
+                ? error.getMessage()
+                : "Unknown printer error.";
+
+        throw new VoucherPrintIOException(
+            message,
+            transmissionStarted,
+            error
+        );
+    } finally {
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException ignored) {
+                /**
+                 * Closing the Bluetooth socket after the transmission attempt
+                 * must not trigger a duplicate bearer-voucher print.
+                 */
+            }
+        }
+    }
+}
 
     private void sendBytesToPrinter(String address, byte[] bytes) throws IOException {
         IOException lastError = null;
