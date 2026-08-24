@@ -1299,13 +1299,14 @@ const neNP = {
 
   receiptPreview: {
     printLabels: {
-      valueLoaded: 'लोड गरिएको मूल्य',
-      scanToRedeem: 'रिडिम गर्न स्क्यान गर्नुहोस्',
-      reference: 'सन्दर्भ',
-      issued: 'जारी गरिएको',
-      customerPaid: 'ग्राहकले तिरेको',
-      loaded: 'लोड गरिएको',
-      voucherAddress: 'भौचर ठेगाना',
+      valueLoaded: 'Value loaded',
+      scanToRedeem: 'Scan to Redeem',
+      reference: 'Reference',
+      issued: 'Issued',
+      customerPaid: 'Customer Paid',
+      serviceFee: 'Service Fee',
+      loaded: 'Topup Loaded',
+      voucherAddress: 'Voucher Address',
     },
     privateKeyWarning:
       'विकास पूर्वावलोकन मात्र। यो रसिदमा स्वीप गर्न मिल्ने निजी कुञ्जी QR छ। यसलाई स्क्यान वा प्रतिलिपि गर्ने जो कोहीले भौचर रकम स्वीप गर्न सक्छ।',

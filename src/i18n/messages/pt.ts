@@ -1322,13 +1322,14 @@ const pt = {
 
   receiptPreview: {
     printLabels: {
-      valueLoaded: 'Valor carregado',
-      scanToRedeem: 'Digitalizar para resgatar',
-      reference: 'Referência',
-      issued: 'Emitido',
-      customerPaid: 'Cliente pagou',
-      loaded: 'Carregado',
-      voucherAddress: 'Endereço do vale',
+      valueLoaded: 'Value loaded',
+      scanToRedeem: 'Scan to Redeem',
+      reference: 'Reference',
+      issued: 'Issued',
+      customerPaid: 'Customer Paid',
+      serviceFee: 'Service Fee',
+      loaded: 'Topup Loaded',
+      voucherAddress: 'Voucher Address',
     },
     privateKeyWarning:
       'Apenas pré-visualização de desenvolvimento. Este recibo contém um QR com uma chave privada transferível. Qualquer pessoa que o digitalize ou copie pode transferir os fundos do vale.',

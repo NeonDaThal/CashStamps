@@ -1327,13 +1327,14 @@ const de = {
 
   receiptPreview: {
     printLabels: {
-      valueLoaded: 'Geladener Wert',
-      scanToRedeem: 'Zum Einlösen scannen',
-      reference: 'Referenz',
-      issued: 'Ausgestellt',
-      customerPaid: 'Kunde bezahlt',
-      loaded: 'Geladen',
-      voucherAddress: 'Gutschein-Adresse',
+      valueLoaded: 'Value loaded',
+      scanToRedeem: 'Scan to Redeem',
+      reference: 'Reference',
+      issued: 'Issued',
+      customerPaid: 'Customer Paid',
+      serviceFee: 'Service Fee',
+      loaded: 'Topup Loaded',
+      voucherAddress: 'Voucher Address',
     },
     privateKeyWarning:
       'Nur Entwicklungsvorschau. Dieser Beleg enthält einen QR-Code mit einem übertragbaren privaten Schlüssel. Jede Person, die ihn scannt oder kopiert, kann die Voucher-Gelder übertragen.',

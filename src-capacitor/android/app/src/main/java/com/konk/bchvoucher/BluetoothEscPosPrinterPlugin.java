@@ -1175,7 +1175,7 @@ String voucherAddressLabel
             0
         );
 
-        writeRasterSpacer(output, 4);
+        writeRasterSpacer(output, 6);
 
         Bitmap qrBitmap = decodeQrImageDataUrl(qrImageDataUrl);
 

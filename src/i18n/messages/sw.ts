@@ -1316,13 +1316,14 @@ const sw = {
 
   receiptPreview: {
     printLabels: {
-      valueLoaded: 'Thamani iliyopakiwa',
-      scanToRedeem: 'Scan ili kukomboa',
-      reference: 'Rejea',
-      issued: 'Imetolewa',
-      customerPaid: 'Mteja amelipa',
-      loaded: 'Imepakiwa',
-      voucherAddress: 'Anwani ya vocha',
+      valueLoaded: 'Value loaded',
+      scanToRedeem: 'Scan to Redeem',
+      reference: 'Reference',
+      issued: 'Issued',
+      customerPaid: 'Customer Paid',
+      serviceFee: 'Service Fee',
+      loaded: 'Topup Loaded',
+      voucherAddress: 'Voucher Address',
     },
     privateKeyWarning:
       'Muonekano wa maendeleo pekee. Risiti hii ina QR ya private key inayoweza kuhamisha fedha. Mtu yeyote anayeiscan au kuinakili anaweza kuhamisha fedha za vocha.',

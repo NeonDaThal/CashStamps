@@ -1313,13 +1313,14 @@ const svSE = {
 
   receiptPreview: {
     printLabels: {
-      valueLoaded: 'Laddat värde',
-      scanToRedeem: 'Skanna för att lösa in',
-      reference: 'Referens',
-      issued: 'Utfärdad',
-      customerPaid: 'Kunden betalade',
-      loaded: 'Laddat',
-      voucherAddress: 'Värdekodsadress',
+      valueLoaded: 'Value loaded',
+      scanToRedeem: 'Scan to Redeem',
+      reference: 'Reference',
+      issued: 'Issued',
+      customerPaid: 'Customer Paid',
+      serviceFee: 'Service Fee',
+      loaded: 'Topup Loaded',
+      voucherAddress: 'Voucher Address',
     },
     privateKeyWarning:
       'Endast utvecklingsvisning. Det här kvittot innehåller en QR-kod med en överförbar privat nyckel. Alla som skannar eller kopierar den kan föra över värdekodens medel.',
