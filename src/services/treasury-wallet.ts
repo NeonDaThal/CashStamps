@@ -132,9 +132,12 @@ async function incrementNextTreasuryCashOutDerivationIndex(
 }
 
 async function getKnownTreasuryBalanceDerivationIndexes(): Promise<number[]> {
-  const cashOutRecords = await getCashOutRecords();
+  const [cashOutRecords, nextCashOutDerivationIndex] = await Promise.all([
+    getCashOutRecords(),
+    getNextTreasuryCashOutDerivationIndex(),
+  ]);
 
-  const cashOutIndexes = cashOutRecords
+  const recordedCashOutIndexes = cashOutRecords
     .map((record) => record.treasuryReceivingDerivationIndex)
     .filter((derivationIndex): derivationIndex is number => {
       return (
@@ -144,7 +147,23 @@ async function getKnownTreasuryBalanceDerivationIndexes(): Promise<number[]> {
       );
     });
 
-  return [...new Set([0, ...cashOutIndexes])].sort((a, b) => a - b);
+  /**
+   * Every index below the durable "next index" value has already been
+   * allocated by this installation.
+   *
+   * Scan those addresses even if a Cash-out record was interrupted or lost
+   * after address allocation.
+   */
+  const allocatedCashOutIndexes = Array.from(
+    {
+      length: Math.max(0, nextCashOutDerivationIndex - 1),
+    },
+    (_, offset) => offset + 1
+  );
+
+  return [
+    ...new Set([0, ...allocatedCashOutIndexes, ...recordedCashOutIndexes]),
+  ].sort((a, b) => a - b);
 }
 
 export async function getTreasuryWalletRecord(): Promise<

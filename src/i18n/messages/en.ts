@@ -242,6 +242,7 @@ const en = {
     messages: {
       couldNotLoadTreasuryWallet: 'Could not load treasury wallet.',
       enterValidCashAmount: 'Enter a valid cash amount.',
+      minimumCashOutAmount: 'The minimum Cash-out amount is £1.00.',
       setUpTreasuryFirst:
         'Set up the merchant treasury wallet before preparing a cash-out.',
       fallbackQuoteWarning:
@@ -249,8 +250,15 @@ const en = {
       pricingUnavailable:
         'Pricing is currently unavailable. Check your connection and try again.',
       couldNotPrepareCashOut: 'Could not prepare cash-out.',
+      cashOutCompleted:
+        'Cash-out completed. The cash payout has been recorded.',
+
+      couldNotCompleteCashOut:
+        'Could not complete the Cash-out. Please try again.',
       receiptPrintingPending:
-        'Receipt printing will be connected after payment detection is added.',
+        'Complete the Cash-out by confirming the customer has received their cash before printing a receipt.',
+      quoteExpired:
+        'The Cash-out quote expired before payment was confirmed. No cash should be paid out for this Cash-out. Please prepare a new Cash-out with a fresh quote.',
     },
   },
 
@@ -261,7 +269,11 @@ const en = {
       reviewSubtitle:
         'Ask the customer to scan the QR code below with their BCH wallet and send the required BCH amount. Once it is confirmed your Treasury Wallet has received the payment, you can give them the Cash-out amount.',
       receivedSubtitle:
-        'The customer payment has been detected in the merchant treasury.',
+        'The customer BCH payment has been detected. Hand over the cash amount shown below, then confirm the payout.',
+      completedTitle: 'Cash-out complete',
+
+      completedSubtitle:
+        'The customer BCH was received and the cash payout has been confirmed.',
     },
     quoteStatus: {
       fallback:
@@ -273,7 +285,7 @@ const en = {
       subtitle: 'Cash-out breakdown',
       cashOutAmount: 'Cash-out requested',
       cashOutAmountNote: 'To pay to customer',
-      serviceFeeSpread: '10% fee',
+      serviceFeeSpread: '3% fee',
       cashOutTotal: 'Cash-out total to pay',
       cashOutTotalNote: 'Customer to send to you',
     },
@@ -281,7 +293,7 @@ const en = {
       cashCustomerReceives: 'Cash customer receives',
       customerSends: 'Customer sends',
       fiatEquivalentSent: 'Fiat equivalent sent',
-      serviceFeeSpread: 'Service fee / spread',
+      serviceFeeSpread: 'Service fee',
     },
     paymentQr: {
       title: 'Ask customer to scan QR code and send requested amount',
@@ -315,14 +327,25 @@ const en = {
     },
     success: {
       title: 'BCH received',
+
       nowGiveCustomer: 'Now give the customer',
+
       cash: 'cash',
+
+      confirmAfterCashPaid:
+        'Only confirm below after the cash has physically been handed to the customer.',
+
+      completedTitle: 'Cash-out complete',
+
+      completedMessage:
+        'Cash payout confirmed. You can now close this Cash-out or print an optional customer receipt.',
     },
     actions: {
       copyAddress: 'Copy address',
       copyPaymentUri: 'Copy payment URI',
       closeReview: 'Cancel cash-out and close',
       printReceipt: 'Print Receipt',
+      confirmCashPaid: 'Confirm Cash Paid',
     },
     messages: {
       treasuryAddressCopied: 'Treasury address copied.',
@@ -1360,9 +1383,9 @@ const en = {
       transactionId: 'Transaction ID',
     },
     statusNote:
-      'BCH received before cash paid. Customer payment was detected in the merchant Treasury Wallet.',
+      'Customer BCH was received before the merchant confirmed the cash payout.',
     supportNote: 'Keep this receipt as proof of the cash-out transaction.',
-    footerNote: 'BCH received before cash paid.',
+    footerNote: 'Cash-out completed after BCH payment was received.',
     complete: 'Cash-out complete',
     couldNotBuildPreview: 'Could not build cash-out receipt preview.',
     messages: {
@@ -1379,8 +1402,8 @@ const en = {
       invalidBchReceived: 'Cash-out does not have a valid BCH received amount.',
       missingTreasuryReceivingAddress:
         'Cash-out does not have a treasury receiving address.',
-      paymentNotDetected:
-        'Cash-out payment has not been detected yet. Receipt cannot be built.',
+      cashOutNotCompleted:
+        'Cash-out has not been completed yet. Receipt cannot be built.',
     },
   },
 };

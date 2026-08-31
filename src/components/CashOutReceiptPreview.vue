@@ -218,13 +218,16 @@ function buildReceiptPreview(): void {
       printerSubtitle: text('printerSubtitle', 'Cash-out Receipt'),
       statusNote: text(
         'statusNote',
-        'BCH received before cash paid. Customer payment was detected in the merchant Treasury Wallet.'
+        'Customer BCH was received before the merchant confirmed the cash payout.'
       ),
       supportNote: text(
         'supportNote',
         'Keep this receipt as proof of the cash-out transaction.'
       ),
-      footerNote: text('footerNote', 'BCH received before cash paid.'),
+      footerNote: text(
+        'footerNote',
+        'Cash-out completed after BCH payment was received.'
+      ),
       printLabels: {
         cashPaidOut: text('labels.cashPaidOut', 'Cash paid out'),
         bchReceived: text('labels.bchReceived', 'BCH received'),
@@ -260,9 +263,9 @@ function buildReceiptPreview(): void {
           'errors.missingTreasuryReceivingAddress',
           'Cash-out does not have a treasury receiving address.'
         ),
-        paymentNotDetected: text(
-          'errors.paymentNotDetected',
-          'Cash-out payment has not been detected yet. Receipt cannot be built.'
+        cashOutNotCompleted: text(
+          'errors.cashOutNotCompleted',
+          'Cash-out has not been completed yet. Receipt cannot be built.'
         ),
       },
     });
@@ -271,7 +274,10 @@ function buildReceiptPreview(): void {
     errorMessage.value =
       error instanceof Error
         ? error.message
-        : text('couldNotBuildPreview', 'Could not build cash-out receipt preview.');
+        : text(
+            'couldNotBuildPreview',
+            'Could not build cash-out receipt preview.'
+          );
   }
 }
 
@@ -300,7 +306,8 @@ async function handlePrintReceipt(): Promise<void> {
 
     $q.notify({
       type: 'positive',
-      message: result.message || text('messages.sent', 'Receipt sent to printer.'),
+      message:
+        result.message || text('messages.sent', 'Receipt sent to printer.'),
     });
   } catch (error) {
     console.error(error);

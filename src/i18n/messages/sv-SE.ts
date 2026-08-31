@@ -245,6 +245,7 @@ const svSE = {
     messages: {
       couldNotLoadTreasuryWallet: 'Kunde inte läsa in treasury-plånboken.',
       enterValidCashAmount: 'Ange ett giltigt kontantbelopp.',
+      minimumCashOutAmount: 'The minimum Cash-out amount is £1.00.',
       setUpTreasuryFirst:
         'Konfigurera handlarens treasury-plånbok innan ett kontantuttag förbereds.',
       fallbackQuoteWarning:
@@ -252,8 +253,15 @@ const svSE = {
       pricingUnavailable:
         'Prissättning är inte tillgänglig just nu. Kontrollera anslutningen och försök igen.',
       couldNotPrepareCashOut: 'Kunde inte förbereda kontantuttaget.',
+      cashOutCompleted:
+        'Cash-out completed. The cash payout has been recorded.',
+
+      couldNotCompleteCashOut:
+        'Could not complete the Cash-out. Please try again.',
       receiptPrintingPending:
-        'Kvittoutskrift kopplas in efter att betalningsdetektering har lagts till.',
+        'Complete the Cash-out by confirming the customer has received their cash before printing a receipt.',
+      quoteExpired:
+        'The Cash-out quote expired before payment was confirmed. No cash should be paid out for this Cash-out. Please prepare a new Cash-out with a fresh quote.',
     },
   },
 
@@ -263,7 +271,11 @@ const svSE = {
       receivedTitle: 'BCH mottaget',
       reviewSubtitle: 'Be kunden skanna QR-koden och skicka den BCH som krävs.',
       receivedSubtitle:
-        'Kundens betalning har upptäckts i handlarens treasury.',
+        'The customer BCH payment has been detected. Hand over the cash amount shown below, then confirm the payout.',
+      completedTitle: 'Cash-out complete',
+
+      completedSubtitle:
+        'The customer BCH was received and the cash payout has been confirmed.',
     },
     quoteStatus: {
       fallback:
@@ -283,7 +295,7 @@ const svSE = {
       cashCustomerReceives: 'Kontanter kunden får',
       customerSends: 'Kunden skickar',
       fiatEquivalentSent: 'Skickat fiat-motsvarande',
-      serviceFeeSpread: 'Serviceavgift / spread',
+      serviceFeeSpread: 'Serviceavgift',
     },
     paymentQr: {
       title: 'Kundens betalnings-QR',
@@ -316,15 +328,26 @@ const svSE = {
       detected: 'Upptäckt',
     },
     success: {
-      title: 'BCH mottaget',
-      nowGiveCustomer: 'Ge nu kunden',
-      cash: 'kontanter',
+      title: 'BCH received',
+
+      nowGiveCustomer: 'Now give the customer',
+
+      cash: 'cash',
+
+      confirmAfterCashPaid:
+        'Only confirm below after the cash has physically been handed to the customer.',
+
+      completedTitle: 'Cash-out complete',
+
+      completedMessage:
+        'Cash payout confirmed. You can now close this Cash-out or print an optional customer receipt.',
     },
     actions: {
       copyAddress: 'Kopiera adress',
       copyPaymentUri: 'Kopiera betalnings-URI',
       closeReview: 'Avbryt kontantuttag och stäng',
       printReceipt: 'Skriv ut kvitto',
+      confirmCashPaid: 'Confirm Cash Paid',
     },
     messages: {
       treasuryAddressCopied: 'Treasury-adress kopierad.',
@@ -1376,9 +1399,9 @@ const svSE = {
       transactionId: 'Transaktions-ID',
     },
     statusNote:
-      'BCH mottogs innan kontanter betalades ut. Kundens betalning upptäcktes i handlarens treasury-plånbok.',
+      'Customer BCH was received before the merchant confirmed the cash payout.',
     supportNote: 'Spara detta kvitto som bevis på cash-out-transaktionen.',
-    footerNote: 'BCH mottaget före kontantutbetalning.',
+    footerNote: 'Cash-out completed after BCH payment was received.',
     complete: 'Cash-out slutförd',
     couldNotBuildPreview:
       'Kunde inte skapa förhandsvisning av cash-out-kvitto.',
@@ -1396,8 +1419,8 @@ const svSE = {
       invalidBchReceived: 'Cash-out har inget giltigt mottaget BCH-belopp.',
       missingTreasuryReceivingAddress:
         'Cash-out saknar mottagningsadress för treasury.',
-      paymentNotDetected:
-        'Cash-out-betalningen har inte upptäckts än. Kvittot kan inte skapas.',
+      cashOutNotCompleted:
+        'Cash-out has not been completed yet. Receipt cannot be built.',
     },
   },
 };

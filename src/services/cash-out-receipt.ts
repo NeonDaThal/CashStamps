@@ -63,7 +63,7 @@ export interface CashOutReceiptErrorMessages {
   invalidCashAmount: string;
   invalidBchReceived: string;
   missingTreasuryReceivingAddress: string;
-  paymentNotDetected: string;
+  cashOutNotCompleted: string;
 }
 
 export interface BuildCashOutReceiptDataOptions {
@@ -107,8 +107,8 @@ const DEFAULT_ERROR_MESSAGES: CashOutReceiptErrorMessages = {
   invalidBchReceived: 'Cash-out does not have a valid BCH received amount.',
   missingTreasuryReceivingAddress:
     'Cash-out does not have a treasury receiving address.',
-  paymentNotDetected:
-    'Cash-out payment has not been detected yet. Receipt cannot be built.',
+  cashOutNotCompleted:
+    'Cash-out has not been completed yet. Receipt cannot be built.',
 };
 
 function getErrorMessages(
@@ -162,8 +162,8 @@ function assertUsableCashOutForReceipt(
   cashOut: CashOutRecord,
   errorMessages: CashOutReceiptErrorMessages
 ): void {
-  if (cashOut.status !== 'received' && cashOut.status !== 'completed') {
-    throw new Error(errorMessages.paymentNotDetected);
+  if (cashOut.status !== 'completed') {
+    throw new Error(errorMessages.cashOutNotCompleted);
   }
 
   if (!cashOut.serial) {

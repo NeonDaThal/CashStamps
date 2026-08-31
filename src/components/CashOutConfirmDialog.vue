@@ -1,7 +1,7 @@
 <template>
   <q-dialog
     :model-value="modelValue"
-    :persistent="!isPaymentDetected"
+    :persistent="!isCashOutCompleted"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <q-card class="confirm-card">
@@ -9,13 +9,21 @@
         <div class="dialog-title-row">
           <div class="header-icon">
             <q-icon
-              :name="isPaymentDetected ? 'check_circle' : 'currency_exchange'"
+              :name="
+                isCashOutCompleted
+                  ? 'task_alt'
+                  : isPaymentDetected
+                  ? 'payments'
+                  : 'currency_exchange'
+              "
             />
           </div>
 
           <div class="dialog-title">
             {{
-              isPaymentDetected
+              isCashOutCompleted
+                ? t('cashOutConfirm.header.completedTitle')
+                : isPaymentDetected
                 ? t('cashOutConfirm.header.receivedTitle')
                 : t('cashOutConfirm.header.reviewTitle')
             }}
@@ -24,7 +32,9 @@
 
         <p class="dialog-subtitle">
           {{
-            isPaymentDetected
+            isCashOutCompleted
+              ? t('cashOutConfirm.header.completedSubtitle')
+              : isPaymentDetected
               ? t('cashOutConfirm.header.receivedSubtitle')
               : t('cashOutConfirm.header.reviewSubtitle')
           }}
@@ -331,23 +341,45 @@
         <template v-else>
           <div class="success-panel">
             <div class="success-icon">
-              <q-icon name="check_circle" />
+              <q-icon
+                :name="isCashOutCompleted ? 'task_alt' : 'check_circle'"
+              />
             </div>
 
-            <h2>{{ t('cashOutConfirm.success.title') }}</h2>
+            <template v-if="isCashOutCompleted">
+              <h2>
+                {{ t('cashOutConfirm.success.completedTitle') }}
+              </h2>
 
-            <p>
-              {{ t('cashOutConfirm.success.nowGiveCustomer') }}
-              <strong>
-                {{
-                  formatFiatAmount(
-                    cashOut.fiatAmountMinor,
-                    cashOut.fiatCurrency
-                  )
-                }}
-              </strong>
-              {{ t('cashOutConfirm.success.cash') }}.
-            </p>
+              <p>
+                {{ t('cashOutConfirm.success.completedMessage') }}
+              </p>
+            </template>
+
+            <template v-else>
+              <h2>
+                {{ t('cashOutConfirm.success.title') }}
+              </h2>
+
+              <p>
+                {{ t('cashOutConfirm.success.nowGiveCustomer') }}
+
+                <strong>
+                  {{
+                    formatFiatAmount(
+                      cashOut.fiatAmountMinor,
+                      cashOut.fiatCurrency
+                    )
+                  }}
+                </strong>
+
+                {{ t('cashOutConfirm.success.cash') }}.
+              </p>
+
+              <p class="q-mt-sm text-weight-bold">
+                {{ t('cashOutConfirm.success.confirmAfterCashPaid') }}
+              </p>
+            </template>
           </div>
 
           <q-card flat bordered class="details-card q-mt-md">
@@ -388,40 +420,57 @@
         align="right"
         :class="[
           'dialog-actions',
-          { 'dialog-actions--review': !isPaymentDetected },
-          { 'success-actions': isPaymentDetected },
+          {
+            'dialog-actions--review': !isPaymentDetected,
+          },
+          {
+            'success-actions': isPaymentDetected,
+          },
         ]"
       >
         <q-btn
-          :flat="!isPaymentDetected"
-          :outline="isPaymentDetected"
-          :class="
-            isPaymentDetected
-              ? 'secondary-action-button'
-              : 'cancel-review-button'
-          "
-          :icon="isPaymentDetected ? 'close' : undefined"
-          :color="isPaymentDetected ? 'grey-9' : undefined"
-          :label="
-            isPaymentDetected
-              ? t('common.close')
-              : t('cashOutConfirm.actions.closeReview')
-          "
-          :disable="isPreparingReceipt"
+          v-if="!isPaymentDetected"
+          flat
+          class="cancel-review-button"
+          :label="t('cashOutConfirm.actions.closeReview')"
           no-caps
           @click="emit('update:modelValue', false)"
         />
 
         <q-btn
-          v-if="isPaymentDetected"
+          v-else-if="!isCashOutCompleted"
           class="primary-button"
-          :label="t('cashOutConfirm.actions.printReceipt')"
-          icon="print"
-          :loading="isPreparingReceipt"
+          icon="payments"
+          :label="t('cashOutConfirm.actions.confirmCashPaid')"
+          :loading="isCompletingCashOut"
+          :disable="isCompletingCashOut"
           unelevated
           no-caps
-          @click="emit('print-receipt')"
+          @click="emit('confirm-cash-paid')"
         />
+
+        <template v-else>
+          <q-btn
+            outline
+            class="secondary-action-button"
+            icon="close"
+            color="grey-9"
+            :label="t('common.close')"
+            :disable="isPreparingReceipt"
+            no-caps
+            @click="emit('update:modelValue', false)"
+          />
+
+          <q-btn
+            class="primary-button"
+            :label="t('cashOutConfirm.actions.printReceipt')"
+            icon="print"
+            :loading="isPreparingReceipt"
+            unelevated
+            no-caps
+            @click="emit('print-receipt')"
+          />
+        </template>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -440,34 +489,37 @@ import { useI18n } from 'vue-i18n';
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import type { CashOutRecord } from 'src/types/cash-out';
 import {
-  formatCashOutBasisPointsAsPercent,
   formatCashOutBchSats,
   formatCashOutMarketRate,
   formatCashOutMinorFiatAmount,
 } from 'src/services/cash-out-pricing';
-import { createTreasuryTopUpUri } from 'src/services/treasury-topup-uri';
 
-const SATS_PER_BCH = 100_000_000;
+import { createCashOutPaymentUri } from 'src/services/cash-out-payment-uri';
 
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
     cashOut: CashOutRecord;
     isPaymentDetected?: boolean;
+    isCashOutCompleted?: boolean;
     isWatchingForPayment?: boolean;
     paymentDetectionError?: string;
     isPreparingReceipt?: boolean;
+    isCompletingCashOut?: boolean;
   }>(),
   {
     isPaymentDetected: false,
     isWatchingForPayment: false,
     paymentDetectionError: '',
     isPreparingReceipt: false,
+    isCashOutCompleted: false,
+    isCompletingCashOut: false,
   }
 );
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
+  'confirm-cash-paid': [];
   'print-receipt': [];
 }>();
 
@@ -482,10 +534,13 @@ const paymentUri = computed(() => {
     return props.cashOut.paymentUri;
   }
 
-  return createTreasuryTopUpUri({
+  return createCashOutPaymentUri({
     address: props.cashOut.treasuryReceivingAddress,
-    amountBch: satsToBchAmount(props.cashOut.bchSatsRequired),
+
+    requiredSats: props.cashOut.bchSatsRequired,
+
     label: t('cashOutConfirm.paymentUri.label'),
+
     message: props.cashOut.serial,
   }).uri;
 });
@@ -503,10 +558,6 @@ const cashOutStatusLabel = computed(() => {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 });
-
-function satsToBchAmount(sats: number): number {
-  return Number((sats / SATS_PER_BCH).toFixed(8));
-}
 
 async function generateQrCode(): Promise<void> {
   qrDataUrl.value = '';
@@ -576,10 +627,6 @@ function formatBchAmount(sats: number): string {
 
 function formatRate(marketRate: number, currency: string): string {
   return formatCashOutMarketRate(marketRate, currency);
-}
-
-function formatPercent(basisPoints: number): string {
-  return formatCashOutBasisPointsAsPercent(basisPoints);
 }
 
 function formatDateTime(value: string): string {

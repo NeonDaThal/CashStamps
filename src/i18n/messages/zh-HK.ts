@@ -236,11 +236,20 @@ const zhHK = {
     messages: {
       couldNotLoadTreasuryWallet: '無法載入資金錢包。',
       enterValidCashAmount: '請輸入有效現金金額。',
+      minimumCashOutAmount: 'The minimum Cash-out amount is £1.00.',
       setUpTreasuryFirst: '準備兌現前，請先設定商戶資金錢包。',
       fallbackQuoteWarning: '使用了備用報價。繼續前請仔細核對匯率。',
       pricingUnavailable: '價格暫時不可用。請檢查連線後再試。',
       couldNotPrepareCashOut: '無法準備兌現。',
-      receiptPrintingPending: '收據打印會在加入付款偵測後連接。',
+      cashOutCompleted:
+        'Cash-out completed. The cash payout has been recorded.',
+
+      couldNotCompleteCashOut:
+        'Could not complete the Cash-out. Please try again.',
+      receiptPrintingPending:
+        'Complete the Cash-out by confirming the customer has received their cash before printing a receipt.',
+      quoteExpired:
+        'The Cash-out quote expired before payment was confirmed. No cash should be paid out for this Cash-out. Please prepare a new Cash-out with a fresh quote.',
     },
   },
 
@@ -249,7 +258,12 @@ const zhHK = {
       reviewTitle: '確認套現',
       receivedTitle: '已收到 BCH',
       reviewSubtitle: '請顧客掃描 QR 碼並發送所需 BCH。',
-      receivedSubtitle: '顧客付款已在商戶資金錢包偵測到。',
+      receivedSubtitle:
+        'The customer BCH payment has been detected. Hand over the cash amount shown below, then confirm the payout.',
+      completedTitle: 'Cash-out complete',
+
+      completedSubtitle:
+        'The customer BCH was received and the cash payout has been confirmed.',
     },
     quoteStatus: {
       fallback: '使用了備用價格報價。繼續前請仔細核對匯率。',
@@ -268,7 +282,7 @@ const zhHK = {
       cashCustomerReceives: '顧客收取現金',
       customerSends: '顧客發送',
       fiatEquivalentSent: '已發送法幣等值',
-      serviceFeeSpread: '服務費／差價',
+      serviceFeeSpread: '服務費',
     },
     paymentQr: {
       title: '顧客付款 QR',
@@ -301,15 +315,26 @@ const zhHK = {
       detected: '已偵測',
     },
     success: {
-      title: '已收到 BCH',
-      nowGiveCustomer: '現在交給顧客',
-      cash: '現金',
+      title: 'BCH received',
+
+      nowGiveCustomer: 'Now give the customer',
+
+      cash: 'cash',
+
+      confirmAfterCashPaid:
+        'Only confirm below after the cash has physically been handed to the customer.',
+
+      completedTitle: 'Cash-out complete',
+
+      completedMessage:
+        'Cash payout confirmed. You can now close this Cash-out or print an optional customer receipt.',
     },
     actions: {
       copyAddress: '複製地址',
       copyPaymentUri: '複製付款 URI',
       closeReview: '取消兌現並關閉',
       printReceipt: '打印收據',
+      confirmCashPaid: 'Confirm Cash Paid',
     },
     messages: {
       treasuryAddressCopied: '資金錢包地址已複製。',
@@ -1326,9 +1351,9 @@ const zhHK = {
       transactionId: '交易 ID',
     },
     statusNote:
-      '已先收到 BCH，然後才支付現金。顧客付款已喺商戶資金錢包中偵測到。',
+      'Customer BCH was received before the merchant confirmed the cash payout.',
     supportNote: '請保留此收據，作為兌現交易證明。',
-    footerNote: '先收到 BCH，後支付現金。',
+    footerNote: 'Cash-out completed after BCH payment was received.',
     complete: '兌現完成',
     couldNotBuildPreview: '無法建立兌現收據預覽。',
     messages: {
@@ -1344,7 +1369,8 @@ const zhHK = {
       invalidCashAmount: '兌現記錄沒有有效現金金額。',
       invalidBchReceived: '兌現記錄沒有有效嘅 BCH 收款金額。',
       missingTreasuryReceivingAddress: '兌現記錄沒有資金錢包收款地址。',
-      paymentNotDetected: '尚未偵測到兌現付款，無法建立收據。',
+      cashOutNotCompleted:
+        'Cash-out has not been completed yet. Receipt cannot be built.',
     },
   },
 };

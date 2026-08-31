@@ -7,6 +7,8 @@ export type CashOutStatus =
   | 'cancelled'
   | 'failed';
 
+export type CashOutCancellationReason = 'merchant_cancelled' | 'quote_expired';
+
 export type CashOutQuoteSource =
   | 'general_protocols_oracle'
   | 'coingecko'
@@ -25,27 +27,63 @@ export interface CashOutQuote {
   isFallbackQuote: boolean;
 }
 
+export type CashOutFeeModel = 'cash_out_v1';
+
 export interface CashOutFeeBreakdown {
+  /**
+   * Absent on older development records created before Cash-out Fee Model v1.
+   */
+  feeModel?: CashOutFeeModel;
+
+  /**
+   * Total customer-facing Cash-out service fee.
+   *
+   * Cash-out Fee Model v1:
+   * 3% of the fiat cash amount paid to the customer.
+   */
   totalServiceFeeBasisPoints: number;
   totalServiceFeeAmountMinor: number;
 
+  /**
+   * Platform share of the Cash-out service fee.
+   *
+   * Nominally 1.5% of the cash payout.
+   *
+   * When the total fee is an odd number of minor currency units, the platform
+   * receives the lower half and the merchant receives the remainder.
+   */
   platformFeeBasisPoints: number;
   platformFeeAmountMinor: number;
 
-  merchantRetainedBasisPoints: number;
-  merchantRetainedAmountMinor: number;
-
-  bufferReserveBasisPoints: number;
-  bufferReserveAmountMinor: number;
+  /**
+   * Merchant share of the Cash-out service fee.
+   *
+   * Nominally 1.5% of the cash payout.
+   */
+  merchantFeeBasisPoints?: number;
+  merchantFeeAmountMinor?: number;
 
   /**
-   * MVP note:
+   * Legacy development fields.
    *
-   * Cash-out customer payments are received as one BCH payment into the
-   * merchant treasury wallet.
+   * Older Cash-out records used the original shared 10% placeholder fee model:
+   * platform + merchant retained + buffer reserve.
    *
-   * These fee amounts are tracked for accounting/settlement, but the payment
-   * URI itself does not force separate BCH outputs.
+   * Keep these optional so old locally stored records remain readable while
+   * new Cash-out Fee Model v1 records stop writing them.
+   */
+  merchantRetainedBasisPoints?: number;
+  merchantRetainedAmountMinor?: number;
+
+  bufferReserveBasisPoints?: number;
+  bufferReserveAmountMinor?: number;
+
+  /**
+   * Cash-out customer BCH is currently received as one payment into the
+   * merchant Treasury Wallet.
+   *
+   * The merchant/platform split is recorded for accounting. Contract-based
+   * settlement will be introduced separately in later CashScript phases.
    */
   settlementMode: 'accounting_only';
 }
@@ -132,6 +170,14 @@ export interface CashOutRecord {
   completedAt?: string;
   printedAt?: string;
   cancelledAt?: string;
+  /**
+   * Why an unfinished Cash-out was cancelled.
+   *
+   * This does not imply that the unique BCH receiving address becomes incapable
+   * of receiving funds. A payment sent after cancellation/expiry is an
+   * exceptional recovery case and must not automatically authorise cash payout.
+   */
+  cancellationReason?: CashOutCancellationReason;
   failedAt?: string;
 
   status: CashOutStatus;

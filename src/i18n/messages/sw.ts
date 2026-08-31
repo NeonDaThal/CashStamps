@@ -245,6 +245,7 @@ const sw = {
     messages: {
       couldNotLoadTreasuryWallet: 'Haikuwezekana kupakia pochi ya hazina.',
       enterValidCashAmount: 'Weka kiasi halali cha fedha taslimu.',
+      minimumCashOutAmount: 'The minimum Cash-out amount is £1.00.',
       setUpTreasuryFirst:
         'Sanidi pochi ya hazina ya mfanyabiashara kabla ya kutayarisha kubadili fedha.',
       fallbackQuoteWarning:
@@ -252,8 +253,15 @@ const sw = {
       pricingUnavailable:
         'Bei haipatikani kwa sasa. Kagua muunganisho kisha jaribu tena.',
       couldNotPrepareCashOut: 'Haikuwezekana kutayarisha kubadili fedha.',
+      cashOutCompleted:
+        'Cash-out completed. The cash payout has been recorded.',
+
+      couldNotCompleteCashOut:
+        'Could not complete the Cash-out. Please try again.',
       receiptPrintingPending:
-        'Uchapishaji wa risiti utaunganishwa baada ya ugunduzi wa malipo kuongezwa.',
+        'Complete the Cash-out by confirming the customer has received their cash before printing a receipt.',
+      quoteExpired:
+        'The Cash-out quote expired before payment was confirmed. No cash should be paid out for this Cash-out. Please prepare a new Cash-out with a fresh quote.',
     },
   },
 
@@ -263,7 +271,11 @@ const sw = {
       receivedTitle: 'BCH imepokelewa',
       reviewSubtitle: 'Mwambie mteja ascan QR code na atume BCH inayohitajika.',
       receivedSubtitle:
-        'Malipo ya mteja yamegunduliwa kwenye hazina ya mfanyabiashara.',
+        'The customer BCH payment has been detected. Hand over the cash amount shown below, then confirm the payout.',
+      completedTitle: 'Cash-out complete',
+
+      completedSubtitle:
+        'The customer BCH was received and the cash payout has been confirmed.',
     },
     quoteStatus: {
       fallback:
@@ -283,7 +295,7 @@ const sw = {
       cashCustomerReceives: 'Fedha taslimu anazopokea mteja',
       customerSends: 'Mteja anatuma',
       fiatEquivalentSent: 'Thamani sawa ya fiat iliyotumwa',
-      serviceFeeSpread: 'Ada ya huduma / tofauti ya bei',
+      serviceFeeSpread: 'Ada ya huduma',
     },
     paymentQr: {
       title: 'QR ya malipo ya mteja',
@@ -316,15 +328,26 @@ const sw = {
       detected: 'Imegunduliwa',
     },
     success: {
-      title: 'BCH imepokelewa',
-      nowGiveCustomer: 'Sasa mpe mteja',
-      cash: 'fedha taslimu',
+      title: 'BCH received',
+
+      nowGiveCustomer: 'Now give the customer',
+
+      cash: 'cash',
+
+      confirmAfterCashPaid:
+        'Only confirm below after the cash has physically been handed to the customer.',
+
+      completedTitle: 'Cash-out complete',
+
+      completedMessage:
+        'Cash payout confirmed. You can now close this Cash-out or print an optional customer receipt.',
     },
     actions: {
       copyAddress: 'Nakili anwani',
       copyPaymentUri: 'Nakili URI ya malipo',
       closeReview: 'Ghairi kutoa fedha na funga',
       printReceipt: 'Chapisha risiti',
+      confirmCashPaid: 'Confirm Cash Paid',
     },
     messages: {
       treasuryAddressCopied: 'Anwani ya hazina imenakiliwa.',
@@ -1380,10 +1403,10 @@ const sw = {
       transactionId: 'Kitambulisho cha muamala',
     },
     statusNote:
-      'BCH ilipokelewa kabla ya pesa taslimu kulipwa. Malipo ya mteja yaligunduliwa kwenye pochi ya hazina ya mfanyabiashara.',
+      'Customer BCH was received before the merchant confirmed the cash payout.',
     supportNote:
       'Hifadhi risiti hii kama uthibitisho wa muamala wa kutoa fedha.',
-    footerNote: 'BCH imepokelewa kabla ya pesa taslimu kulipwa.',
+    footerNote: 'Cash-out completed after BCH payment was received.',
     complete: 'Kutoa fedha kumekamilika',
     couldNotBuildPreview:
       'Haikuwezekana kuunda onyesho la awali la risiti ya kutoa fedha.',
@@ -1402,8 +1425,8 @@ const sw = {
         'Cash-out haina kiasi halali cha BCH kilichopokelewa.',
       missingTreasuryReceivingAddress:
         'Cash-out haina anwani ya kupokea ya hazina.',
-      paymentNotDetected:
-        'Malipo ya cash-out bado hayajagunduliwa. Risiti haiwezi kuundwa.',
+      cashOutNotCompleted:
+        'Cash-out has not been completed yet. Receipt cannot be built.',
     },
   },
 };

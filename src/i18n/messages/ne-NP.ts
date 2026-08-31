@@ -240,6 +240,7 @@ const neNP = {
     messages: {
       couldNotLoadTreasuryWallet: 'ट्रेजरी वालेट लोड गर्न सकिएन।',
       enterValidCashAmount: 'मान्य नगद रकम प्रविष्ट गर्नुहोस्।',
+      minimumCashOutAmount: 'The minimum Cash-out amount is £1.00.',
       setUpTreasuryFirst:
         'क्यास-आउट तयार गर्नु अघि व्यापारी ट्रेजरी वालेट सेटअप गर्नुहोस्।',
       fallbackQuoteWarning:
@@ -247,8 +248,15 @@ const neNP = {
       pricingUnavailable:
         'मूल्य हाल उपलब्ध छैन। जडान जाँच गरेर फेरि प्रयास गर्नुहोस्।',
       couldNotPrepareCashOut: 'क्यास-आउट तयार गर्न सकिएन।',
+      cashOutCompleted:
+        'Cash-out completed. The cash payout has been recorded.',
+
+      couldNotCompleteCashOut:
+        'Could not complete the Cash-out. Please try again.',
       receiptPrintingPending:
-        'भुक्तानी पत्ता लगाउने सुविधा थपिएपछि रसिद प्रिन्टिङ जडान गरिनेछ।',
+        'Complete the Cash-out by confirming the customer has received their cash before printing a receipt.',
+      quoteExpired:
+        'The Cash-out quote expired before payment was confirmed. No cash should be paid out for this Cash-out. Please prepare a new Cash-out with a fresh quote.',
     },
   },
 
@@ -258,7 +266,12 @@ const neNP = {
       receivedTitle: 'BCH प्राप्त भयो',
       reviewSubtitle:
         'ग्राहकलाई QR कोड स्क्यान गरेर आवश्यक BCH पठाउन भन्नुहोस्।',
-      receivedSubtitle: 'ग्राहकको भुक्तानी व्यापारी ट्रेजरीमा पत्ता लागेको छ।',
+      receivedSubtitle:
+        'The customer BCH payment has been detected. Hand over the cash amount shown below, then confirm the payout.',
+      completedTitle: 'Cash-out complete',
+
+      completedSubtitle:
+        'The customer BCH was received and the cash payout has been confirmed.',
     },
     quoteStatus: {
       fallback:
@@ -278,7 +291,7 @@ const neNP = {
       cashCustomerReceives: 'ग्राहकले प्राप्त गर्ने नगद',
       customerSends: 'ग्राहकले पठाउँछ',
       fiatEquivalentSent: 'पठाइएको फियाट बराबर',
-      serviceFeeSpread: 'सेवा शुल्क / स्प्रेड',
+      serviceFeeSpread: 'सेवा शुल्क',
     },
     paymentQr: {
       title: 'ग्राहक भुक्तानी QR',
@@ -311,15 +324,26 @@ const neNP = {
       detected: 'पत्ता लाग्यो',
     },
     success: {
-      title: 'BCH प्राप्त भयो',
-      nowGiveCustomer: 'अब ग्राहकलाई',
-      cash: 'नगद दिनुहोस्',
+      title: 'BCH received',
+
+      nowGiveCustomer: 'Now give the customer',
+
+      cash: 'cash',
+
+      confirmAfterCashPaid:
+        'Only confirm below after the cash has physically been handed to the customer.',
+
+      completedTitle: 'Cash-out complete',
+
+      completedMessage:
+        'Cash payout confirmed. You can now close this Cash-out or print an optional customer receipt.',
     },
     actions: {
       copyAddress: 'ठेगाना प्रतिलिपि गर्नुहोस्',
       copyPaymentUri: 'भुक्तानी URI प्रतिलिपि गर्नुहोस्',
       closeReview: 'क्यास-आउट रद्द गरेर बन्द गर्नुहोस्',
       printReceipt: 'रसिद प्रिन्ट गर्नुहोस्',
+      confirmCashPaid: 'Confirm Cash Paid',
     },
     messages: {
       treasuryAddressCopied: 'ट्रेजरी ठेगाना प्रतिलिपि भयो।',
@@ -1362,10 +1386,10 @@ const neNP = {
       transactionId: 'कारोबार ID',
     },
     statusNote:
-      'नगद तिर्नु अघि BCH प्राप्त भयो। ग्राहकको भुक्तानी व्यापारीको ट्रेजरी वालेटमा पत्ता लाग्यो।',
+      'Customer BCH was received before the merchant confirmed the cash payout.',
     supportNote:
       'यो रसिद क्यास-आउट कारोबारको प्रमाणको रूपमा सुरक्षित राख्नुहोस्।',
-    footerNote: 'नगद तिर्नु अघि BCH प्राप्त भयो।',
+    footerNote: 'Cash-out completed after BCH payment was received.',
     complete: 'क्यास-आउट पूरा भयो',
     couldNotBuildPreview: 'क्यास-आउट रसिद पूर्वावलोकन बनाउन सकिएन।',
     messages: {
@@ -1382,8 +1406,8 @@ const neNP = {
       invalidBchReceived: 'क्यास-आउटमा मान्य BCH प्राप्त रकम छैन।',
       missingTreasuryReceivingAddress:
         'क्यास-आउटमा ट्रेजरी प्राप्त गर्ने ठेगाना छैन।',
-      paymentNotDetected:
-        'क्यास-आउट भुक्तानी अझै पत्ता लागेको छैन। रसिद बनाउन सकिँदैन।',
+      cashOutNotCompleted:
+        'Cash-out has not been completed yet. Receipt cannot be built.',
     },
   },
 };

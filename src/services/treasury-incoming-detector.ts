@@ -41,7 +41,7 @@ export interface CheckTreasuryIncomingPaymentOptions {
    *
    * This matters because if we simply restart the watcher after the customer
    * has already paid, the new baseline can include the incoming payment and the
-   * app can miss the completed cash-out.
+   * app can miss the completed Cash-out.
    */
   baselineBalanceSats?: number;
 }
@@ -52,6 +52,12 @@ interface TreasuryBalanceSnapshot {
   totalBalanceSats: number;
 }
 
+interface NormalizedPaymentCheck {
+  treasuryAddress: string;
+  requiredSats: number;
+  baselineBalanceSats: number;
+}
+
 function normalizeError(error: unknown, fallbackMessage: string): Error {
   if (error instanceof Error) {
     return error;
@@ -60,20 +66,72 @@ function normalizeError(error: unknown, fallbackMessage: string): Error {
   return new Error(fallbackMessage);
 }
 
-function isDisconnectedElectrumError(error: Error): boolean {
+export function isTransientTreasuryDetectorConnectionError(
+  error: Error
+): boolean {
   const message = error.message.toLowerCase();
 
   return (
     message.includes('disconnected server') ||
     message.includes('not connected') ||
     message.includes('websocket') ||
-    message.includes('connection')
+    message.includes('connection') ||
+    message.includes('failed to connect') ||
+    message.includes('could not connect') ||
+    message.includes('connect to electrum') ||
+    message.includes('reconnect')
   );
+}
+
+function normaliseRequiredSats(requiredSats: number): number {
+  if (!Number.isSafeInteger(requiredSats) || requiredSats <= 0) {
+    throw new Error(
+      'Required payment amount must be a positive integer number of satoshis.'
+    );
+  }
+
+  return requiredSats;
+}
+
+function normaliseBaselineBalanceSats(
+  baselineBalanceSats: number | undefined
+): number {
+  const value = baselineBalanceSats ?? 0;
+
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(
+      'Treasury payment baseline must be a non-negative integer number of satoshis.'
+    );
+  }
+
+  return value;
+}
+
+function normalisePaymentCheck(
+  options: CheckTreasuryIncomingPaymentOptions
+): NormalizedPaymentCheck {
+  const treasuryAddress = options.treasuryAddress.trim();
+
+  if (!treasuryAddress) {
+    throw new Error('Treasury address is required for payment detection.');
+  }
+
+  return {
+    treasuryAddress,
+
+    requiredSats: normaliseRequiredSats(options.requiredSats),
+
+    baselineBalanceSats: normaliseBaselineBalanceSats(
+      options.baselineBalanceSats
+    ),
+  };
 }
 
 async function createStartedElectrum(): Promise<ElectrumService> {
   const electrum = new ElectrumService(ELECTRUM_SERVERS);
+
   await electrum.start();
+
   return electrum;
 }
 
@@ -88,7 +146,9 @@ async function getTreasuryBalanceSnapshot(
 
   return {
     confirmedSats: balance.confirmed,
+
     unconfirmedSats: balance.unconfirmed,
+
     totalBalanceSats: balance.confirmed + balance.unconfirmed,
   };
 }
@@ -127,14 +187,53 @@ async function getCandidateIncomingTxid(
     return latestHistoryItem?.tx_hash;
   } catch (error) {
     console.warn(error);
+
     return undefined;
   }
+}
+
+async function detectIncomingPaymentUsingElectrum(
+  electrum: ElectrumService,
+  check: NormalizedPaymentCheck
+): Promise<TreasuryIncomingPaymentDetection | null> {
+  const currentSnapshot = await getTreasuryBalanceSnapshot(
+    electrum,
+    check.treasuryAddress
+  );
+
+  const receivedSats =
+    currentSnapshot.totalBalanceSats - check.baselineBalanceSats;
+
+  if (receivedSats < check.requiredSats) {
+    return null;
+  }
+
+  const txid = await getCandidateIncomingTxid(electrum, check.treasuryAddress);
+
+  return {
+    treasuryAddress: check.treasuryAddress,
+
+    requiredSats: check.requiredSats,
+
+    baselineBalanceSats: check.baselineBalanceSats,
+
+    currentBalanceSats: currentSnapshot.totalBalanceSats,
+
+    receivedSats,
+
+    txid,
+
+    detectedAt: new Date().toISOString(),
+
+    message: 'Incoming BCH payment detected in merchant treasury wallet.',
+  };
 }
 
 async function disconnectElectrum(electrum: ElectrumService): Promise<void> {
   const electrumClient = electrum.electrumClient as unknown as
     | {
         disconnect?: () => Promise<void> | void;
+
         close?: () => Promise<void> | void;
       }
     | undefined;
@@ -146,6 +245,7 @@ async function disconnectElectrum(electrum: ElectrumService): Promise<void> {
   try {
     if (typeof electrumClient.disconnect === 'function') {
       await electrumClient.disconnect();
+
       return;
     }
 
@@ -160,47 +260,12 @@ async function disconnectElectrum(electrum: ElectrumService): Promise<void> {
 export async function checkTreasuryIncomingPaymentOnce(
   options: CheckTreasuryIncomingPaymentOptions
 ): Promise<TreasuryIncomingPaymentDetection | null> {
-  const treasuryAddress = options.treasuryAddress.trim();
-  const requiredSats = Math.round(options.requiredSats);
-  const baselineBalanceSats = Math.max(
-    0,
-    Math.round(options.baselineBalanceSats ?? 0)
-  );
-
-  if (!treasuryAddress) {
-    throw new Error('Treasury address is required for payment detection.');
-  }
-
-  if (!Number.isFinite(requiredSats) || requiredSats <= 0) {
-    throw new Error('Required payment amount must be greater than zero.');
-  }
+  const check = normalisePaymentCheck(options);
 
   const electrum = await createStartedElectrum();
 
   try {
-    const currentSnapshot = await getTreasuryBalanceSnapshot(
-      electrum,
-      treasuryAddress
-    );
-
-    const receivedSats = currentSnapshot.totalBalanceSats - baselineBalanceSats;
-
-    if (receivedSats < requiredSats) {
-      return null;
-    }
-
-    const txid = await getCandidateIncomingTxid(electrum, treasuryAddress);
-
-    return {
-      treasuryAddress,
-      requiredSats,
-      baselineBalanceSats,
-      currentBalanceSats: currentSnapshot.totalBalanceSats,
-      receivedSats,
-      txid,
-      detectedAt: new Date().toISOString(),
-      message: 'Incoming BCH payment detected in merchant treasury wallet.',
-    };
+    return await detectIncomingPaymentUsingElectrum(electrum, check);
   } catch (error) {
     throw normalizeError(error, 'Could not check treasury incoming payment.');
   } finally {
@@ -212,15 +277,13 @@ export async function watchTreasuryIncomingPayment(
   options: WatchTreasuryIncomingPaymentOptions
 ): Promise<TreasuryIncomingPaymentWatcher> {
   const treasuryAddress = options.treasuryAddress.trim();
-  const requiredSats = Math.round(options.requiredSats);
+
+  const requiredSats = normaliseRequiredSats(options.requiredSats);
+
   const pollIntervalMs = options.pollIntervalMs ?? 3_000;
 
   if (!treasuryAddress) {
     throw new Error('Treasury address is required for payment detection.');
-  }
-
-  if (!Number.isFinite(requiredSats) || requiredSats <= 0) {
-    throw new Error('Required payment amount must be greater than zero.');
   }
 
   let electrum = await createStartedElectrum();
@@ -230,9 +293,18 @@ export async function watchTreasuryIncomingPayment(
     treasuryAddress
   );
 
+  const check: NormalizedPaymentCheck = {
+    treasuryAddress,
+
+    requiredSats,
+
+    baselineBalanceSats: baselineSnapshot.totalBalanceSats,
+  };
+
   let isStopped = false;
   let isChecking = false;
   let isReconnecting = false;
+
   let pollTimer: ReturnType<typeof setInterval> | undefined;
 
   const onAddressNotification: AddressCallback = () => {
@@ -256,6 +328,7 @@ export async function watchTreasuryIncomingPayment(
 
     try {
       await safelyUnsubscribeCurrentElectrum();
+
       await disconnectElectrum(electrum);
 
       electrum = await createStartedElectrum();
@@ -275,11 +348,27 @@ export async function watchTreasuryIncomingPayment(
 
     if (pollTimer) {
       clearInterval(pollTimer);
+
       pollTimer = undefined;
     }
 
     await safelyUnsubscribeCurrentElectrum();
+
     await disconnectElectrum(electrum);
+  }
+
+  async function handleDetection(
+    detection: TreasuryIncomingPaymentDetection | null
+  ): Promise<boolean> {
+    if (!detection) {
+      return false;
+    }
+
+    await stopWatcher();
+
+    await options.onDetected(detection);
+
+    return true;
   }
 
   async function checkForPayment(): Promise<void> {
@@ -290,40 +379,55 @@ export async function watchTreasuryIncomingPayment(
     isChecking = true;
 
     try {
-      const detection = await checkTreasuryIncomingPaymentOnce({
-        treasuryAddress,
-        requiredSats,
-        baselineBalanceSats: baselineSnapshot.totalBalanceSats,
-      });
+      try {
+        const detection = await detectIncomingPaymentUsingElectrum(
+          electrum,
+          check
+        );
 
-      if (!detection) {
+        await handleDetection(detection);
+
         return;
-      }
+      } catch (error) {
+        const normalizedError = normalizeError(
+          error,
+          'Could not check treasury incoming payment.'
+        );
 
-      await stopWatcher();
-      await options.onDetected(detection);
-    } catch (error) {
-      const normalizedError = normalizeError(
-        error,
-        'Could not check treasury incoming payment.'
-      );
+        if (!isTransientTreasuryDetectorConnectionError(normalizedError)) {
+          options.onError?.(normalizedError);
 
-      if (isDisconnectedElectrumError(normalizedError)) {
-        try {
-          await reconnectElectrum();
-          return;
-        } catch (reconnectError) {
-          const normalizedReconnectError = normalizeError(
-            reconnectError,
-            'Could not reconnect treasury payment detector.'
-          );
-
-          options.onError?.(normalizedReconnectError);
           return;
         }
       }
 
-      options.onError?.(normalizedError);
+      /**
+       * The active watcher connection failed.
+       *
+       * Reconnect the SAME watcher and immediately retry the payment check.
+       * Do not open an unrelated second Electrum connection for each poll.
+       */
+      try {
+        await reconnectElectrum();
+
+        if (isStopped) {
+          return;
+        }
+
+        const retryDetection = await detectIncomingPaymentUsingElectrum(
+          electrum,
+          check
+        );
+
+        await handleDetection(retryDetection);
+      } catch (reconnectError) {
+        options.onError?.(
+          normalizeError(
+            reconnectError,
+            'Could not reconnect treasury payment detector.'
+          )
+        );
+      }
     } finally {
       isChecking = false;
     }
@@ -331,6 +435,7 @@ export async function watchTreasuryIncomingPayment(
 
   const watcher: TreasuryIncomingPaymentWatcher = {
     baselineBalanceSats: baselineSnapshot.totalBalanceSats,
+
     stop: stopWatcher,
   };
 
@@ -338,6 +443,7 @@ export async function watchTreasuryIncomingPayment(
     await electrum.subscribeAddress(treasuryAddress, onAddressNotification);
   } catch (error) {
     await stopWatcher();
+
     throw normalizeError(error, 'Could not subscribe to treasury address.');
   }
 

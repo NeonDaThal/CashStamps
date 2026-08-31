@@ -245,6 +245,7 @@ const es = {
       couldNotLoadTreasuryWallet:
         'No se pudo cargar la billetera de tesorería.',
       enterValidCashAmount: 'Introduce un importe en efectivo válido.',
+      minimumCashOutAmount: 'The minimum Cash-out amount is £1.00.',
       setUpTreasuryFirst:
         'Configura la billetera de tesorería del comercio antes de preparar una retirada.',
       fallbackQuoteWarning:
@@ -252,8 +253,15 @@ const es = {
       pricingUnavailable:
         'Los precios no están disponibles actualmente. Comprueba tu conexión e inténtalo de nuevo.',
       couldNotPrepareCashOut: 'No se pudo preparar la retirada.',
+      cashOutCompleted:
+        'Cash-out completed. The cash payout has been recorded.',
+
+      couldNotCompleteCashOut:
+        'Could not complete the Cash-out. Please try again.',
       receiptPrintingPending:
-        'La impresión del recibo se conectará después de añadir la detección de pago.',
+        'Complete the Cash-out by confirming the customer has received their cash before printing a receipt.',
+      quoteExpired:
+        'The Cash-out quote expired before payment was confirmed. No cash should be paid out for this Cash-out. Please prepare a new Cash-out with a fresh quote.',
     },
   },
 
@@ -264,7 +272,11 @@ const es = {
       reviewSubtitle:
         'Pide al cliente que escanee el código QR y envíe el BCH requerido.',
       receivedSubtitle:
-        'El pago del cliente ha sido detectado en la tesorería del comercio.',
+        'The customer BCH payment has been detected. Hand over the cash amount shown below, then confirm the payout.',
+      completedTitle: 'Cash-out complete',
+
+      completedSubtitle:
+        'The customer BCH was received and the cash payout has been confirmed.',
     },
     quoteStatus: {
       fallback:
@@ -284,7 +296,7 @@ const es = {
       cashCustomerReceives: 'Efectivo que recibe el cliente',
       customerSends: 'El cliente envía',
       fiatEquivalentSent: 'Equivalente fiat enviado',
-      serviceFeeSpread: 'Comisión de servicio / margen',
+      serviceFeeSpread: 'Comisión de servicio',
     },
     paymentQr: {
       title: 'QR de pago del cliente',
@@ -317,15 +329,26 @@ const es = {
       detected: 'Detectado',
     },
     success: {
-      title: 'BCH recibido',
-      nowGiveCustomer: 'Ahora entrega al cliente',
-      cash: 'en efectivo',
+      title: 'BCH received',
+
+      nowGiveCustomer: 'Now give the customer',
+
+      cash: 'cash',
+
+      confirmAfterCashPaid:
+        'Only confirm below after the cash has physically been handed to the customer.',
+
+      completedTitle: 'Cash-out complete',
+
+      completedMessage:
+        'Cash payout confirmed. You can now close this Cash-out or print an optional customer receipt.',
     },
     actions: {
       copyAddress: 'Copiar dirección',
       copyPaymentUri: 'Copiar URI de pago',
       closeReview: 'Cancelar retiro y cerrar',
       printReceipt: 'Imprimir recibo',
+      confirmCashPaid: 'Confirm Cash Paid',
     },
     messages: {
       treasuryAddressCopied: 'Dirección de tesorería copiada.',
@@ -1384,10 +1407,10 @@ const es = {
       transactionId: 'ID de transacción',
     },
     statusNote:
-      'BCH recibido antes de pagar el efectivo. El pago del cliente fue detectado en la billetera de tesorería del comerciante.',
+      'Customer BCH was received before the merchant confirmed the cash payout.',
     supportNote:
       'Conserve este recibo como comprobante de la transacción de retiro.',
-    footerNote: 'BCH recibido antes de pagar el efectivo.',
+    footerNote: 'Cash-out completed after BCH payment was received.',
     complete: 'Retiro completado',
     couldNotBuildPreview:
       'No se pudo crear la vista previa del recibo de retiro.',
@@ -1406,8 +1429,8 @@ const es = {
         'El retiro no tiene una cantidad válida de BCH recibido.',
       missingTreasuryReceivingAddress:
         'El retiro no tiene una dirección de recepción de tesorería.',
-      paymentNotDetected:
-        'El pago del retiro aún no ha sido detectado. No se puede crear el recibo.',
+      cashOutNotCompleted:
+        'Cash-out has not been completed yet. Receipt cannot be built.',
     },
   },
 };

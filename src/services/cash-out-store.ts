@@ -1,5 +1,7 @@
 import { get, set } from 'idb-keyval';
+
 import type {
+  CashOutCancellationReason,
   CashOutPaymentDetection,
   CashOutRecord,
   CashOutStatus,
@@ -7,32 +9,71 @@ import type {
 
 const CASH_OUT_RECORDS_KEY = 'bch-voucher-cash-out-records';
 
+/**
+ * Cash-out records are stored as one IndexedDB array.
+ *
+ * Every mutation therefore involves:
+ *
+ * read current array
+ * → modify it
+ * → write complete array
+ *
+ * Those operations must be serialized. Otherwise two overlapping mutations
+ * can both read the same old array and the later write can accidentally erase
+ * the earlier mutation.
+ */
+let cashOutRecordsMutationQueue: Promise<void> = Promise.resolve();
+
+function enqueueCashOutRecordsMutation<T>(
+  operation: () => Promise<T>
+): Promise<T> {
+  const result = cashOutRecordsMutationQueue.then(operation, operation);
+
+  cashOutRecordsMutationQueue = result.then(
+    () => undefined,
+    () => undefined
+  );
+
+  return result;
+}
+
+async function writeCashOutRecords(records: CashOutRecord[]): Promise<void> {
+  await set(CASH_OUT_RECORDS_KEY, records);
+}
+
 export async function getCashOutRecords(): Promise<CashOutRecord[]> {
   const records = await get<CashOutRecord[]>(CASH_OUT_RECORDS_KEY);
+
   return Array.isArray(records) ? records : [];
 }
 
 export async function saveCashOutRecords(
   records: CashOutRecord[]
 ): Promise<void> {
-  await set(CASH_OUT_RECORDS_KEY, records);
+  await enqueueCashOutRecordsMutation(async () => {
+    await writeCashOutRecords(records);
+  });
 }
 
 export async function addCashOutRecord(
   record: CashOutRecord
 ): Promise<CashOutRecord> {
-  const records = await getCashOutRecords();
-  const updatedRecords = [record, ...records];
+  return enqueueCashOutRecordsMutation(async () => {
+    const records = await getCashOutRecords();
 
-  await saveCashOutRecords(updatedRecords);
+    const updatedRecords = [record, ...records];
 
-  return record;
+    await writeCashOutRecords(updatedRecords);
+
+    return record;
+  });
 }
 
 export async function getCashOutRecordById(
   id: string
 ): Promise<CashOutRecord | undefined> {
   const records = await getCashOutRecords();
+
   return records.find((record) => record.id === id);
 }
 
@@ -40,26 +81,29 @@ export async function updateCashOutRecord(
   id: string,
   updates: Partial<CashOutRecord>
 ): Promise<CashOutRecord | undefined> {
-  const records = await getCashOutRecords();
-  const existingRecord = records.find((record) => record.id === id);
+  return enqueueCashOutRecordsMutation(async () => {
+    const records = await getCashOutRecords();
 
-  if (!existingRecord) {
-    return undefined;
-  }
+    const existingRecord = records.find((record) => record.id === id);
 
-  const updatedRecord: CashOutRecord = {
-    ...existingRecord,
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
+    if (!existingRecord) {
+      return undefined;
+    }
 
-  const updatedRecords = records.map((record) =>
-    record.id === id ? updatedRecord : record
-  );
+    const updatedRecord: CashOutRecord = {
+      ...existingRecord,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
 
-  await saveCashOutRecords(updatedRecords);
+    const updatedRecords = records.map((record) =>
+      record.id === id ? updatedRecord : record
+    );
 
-  return updatedRecord;
+    await writeCashOutRecords(updatedRecords);
+
+    return updatedRecord;
+  });
 }
 
 export async function updateCashOutStatus(
@@ -88,15 +132,64 @@ export async function updateCashOutStatus(
   });
 }
 
+export async function cancelAwaitingCashOut(
+  id: string,
+  cancellationReason: CashOutCancellationReason
+): Promise<CashOutRecord | undefined> {
+  return enqueueCashOutRecordsMutation(async () => {
+    const records = await getCashOutRecords();
+
+    const existingRecord = records.find((record) => record.id === id);
+
+    if (!existingRecord) {
+      return undefined;
+    }
+
+    /**
+     * Payment detection or another terminal transition always wins over a
+     * stale cancellation request.
+     */
+    if (existingRecord.status !== 'awaiting_payment') {
+      return existingRecord;
+    }
+
+    const now = new Date().toISOString();
+
+    const updatedRecord: CashOutRecord = {
+      ...existingRecord,
+
+      status: 'cancelled',
+
+      cancellationReason,
+
+      cancelledAt: now,
+
+      updatedAt: now,
+    };
+
+    const updatedRecords = records.map((record) =>
+      record.id === id ? updatedRecord : record
+    );
+
+    await writeCashOutRecords(updatedRecords);
+
+    return updatedRecord;
+  });
+}
+
 export async function markCashOutPaymentDetected(
   id: string,
   detection: CashOutPaymentDetection
 ): Promise<CashOutRecord | undefined> {
   return updateCashOutRecord(id, {
     status: 'received',
+
     bchSatsReceived: detection.receivedSats,
+
     receivedTxid: detection.txid,
+
     detectedAt: detection.detectedAt,
+
     paymentDetection: detection,
   });
 }
@@ -107,13 +200,20 @@ export async function markCashOutCompleted(
 ): Promise<CashOutRecord | undefined> {
   const now = new Date().toISOString();
 
-  return updateCashOutRecord(id, {
+  const updates: Partial<CashOutRecord> = {
     status: 'completed',
     completedAt: now,
-    printedAt: printedAt ?? now,
-  });
+  };
+
+  if (printedAt) {
+    updates.printedAt = printedAt;
+  }
+
+  return updateCashOutRecord(id, updates);
 }
 
 export async function clearCashOutRecords(): Promise<void> {
-  await saveCashOutRecords([]);
+  await enqueueCashOutRecordsMutation(async () => {
+    await writeCashOutRecords([]);
+  });
 }
