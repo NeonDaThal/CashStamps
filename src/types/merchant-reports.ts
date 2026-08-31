@@ -177,13 +177,78 @@ export interface MerchantReportVoucherTotals {
 
 export interface MerchantReportCashOutTotals {
   count: number;
+
+  /**
+   * Compatibility count.
+   *
+   * Cash-outs entering report totals are already completed, so this normally
+   * equals count.
+   */
   receivedCount: number;
+
+  /**
+   * Physical cash handed to customers.
+   */
   cashPaidOutMinor: number;
+
+  /**
+   * Fiat equivalent of the BCH customers were required to send:
+   * cash payout + service fee.
+   */
   customerSendsFiatEquivalentMinor: number;
+
+  /**
+   * Canonical total Cash-out service fees.
+   */
+  serviceFeeMinor: number;
+
+  /**
+   * Known merchant allocation of Cash-out service fees.
+   *
+   * For Cash-out Fee Model v1 this is the stored deterministic fee split.
+   */
+  merchantFeeRevenueMinor: number;
+
+  /**
+   * Known platform allocation of Cash-out service fees.
+   *
+   * Under the current Cash-out implementation this is accounting allocation,
+   * not proof that an on-chain platform settlement has already occurred.
+   */
+  platformFeeMinor: number;
+
+  /**
+   * Fee-bearing Cash-outs for which the merchant/platform split cannot be
+   * safely interpreted as Cash-out Fee Model v1.
+   */
+  feeSplitUnknownCount: number;
+
+  /**
+   * Number of reportable Cash-outs whose stored settlement mode is currently
+   * accounting_only.
+   */
+  accountingOnlyCount: number;
+
+  /**
+   * Compatibility alias for serviceFeeMinor.
+   */
   feeRevenueMinor: number;
+
   marketBchSats: number;
+
+  /**
+   * Contractual/requested BCH amount for completed Cash-outs.
+   */
   bchSatsRequired: number;
+
+  /**
+   * Actual BCH detected at the Cash-out receiving address.
+   */
   bchSatsReceived: number;
+
+  /**
+   * Average physical cash payout per completed Cash-out.
+   */
   averageOrderValueMinor: number;
 }
 
@@ -219,7 +284,25 @@ export interface MerchantReportCurrencyTotals {
   voucherFeeRevenueMinor: number;
 
   cashOutCashPaidOutMinor: number;
+
   cashOutCustomerSendsFiatEquivalentMinor: number;
+
+  /**
+   * Canonical Cash-out service fee total.
+   */
+  cashOutServiceFeeMinor: number;
+
+  cashOutMerchantFeeRevenueMinor: number;
+
+  cashOutPlatformFeeMinor: number;
+
+  cashOutFeeSplitUnknownCount: number;
+
+  cashOutAccountingOnlyCount: number;
+
+  /**
+   * Compatibility alias for cashOutServiceFeeMinor.
+   */
   cashOutFeeRevenueMinor: number;
 
   /**
@@ -286,6 +369,23 @@ export interface MerchantReportOverallTotals {
   topupCustomerNetworkFeeRecoveryMinor: number;
   topupCustomerNetworkFeeRecoveryKnownCount: number;
 
+  /**
+   * Cash-out accounting in the report's primary fiat currency.
+   */
+  cashOutCashPaidOutMinor: number;
+
+  cashOutCustomerSendsFiatEquivalentMinor: number;
+
+  cashOutServiceFeeMinor: number;
+
+  cashOutMerchantFeeRevenueMinor: number;
+
+  cashOutPlatformFeeMinor: number;
+
+  cashOutFeeSplitUnknownCount: number;
+
+  cashOutAccountingOnlyCount: number;
+
   bchBoughtByCustomersSats: number;
   bchSoldByCustomersSats: number;
   totalBchMovementSats: number;
@@ -310,15 +410,35 @@ export interface MerchantReportActivityItem {
   feeAmountMinor: number;
 
   /**
-   * Explicit Topup accounting fields.
+   * Explicit fee/accounting fields.
    *
-   * Cash-out semantics will be wired separately when Cash-out Fee Model v1 is
-   * integrated.
+   * For Topups, principalMinor is the value loaded.
+   *
+   * For Cash-outs, fiatAmountMinor remains the physical cash payout. The
+   * merchant/platform fields contain the stored Cash-out Fee Model v1 split
+   * only when that split is known.
    */
   principalMinor?: number;
+
   merchantFeeAmountMinor?: number;
+
   platformFeeAmountMinor?: number;
+
   feeSplitKnown?: boolean;
+
+  /**
+   * Cash-out-only customer-send fiat equivalent.
+   */
+  cashOutCustomerSendsFiatEquivalentMinor?: number;
+
+  /**
+   * Current Cash-out settlement semantics.
+   *
+   * accounting_only means the fee allocation is known in local accounting but
+   * must not be presented as proof of an already-completed on-chain platform
+   * settlement.
+   */
+  cashOutSettlementMode?: 'accounting_only' | 'unknown';
   /**
    * Topup miner-fee accounting.
    *

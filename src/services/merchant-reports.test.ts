@@ -1,5 +1,6 @@
 import { strict as assert } from 'assert';
 
+import type { CashOutRecord } from 'src/types/cash-out';
 import type { VoucherRecord } from 'src/types/voucher';
 import { buildMerchantReport } from './merchant-reports';
 
@@ -133,12 +134,160 @@ function createLegacyVoucher(): VoucherRecord {
   } as unknown as VoucherRecord;
 }
 
-function buildReport(voucherRecords: VoucherRecord[]) {
+function createCashOutV1(options?: {
+  id?: string;
+  status?: CashOutRecord['status'];
+  cashPaidOutMinor?: number;
+  serviceFeeMinor?: number;
+  merchantFeeMinor?: number;
+  platformFeeMinor?: number;
+}): CashOutRecord {
+  const cashPaidOutMinor = options?.cashPaidOutMinor ?? 100;
+
+  const serviceFeeMinor = options?.serviceFeeMinor ?? 3;
+
+  const merchantFeeMinor = options?.merchantFeeMinor ?? 2;
+
+  const platformFeeMinor = options?.platformFeeMinor ?? 1;
+
+  return {
+    id: options?.id ?? 'cash-out-v1',
+
+    serial: 'CO-V1',
+
+    createdAt: RECORD_DATE,
+
+    updatedAt: RECORD_DATE,
+
+    completedAt: RECORD_DATE,
+
+    fiatCurrency: 'GBP',
+
+    fiatAmountMinor: cashPaidOutMinor,
+
+    customerSendsFiatEquivalentMinor: cashPaidOutMinor + serviceFeeMinor,
+
+    marketBchSats: 200_000,
+
+    bchSatsRequired: 206_000,
+
+    bchSatsReceived: 206_000,
+
+    quote: {
+      source: 'coingecko',
+
+      fiatCurrency: 'GBP',
+
+      marketRate: 500,
+
+      marketRateTimestamp: RECORD_DATE,
+
+      quoteLockedAt: RECORD_DATE,
+
+      quoteExpiresAt: '2026-08-14T10:05:00.000Z',
+
+      isFallbackQuote: false,
+    },
+
+    fee: {
+      feeModel: 'cash_out_v1',
+
+      totalServiceFeeBasisPoints: 300,
+
+      totalServiceFeeAmountMinor: serviceFeeMinor,
+
+      platformFeeBasisPoints: 150,
+
+      platformFeeAmountMinor: platformFeeMinor,
+
+      merchantFeeBasisPoints: 150,
+
+      merchantFeeAmountMinor: merchantFeeMinor,
+
+      settlementMode: 'accounting_only',
+    },
+
+    treasuryReceivingAddress: 'bitcoincash:cash-out-v1-test',
+
+    status: options?.status ?? 'completed',
+  };
+}
+
+function createLegacyCashOut(): CashOutRecord {
+  return {
+    id: 'cash-out-legacy',
+
+    serial: 'CO-LEGACY',
+
+    createdAt: RECORD_DATE,
+
+    updatedAt: RECORD_DATE,
+
+    completedAt: RECORD_DATE,
+
+    fiatCurrency: 'GBP',
+
+    fiatAmountMinor: 10_000,
+
+    customerSendsFiatEquivalentMinor: 11_000,
+
+    marketBchSats: 2_000_000,
+
+    bchSatsRequired: 2_200_000,
+
+    bchSatsReceived: 2_200_000,
+
+    quote: {
+      source: 'unknown',
+
+      fiatCurrency: 'GBP',
+
+      marketRate: 500,
+
+      marketRateTimestamp: RECORD_DATE,
+
+      quoteLockedAt: RECORD_DATE,
+
+      quoteExpiresAt: '2026-08-14T10:05:00.000Z',
+
+      isFallbackQuote: false,
+    },
+
+    fee: {
+      totalServiceFeeBasisPoints: 1_000,
+
+      totalServiceFeeAmountMinor: 1_000,
+
+      platformFeeBasisPoints: 500,
+
+      platformFeeAmountMinor: 500,
+
+      merchantRetainedBasisPoints: 300,
+
+      merchantRetainedAmountMinor: 300,
+
+      bufferReserveBasisPoints: 200,
+
+      bufferReserveAmountMinor: 200,
+
+      settlementMode: 'accounting_only',
+    },
+
+    treasuryReceivingAddress: 'bitcoincash:cash-out-legacy-test',
+
+    status: 'completed',
+  } as CashOutRecord;
+}
+
+function buildReport(
+  voucherRecords: VoucherRecord[],
+  cashOutRecords: CashOutRecord[] = []
+) {
   return buildMerchantReport({
     range: 'all_time',
     now: REPORT_NOW,
     voucherRecords,
-    cashOutRecords: [],
+    cashOutRecords,
   });
 }
 
@@ -525,6 +674,172 @@ const tests: MerchantReportTest[] = [
       assert.equal(report.sourceRecordCounts.vouchersLoaded, 2);
 
       assert.equal(report.sourceRecordCounts.reportableVouchers, 1);
+    },
+  },
+  {
+    name: 'Cash-out v1 reports exact odd-penny 3% fee split',
+    run: () => {
+      const report = buildReport([], [createCashOutV1()]);
+
+      const totals = report.current.cashOuts;
+
+      assert.equal(totals.count, 1);
+
+      assert.equal(totals.cashPaidOutMinor, 100);
+
+      assert.equal(totals.customerSendsFiatEquivalentMinor, 103);
+
+      assert.equal(totals.serviceFeeMinor, 3);
+
+      assert.equal(totals.feeRevenueMinor, 3);
+
+      assert.equal(totals.merchantFeeRevenueMinor, 2);
+
+      assert.equal(totals.platformFeeMinor, 1);
+
+      assert.equal(totals.feeSplitUnknownCount, 0);
+
+      assert.equal(totals.accountingOnlyCount, 1);
+
+      const gbp = report.current.currencyTotals.find(
+        (item) => item.currency === 'GBP'
+      );
+
+      assert.ok(gbp);
+
+      assert.equal(gbp.cashOutCashPaidOutMinor, 100);
+
+      assert.equal(gbp.cashOutCustomerSendsFiatEquivalentMinor, 103);
+
+      assert.equal(gbp.cashOutServiceFeeMinor, 3);
+
+      assert.equal(gbp.cashOutMerchantFeeRevenueMinor, 2);
+
+      assert.equal(gbp.cashOutPlatformFeeMinor, 1);
+
+      assert.equal(gbp.cashOutFeeSplitUnknownCount, 0);
+
+      assert.equal(gbp.cashOutAccountingOnlyCount, 1);
+
+      assert.equal(report.current.overall.cashOutCashPaidOutMinor, 100);
+
+      assert.equal(
+        report.current.overall.cashOutCustomerSendsFiatEquivalentMinor,
+        103
+      );
+
+      assert.equal(report.current.overall.cashOutServiceFeeMinor, 3);
+
+      assert.equal(report.current.overall.cashOutMerchantFeeRevenueMinor, 2);
+
+      assert.equal(report.current.overall.cashOutPlatformFeeMinor, 1);
+
+      const activity = report.current.activityItems[0];
+
+      assert.equal(activity?.fiatAmountMinor, 100);
+
+      assert.equal(activity?.feeAmountMinor, 3);
+
+      assert.equal(activity?.merchantFeeAmountMinor, 2);
+
+      assert.equal(activity?.platformFeeAmountMinor, 1);
+
+      assert.equal(activity?.feeSplitKnown, true);
+
+      assert.equal(activity?.cashOutCustomerSendsFiatEquivalentMinor, 103);
+
+      assert.equal(activity?.cashOutSettlementMode, 'accounting_only');
+    },
+  },
+
+  {
+    name: 'received and cancelled Cash-outs remain excluded from reports',
+    run: () => {
+      const completed = createCashOutV1({
+        id: 'completed-cash-out',
+        status: 'completed',
+      });
+
+      const received = createCashOutV1({
+        id: 'received-cash-out',
+        status: 'received',
+      });
+
+      const cancelled = createCashOutV1({
+        id: 'cancelled-cash-out',
+        status: 'cancelled',
+      });
+
+      const report = buildReport([], [completed, received, cancelled]);
+
+      assert.equal(report.current.cashOuts.count, 1);
+
+      assert.equal(report.current.cashOuts.cashPaidOutMinor, 100);
+
+      assert.equal(report.sourceRecordCounts.cashOutsLoaded, 3);
+
+      assert.equal(report.sourceRecordCounts.reportableCashOuts, 1);
+    },
+  },
+
+  {
+    name: 'legacy Cash-out service fee is preserved without inventing v1 fee split',
+    run: () => {
+      const report = buildReport([], [createLegacyCashOut()]);
+
+      const totals = report.current.cashOuts;
+
+      assert.equal(totals.serviceFeeMinor, 1_000);
+
+      assert.equal(totals.merchantFeeRevenueMinor, 0);
+
+      assert.equal(totals.platformFeeMinor, 0);
+
+      assert.equal(totals.feeSplitUnknownCount, 1);
+
+      assert.equal(totals.accountingOnlyCount, 1);
+
+      const activity = report.current.activityItems[0];
+
+      assert.equal(activity?.feeAmountMinor, 1_000);
+
+      assert.equal(activity?.feeSplitKnown, false);
+
+      assert.equal(activity?.merchantFeeAmountMinor, undefined);
+
+      assert.equal(activity?.platformFeeAmountMinor, undefined);
+    },
+  },
+
+  {
+    name: 'Topup and Cash-out service fees aggregate without mixing their fee splits',
+    run: () => {
+      const report = buildReport([createTopupV1Voucher()], [createCashOutV1()]);
+
+      assert.equal(report.current.overall.serviceFeeMinor, 203);
+
+      assert.equal(report.current.overall.topupServiceFeeMinor, 200);
+
+      assert.equal(report.current.overall.topupMerchantFeeRevenueMinor, 100);
+
+      assert.equal(report.current.overall.topupPlatformFeeMinor, 100);
+
+      assert.equal(report.current.overall.cashOutServiceFeeMinor, 3);
+
+      assert.equal(report.current.overall.cashOutMerchantFeeRevenueMinor, 2);
+
+      assert.equal(report.current.overall.cashOutPlatformFeeMinor, 1);
+
+      /**
+       * Physical fiat movement remains:
+       *
+       * Topup customer cash £22.00
+       * +
+       * Cash-out physical payout £1.00
+       *
+       * = £23.00
+       */
+      assert.equal(report.current.overall.grossFiatMovementMinor, 2_300);
     },
   },
 ];

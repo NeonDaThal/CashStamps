@@ -81,12 +81,13 @@ const DEFAULT_RECEIPT_TITLE = 'Cash-out Receipt';
 const DEFAULT_PRINTER_SUBTITLE = 'Cash-out Receipt';
 
 const DEFAULT_STATUS_NOTE =
-  'BCH received before cash paid. Customer payment was detected in the merchant Treasury Wallet.';
+  'Customer BCH was received before the merchant confirmed the cash payout.';
 
 const DEFAULT_SUPPORT_NOTE =
   'Keep this receipt as proof of the cash-out transaction.';
 
-const DEFAULT_FOOTER_NOTE = 'BCH received before cash paid.';
+const DEFAULT_FOOTER_NOTE =
+  'Cash-out completed after BCH payment was received.';
 
 const DEFAULT_PRINT_LABELS: CashOutReceiptPrintLabels = {
   cashPaidOut: 'Cash paid out',

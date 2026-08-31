@@ -17,6 +17,7 @@ import type { VoucherRecord, VoucherStatus } from 'src/types/voucher';
 import { getCashOutRecords } from 'src/services/cash-out-store';
 import { getVoucherRecords } from 'src/services/voucher-store';
 import { getTopupRecordValues } from 'src/services/topup-record-values';
+import { getCashOutRecordValues } from 'src/services/cash-out-record-values';
 
 const DEFAULT_PRIMARY_CURRENCY = 'GBP';
 
@@ -281,49 +282,86 @@ function buildVoucherTotals(
 function buildCashOutTotals(
   cashOutRecords: CashOutRecord[]
 ): MerchantReportCashOutTotals {
-  const cashPaidOutMinor = cashOutRecords.reduce(
-    (total, cashOut) => total + safeNumber(cashOut.fiatAmountMinor),
+  const values = cashOutRecords.map(getCashOutRecordValues);
+
+  const cashPaidOutMinor = values.reduce(
+    (total, value) => total + value.cashPaidOutMinor,
     0
   );
 
-  const customerSendsFiatEquivalentMinor = cashOutRecords.reduce(
-    (total, cashOut) =>
-      total + safeNumber(cashOut.customerSendsFiatEquivalentMinor),
+  const customerSendsFiatEquivalentMinor = values.reduce(
+    (total, value) => total + value.customerSendsFiatEquivalentMinor,
     0
   );
 
-  const feeRevenueMinor = cashOutRecords.reduce(
-    (total, cashOut) =>
-      total + safeNumber(cashOut.fee?.totalServiceFeeAmountMinor),
+  const serviceFeeMinor = values.reduce(
+    (total, value) => total + value.serviceFeeMinor,
     0
   );
 
-  const marketBchSats = cashOutRecords.reduce(
-    (total, cashOut) => total + safeNumber(cashOut.marketBchSats),
+  const merchantFeeRevenueMinor = values.reduce(
+    (total, value) => total + (value.merchantFeeMinor ?? 0),
     0
   );
 
-  const bchSatsRequired = cashOutRecords.reduce(
-    (total, cashOut) => total + safeNumber(cashOut.bchSatsRequired),
+  const platformFeeMinor = values.reduce(
+    (total, value) => total + (value.platformFeeMinor ?? 0),
     0
   );
 
-  const bchSatsReceived = cashOutRecords.reduce(
-    (total, cashOut) => total + safeNumber(cashOut.bchSatsReceived),
+  const feeSplitUnknownCount = values.filter(
+    (value) => value.serviceFeeMinor > 0 && !value.feeSplitKnown
+  ).length;
+
+  const accountingOnlyCount = values.filter(
+    (value) => value.settlementMode === 'accounting_only'
+  ).length;
+
+  const marketBchSats = values.reduce(
+    (total, value) => total + value.marketBchSats,
+    0
+  );
+
+  const bchSatsRequired = values.reduce(
+    (total, value) => total + value.bchRequiredSats,
+    0
+  );
+
+  const bchSatsReceived = values.reduce(
+    (total, value) => total + value.bchReceivedSats,
     0
   );
 
   return {
     count: cashOutRecords.length,
+
     receivedCount: cashOutRecords.filter((cashOut) =>
       RECEIVED_CASH_OUT_STATUSES.includes(cashOut.status)
     ).length,
+
     cashPaidOutMinor,
+
     customerSendsFiatEquivalentMinor,
-    feeRevenueMinor,
+
+    serviceFeeMinor,
+
+    merchantFeeRevenueMinor,
+
+    platformFeeMinor,
+
+    feeSplitUnknownCount,
+
+    accountingOnlyCount,
+
+    // Compatibility alias.
+    feeRevenueMinor: serviceFeeMinor,
+
     marketBchSats,
+
     bchSatsRequired,
+
     bchSatsReceived,
+
     averageOrderValueMinor: calculateAverageMinor(
       cashPaidOutMinor,
       cashOutRecords.length
@@ -388,6 +426,26 @@ function buildOverallTotals(input: {
 
     topupCustomerNetworkFeeRecoveryKnownCount:
       input.vouchers.customerNetworkFeeRecoveryKnownCount,
+
+    cashOutCashPaidOutMinor:
+      primaryCurrencyTotals?.cashOutCashPaidOutMinor ?? 0,
+
+    cashOutCustomerSendsFiatEquivalentMinor:
+      primaryCurrencyTotals?.cashOutCustomerSendsFiatEquivalentMinor ?? 0,
+
+    cashOutServiceFeeMinor: primaryCurrencyTotals?.cashOutServiceFeeMinor ?? 0,
+
+    cashOutMerchantFeeRevenueMinor:
+      primaryCurrencyTotals?.cashOutMerchantFeeRevenueMinor ?? 0,
+
+    cashOutPlatformFeeMinor:
+      primaryCurrencyTotals?.cashOutPlatformFeeMinor ?? 0,
+
+    cashOutFeeSplitUnknownCount:
+      primaryCurrencyTotals?.cashOutFeeSplitUnknownCount ?? 0,
+
+    cashOutAccountingOnlyCount:
+      primaryCurrencyTotals?.cashOutAccountingOnlyCount ?? 0,
 
     bchBoughtByCustomersSats: input.vouchers.finalBchSats,
     bchSoldByCustomersSats: input.cashOuts.bchSatsRequired,
@@ -467,33 +525,54 @@ function buildCurrencyTotals(
 
   for (const cashOut of cashOutRecords) {
     const currency = normaliseCurrency(cashOut.fiatCurrency);
+
     const totals = getOrCreateCurrencyTotals(totalsByCurrency, currency);
 
-    const cashPaidOutMinor = safeNumber(cashOut.fiatAmountMinor);
-
-    const customerSendsFiatEquivalentMinor = safeNumber(
-      cashOut.customerSendsFiatEquivalentMinor
-    );
-
-    const serviceFeeMinor = safeNumber(cashOut.fee?.totalServiceFeeAmountMinor);
+    const values = getCashOutRecordValues(cashOut);
 
     totals.cashOutCount += 1;
+
     totals.transactionCount += 1;
 
-    totals.cashOutCashPaidOutMinor += cashPaidOutMinor;
+    totals.cashOutCashPaidOutMinor += values.cashPaidOutMinor;
 
     totals.cashOutCustomerSendsFiatEquivalentMinor +=
-      customerSendsFiatEquivalentMinor;
+      values.customerSendsFiatEquivalentMinor;
 
-    totals.cashOutFeeRevenueMinor += serviceFeeMinor;
+    totals.cashOutServiceFeeMinor += values.serviceFeeMinor;
 
-    totals.grossFiatMovementMinor += cashPaidOutMinor;
-    totals.netFiatMovementMinor += cashPaidOutMinor;
+    totals.cashOutMerchantFeeRevenueMinor += values.merchantFeeMinor ?? 0;
 
-    totals.serviceFeeMinor += serviceFeeMinor;
+    totals.cashOutPlatformFeeMinor += values.platformFeeMinor ?? 0;
+
+    if (values.serviceFeeMinor > 0 && !values.feeSplitKnown) {
+      totals.cashOutFeeSplitUnknownCount += 1;
+    }
+
+    if (values.settlementMode === 'accounting_only') {
+      totals.cashOutAccountingOnlyCount += 1;
+    }
+
+    /**
+     * Compatibility alias.
+     */
+    totals.cashOutFeeRevenueMinor += values.serviceFeeMinor;
+
+    /**
+     * Existing report movement semantics are preserved:
+     *
+     * Cash-out fiat movement is the physical cash handed to the customer.
+     * The service fee is tracked separately rather than inflating physical
+     * Cash on Hand movement.
+     */
+    totals.grossFiatMovementMinor += values.cashPaidOutMinor;
+
+    totals.netFiatMovementMinor += values.cashPaidOutMinor;
+
+    totals.serviceFeeMinor += values.serviceFeeMinor;
 
     // Compatibility alias.
-    totals.feeRevenueMinor += serviceFeeMinor;
+    totals.feeRevenueMinor += values.serviceFeeMinor;
   }
 
   return Array.from(totalsByCurrency.values())
@@ -556,7 +635,19 @@ function getOrCreateCurrencyTotals(
     voucherFeeRevenueMinor: 0,
 
     cashOutCashPaidOutMinor: 0,
+
     cashOutCustomerSendsFiatEquivalentMinor: 0,
+
+    cashOutServiceFeeMinor: 0,
+
+    cashOutMerchantFeeRevenueMinor: 0,
+
+    cashOutPlatformFeeMinor: 0,
+
+    cashOutFeeSplitUnknownCount: 0,
+
+    cashOutAccountingOnlyCount: 0,
+
     cashOutFeeRevenueMinor: 0,
 
     grossFiatMovementMinor: 0,
@@ -617,17 +708,43 @@ function buildActivityItems(
   );
 
   const cashOutItems: MerchantReportActivityItem[] = cashOutRecords.map(
-    (cashOut) => ({
-      id: cashOut.id,
-      serial: cashOut.serial,
-      type: 'cash_out',
-      occurredAt: getCashOutReportDateIso(cashOut),
-      fiatCurrency: normaliseCurrency(cashOut.fiatCurrency),
-      fiatAmountMinor: safeNumber(cashOut.fiatAmountMinor),
-      feeAmountMinor: safeNumber(cashOut.fee?.totalServiceFeeAmountMinor),
-      bchSats: safeNumber(cashOut.bchSatsRequired),
-      status: cashOut.status,
-    })
+    (cashOut) => {
+      const values = getCashOutRecordValues(cashOut);
+
+      return {
+        id: cashOut.id,
+
+        serial: cashOut.serial,
+
+        type: 'cash_out',
+
+        occurredAt: getCashOutReportDateIso(cashOut),
+
+        fiatCurrency: normaliseCurrency(cashOut.fiatCurrency),
+
+        /**
+         * Compatibility amount = physical cash payout.
+         */
+        fiatAmountMinor: values.cashPaidOutMinor,
+
+        feeAmountMinor: values.serviceFeeMinor,
+
+        merchantFeeAmountMinor: values.merchantFeeMinor ?? undefined,
+
+        platformFeeAmountMinor: values.platformFeeMinor ?? undefined,
+
+        feeSplitKnown: values.feeSplitKnown,
+
+        cashOutCustomerSendsFiatEquivalentMinor:
+          values.customerSendsFiatEquivalentMinor,
+
+        cashOutSettlementMode: values.settlementMode,
+
+        bchSats: values.bchRequiredSats,
+
+        status: cashOut.status,
+      };
+    }
   );
 
   return [...voucherItems, ...cashOutItems].sort((a, b) => {
