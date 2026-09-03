@@ -82,157 +82,24 @@
       </template>
 
       <!-- Your Business -->
-      <template v-else-if="activeView === 'your-business'">
-        <section class="settings-detail-header">
-          <q-btn
-            flat
-            dense
-            round
-            icon="arrow_back"
-            class="settings-back-button"
-            :aria-label="t('appSettings.navigation.backToSettings')"
-            @click="returnToMainSettings"
-          />
-
-          <div class="settings-detail-heading">
-            <div class="settings-eyebrow">
-              {{ t('appSettings.business.eyebrow') }}
-            </div>
-
-            <h1>{{ t('appSettings.business.title') }}</h1>
-
-            <p>
-              {{ t('appSettings.business.subtitle') }}
-            </p>
-          </div>
-        </section>
-
-        <q-card flat bordered class="settings-detail-card">
-          <q-card-section class="settings-detail-card-section">
-            <div class="business-card-heading">
-              <div class="business-card-icon">
-                <q-icon name="storefront" />
-              </div>
-
-              <div>
-                <div class="business-card-title">
-                  {{ t('appSettings.business.cardTitle') }}
-                </div>
-
-                <p class="business-card-copy">
-                  {{ t('appSettings.business.cardSubtitle') }}
-                </p>
-              </div>
-            </div>
-
-            <q-input
-              v-model="businessNameInput"
-              outlined
-              clearable
-              maxlength="100"
-              :label="t('appSettings.business.nameLabel')"
-              :hint="t('appSettings.business.nameHint')"
-              class="business-name-input"
-              @clear="handleClearBusinessNameInput"
-              @keyup.enter="saveBusinessName"
-            />
-
-            <div class="business-save-row">
-              <q-btn
-                unelevated
-                no-caps
-                icon="save"
-                class="business-save-button"
-                :label="t('appSettings.business.save')"
-                :disable="!hasBusinessNameChanges"
-                @click="saveBusinessName"
-              />
-            </div>
-          </q-card-section>
-        </q-card>
-      </template>
+      <BusinessSettingsPanel
+        v-else-if="activeView === 'your-business'"
+        :business-name="appSettings.businessName"
+        @back="returnToMainSettings"
+        @saved="handleBusinessSettingsSaved"
+      />
 
       <!-- Language -->
-      <template v-else-if="activeView === 'language'">
-        <section class="settings-detail-header">
-          <q-btn
-            flat
-            dense
-            round
-            icon="arrow_back"
-            class="settings-back-button"
-            :aria-label="t('appSettings.navigation.backToSettings')"
-            @click="returnToMainSettings"
-          />
+      <LanguageSettingsPanel
+        v-else-if="activeView === 'language'"
+        @back="returnToMainSettings"
+      />
 
-          <div class="settings-detail-heading">
-            <div class="settings-eyebrow">
-              {{ t('appSettings.sections.regional') }}
-            </div>
-
-            <h1>{{ t('appSettings.items.language.title') }}</h1>
-
-            <p>
-              {{ t('appSettings.language.prompt') }}
-            </p>
-          </div>
-        </section>
-
-        <q-card flat bordered class="language-selector-card">
-          <q-list
-            separator
-            class="language-list"
-            role="radiogroup"
-            :aria-label="t('appSettings.language.prompt')"
-          >
-            <q-item
-              v-for="localeOption in localeOptions"
-              :key="localeOption.value"
-              clickable
-              class="language-option"
-              :class="{
-                'language-option--selected':
-                  localeOption.value === currentLocale,
-              }"
-              role="radio"
-              :aria-checked="localeOption.value === currentLocale"
-              @click="setAppLocale(localeOption.value)"
-            >
-              <q-item-section avatar>
-                <div class="language-code">
-                  {{ localeOption.toolbarLabel }}
-                </div>
-              </q-item-section>
-
-              <q-item-section>
-                <q-item-label class="language-option-name">
-                  {{ t(localeOption.labelKey) }}
-                </q-item-label>
-              </q-item-section>
-
-              <q-item-section side>
-                <q-icon
-                  v-if="localeOption.value === currentLocale"
-                  name="check_circle"
-                  class="language-selected-icon"
-                />
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card>
-
-        <q-card flat bordered class="language-info-card">
-          <q-card-section class="language-info-content">
-            <div class="language-info-icon">
-              <q-icon name="info_outline" />
-            </div>
-
-            <p>
-              {{ t('appSettings.language.toolbarHint') }}
-            </p>
-          </q-card-section>
-        </q-card>
-      </template>
+      <!-- FAQ -->
+      <FaqSettingsPanel
+        v-else-if="activeView === 'faq'"
+        @back="returnToMainSettings"
+      />
 
       <!-- Generic future section -->
       <template v-else>
@@ -286,25 +153,26 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
-import {
-  getAppSettings,
-  updateAppSettings,
-  type AppSettings,
-} from 'src/services/app-settings';
+import { getAppSettings, type AppSettings } from 'src/services/app-settings';
+import BusinessSettingsPanel from 'src/components/app-settings/BusinessSettingsPanel.vue';
+import LanguageSettingsPanel from 'src/components/app-settings/LanguageSettingsPanel.vue';
+import FaqSettingsPanel from 'src/components/app-settings/FaqSettingsPanel.vue';
 
 import {
   getInstalledAppVersion,
   type InstalledAppVersion,
 } from 'src/services/app-update';
 
-import { getLocaleOption, localeOptions, type SupportedLocale } from 'src/i18n';
+import { getLocaleOption } from 'src/i18n';
 
-import { saveStoredLocale } from 'src/i18n/locale-storage';
-
-type SettingsView = 'main' | 'your-business' | 'language' | 'coming-soon';
+type SettingsView =
+  | 'main'
+  | 'your-business'
+  | 'language'
+  | 'faq'
+  | 'coming-soon';
 
 type SettingsItemDefinition = {
   id: string;
@@ -319,7 +187,6 @@ type SettingsGroupDefinition = {
   items: SettingsItemDefinition[];
 };
 
-const $q = useQuasar();
 const { t, locale } = useI18n({ useScope: 'global' });
 
 const settingsGroups: SettingsGroupDefinition[] = [
@@ -449,21 +316,8 @@ const activeView = ref<SettingsView>('main');
 const selectedSettingsItem = ref<SettingsItemDefinition | null>(null);
 
 const appSettings = ref<AppSettings>(getAppSettings());
-const businessNameInput = ref(appSettings.value.businessName);
 
 const installedAppVersion = ref<InstalledAppVersion | null>(null);
-
-const currentLocale = computed<SupportedLocale>(() => {
-  return getLocaleOption(locale.value).value;
-});
-
-const normalizedBusinessNameInput = computed(() =>
-  (businessNameInput.value ?? '').trim()
-);
-
-const hasBusinessNameChanges = computed(
-  () => normalizedBusinessNameInput.value !== appSettings.value.businessName
-);
 
 const selectedSettingsTitle = computed(() => {
   if (!selectedSettingsItem.value) {
@@ -534,7 +388,6 @@ function openSettingsItem(item: SettingsItemDefinition): void {
   selectedSettingsItem.value = item;
 
   if (item.id === 'your-business') {
-    businessNameInput.value = appSettings.value.businessName;
     activeView.value = 'your-business';
     return;
   }
@@ -544,61 +397,21 @@ function openSettingsItem(item: SettingsItemDefinition): void {
     return;
   }
 
+  if (item.id === 'faq') {
+    activeView.value = 'faq';
+    return;
+  }
+
   activeView.value = 'coming-soon';
 }
 
 function returnToMainSettings(): void {
-  businessNameInput.value = appSettings.value.businessName;
   selectedSettingsItem.value = null;
   activeView.value = 'main';
 }
 
-function setAppLocale(newLocale: SupportedLocale): void {
-  if (locale.value === newLocale) {
-    return;
-  }
-
-  locale.value = newLocale;
-  saveStoredLocale(newLocale);
-}
-
-function saveBusinessName(): void {
-  if (!hasBusinessNameChanges.value) {
-    return;
-  }
-
-  try {
-    const savedSettings = updateAppSettings({
-      businessName: normalizedBusinessNameInput.value,
-    });
-
-    appSettings.value = savedSettings;
-    businessNameInput.value = savedSettings.businessName;
-
-    $q.notify({
-      type: 'positive',
-      icon: 'check_circle',
-      message: t('appSettings.business.saved'),
-      group: false,
-      timeout: 1200,
-      position: 'top',
-    });
-  } catch (error) {
-    console.error(error);
-
-    $q.notify({
-      type: 'negative',
-      icon: 'error',
-      message: t('appSettings.business.saveFailed'),
-      group: false,
-      timeout: 2500,
-      position: 'top',
-    });
-  }
-}
-
-function handleClearBusinessNameInput(): void {
-  businessNameInput.value = '';
+function handleBusinessSettingsSaved(settings: AppSettings): void {
+  appSettings.value = settings;
 }
 
 onMounted(() => {
@@ -699,9 +512,6 @@ onMounted(() => {
 }
 
 .settings-group-card,
-.settings-detail-card,
-.language-selector-card,
-.language-info-card,
 .coming-soon-card {
   background: #ffffff;
   border: 1px solid #dddddd;
@@ -785,164 +595,6 @@ onMounted(() => {
 
 .settings-detail-heading {
   min-width: 0;
-}
-
-.settings-detail-card-section {
-  display: grid;
-  gap: 22px;
-  padding: 22px;
-}
-
-.business-card-heading {
-  align-items: flex-start;
-  display: flex;
-  gap: 14px;
-}
-
-.business-card-icon {
-  align-items: center;
-  background: #eaffed;
-  border: 1px solid rgba(0, 206, 27, 0.3);
-  border-radius: 15px;
-  color: #00a816;
-  display: flex;
-  flex: 0 0 46px;
-  font-size: 25px;
-  height: 46px;
-  justify-content: center;
-  width: 46px;
-}
-
-.business-card-title {
-  color: #111111;
-  font-size: 18px;
-  font-weight: 950;
-  line-height: 1.2;
-}
-
-.business-card-copy {
-  color: #666666;
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.4;
-  margin: 5px 0 0;
-}
-
-.business-name-input :deep(.q-field__control) {
-  border-radius: 18px;
-}
-
-.business-save-row {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.business-save-button {
-  background: #00ce1b;
-  border-radius: 14px;
-  color: #000000;
-  font-weight: 900;
-  min-height: 44px;
-  padding: 0 20px;
-}
-
-.business-save-button :deep(.q-focus-helper) {
-  border-radius: inherit;
-}
-
-.business-save-button.q-btn--disabled {
-  background: #e5e5e5;
-  color: #777777;
-  opacity: 1 !important;
-}
-
-.language-list :deep(.q-separator) {
-  background: #eeeeee;
-  margin-left: 72px;
-}
-
-.language-option :deep(.q-item__section--avatar) {
-  min-width: 56px;
-}
-
-.language-option {
-  min-height: 76px;
-  padding: 10px 16px;
-  transition: background 140ms ease;
-}
-
-.language-option :deep(.q-focus-helper) {
-  border-radius: 0;
-}
-
-.language-option--selected {
-  background: rgba(0, 206, 27, 0.08);
-}
-
-.language-code {
-  align-items: center;
-  background: #f0f4f0;
-  border: 1px solid #e1e5e1;
-  border-radius: 999px;
-  color: #008f13;
-  display: flex;
-  font-size: 11px;
-  font-weight: 950;
-  height: 32px;
-  justify-content: center;
-  letter-spacing: 0.04em;
-  min-width: 40px;
-  padding: 0 9px;
-}
-
-.language-option--selected .language-code {
-  background: #111111;
-  border-color: #111111;
-  color: #00ce1b;
-}
-
-.language-option-name {
-  color: #111111;
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.language-selected-icon {
-  color: #00a816;
-  font-size: 25px;
-}
-
-.language-info-card {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.045);
-}
-
-.language-info-content {
-  align-items: flex-start;
-  display: flex;
-  gap: 12px;
-  padding: 18px 20px;
-}
-
-.language-info-icon {
-  align-items: center;
-  background: #eaffed;
-  border: 1px solid rgba(0, 206, 27, 0.28);
-  border-radius: 12px;
-  color: #00a816;
-  display: flex;
-  flex: 0 0 36px;
-  font-size: 20px;
-  height: 36px;
-  justify-content: center;
-  width: 36px;
-}
-
-.language-info-content p {
-  color: #5f5f5f;
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.45;
-  margin: 1px 0 0;
 }
 
 .coming-soon-content {
@@ -1033,24 +685,6 @@ onMounted(() => {
     min-height: 70px;
     padding-left: 12px;
     padding-right: 10px;
-  }
-
-  .settings-detail-card-section {
-    padding: 18px;
-  }
-
-  .business-save-button {
-    width: 100%;
-  }
-
-  .language-option {
-    min-height: 72px;
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
-  .language-info-content {
-    padding: 16px;
   }
 }
 </style>

@@ -7,6 +7,15 @@ import neNP from './messages/ne-NP';
 import svSE from './messages/sv-SE';
 import sw from './messages/sw';
 
+import faqEn from './faq/en';
+import faqEs from './faq/es';
+import faqDe from './faq/de';
+import faqPt from './faq/pt';
+import faqZhHK from './faq/zh-HK';
+import faqNeNP from './faq/ne-NP';
+import faqSvSE from './faq/sv-SE';
+import faqSw from './faq/sw';
+
 export const localeOptions = [
   {
     value: 'en',
@@ -81,14 +90,45 @@ export const getLocaleOption = (value: string): LocaleOption => {
 };
 
 const messages = {
-  en,
-  es,
-  de,
-  pt,
-  'zh-HK': zhHK,
-  'ne-NP': neNP,
-  'sv-SE': svSE,
-  sw,
+  en: {
+    ...en,
+    faq: faqEn,
+  },
+
+  es: {
+    ...es,
+    faq: faqEs,
+  },
+
+  de: {
+    ...de,
+    faq: faqDe,
+  },
+
+  pt: {
+    ...pt,
+    faq: faqPt,
+  },
+
+  'zh-HK': {
+    ...zhHK,
+    faq: faqZhHK,
+  },
+
+  'ne-NP': {
+    ...neNP,
+    faq: faqNeNP,
+  },
+
+  'sv-SE': {
+    ...svSE,
+    faq: faqSvSE,
+  },
+
+  sw: {
+    ...sw,
+    faq: faqSw,
+  },
 };
 
 export default messages;
