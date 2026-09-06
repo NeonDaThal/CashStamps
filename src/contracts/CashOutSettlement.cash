@@ -1,0 +1,114 @@
+pragma cashscript ^0.13.0;
+
+/**
+ * Bitcoin Cash Topup — Cash-out Settlement prototype.
+ *
+ * D1A NORMAL SETTLEMENT ONLY.
+ *
+ * This contract deliberately requires no signature.
+ *
+ * Anyone may submit the settlement transaction, but the covenant only permits:
+ *
+ *   input:
+ *     one exact Cash-out payment UTXO
+ *
+ *   output 0:
+ *     exact Treasury destination
+ *     exact merchant entitlement after settlement miner fee
+ *
+ *   output 1:
+ *     exact Platform destination
+ *     exact platform allocation
+ *
+ * This is intentionally isolated from the live Cash-out implementation.
+ * Exceptional recovery paths will be designed and tested separately.
+ */
+contract CashOutSettlement(
+    bytes20 treasuryPkh,
+    bytes20 platformPkh,
+    int paymentSats,
+    int platformFeeSats,
+    int settlementFeeSats
+) {
+    function settle() {
+        /**
+         * Normal settlement must spend only the exact selected contract UTXO.
+         *
+         * No additional inputs are allowed to alter the economics of the
+         * transaction.
+         */
+        require(tx.inputs.length == 1);
+
+        /**
+         * Normal settlement has exactly two economic outputs:
+         *
+         * 0 = merchant Treasury
+         * 1 = platform
+         */
+        require(tx.outputs.length == 2);
+
+        /**
+         * Constructor values must describe a usable settlement.
+         */
+        require(paymentSats > 0);
+        require(platformFeeSats > 0);
+        require(settlementFeeSats > 0);
+
+        int treasuryOutputSats =
+            paymentSats - platformFeeSats - settlementFeeSats;
+
+        require(treasuryOutputSats > 0);
+
+        /**
+         * Exact-payment invariant.
+         *
+         * An underpayment, overpayment, dust UTXO, or other unexpected UTXO
+         * cannot use the normal settlement path.
+         */
+        require(
+            tx.inputs[this.activeInputIndex].value == paymentSats
+        );
+
+        /**
+         * Reconstruct the exact permitted P2PKH destinations from the hashes
+         * frozen into this contract instance.
+         */
+        bytes25 treasuryLock =
+            new LockingBytecodeP2PKH(treasuryPkh);
+
+        bytes25 platformLock =
+            new LockingBytecodeP2PKH(platformPkh);
+
+        /**
+         * Merchant output.
+         *
+         * The merchant receives the customer payment minus:
+         *
+         * - the frozen platform allocation; and
+         * - the frozen settlement miner fee.
+         *
+         * Therefore the merchant side absorbs the miner fee.
+         */
+        require(
+            tx.outputs[0].lockingBytecode == treasuryLock
+        );
+
+        require(
+            tx.outputs[0].value == treasuryOutputSats
+        );
+
+        /**
+         * Platform output.
+         *
+         * Neither its destination nor amount can be changed by whoever submits
+         * the permissionless settlement transaction.
+         */
+        require(
+            tx.outputs[1].lockingBytecode == platformLock
+        );
+
+        require(
+            tx.outputs[1].value == platformFeeSats
+        );
+    }
+}
