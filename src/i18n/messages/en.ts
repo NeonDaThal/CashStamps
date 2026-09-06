@@ -39,7 +39,7 @@ const en = {
     actionSubtitle: 'Choose the next customer action.',
     sellVoucher: 'Topup',
     cashOutBch: 'Cashout',
-    voucherHistory: 'History',
+    voucherHistory: 'Transactions',
     treasuryWallet: 'Treasury',
     receiptPreview: 'Receipt Preview',
     glance: {
@@ -78,7 +78,7 @@ const en = {
     quoteSource: 'Quote',
     lockedAfterReview: 'Locked after review',
     reviewVoucher: 'Review Topup',
-    viewHistory: 'View History',
+    viewHistory: 'View Transactions',
   },
 
   issueProgress: {
@@ -217,7 +217,7 @@ const en = {
     },
     actions: {
       treasuryWallet: 'Treasury wallet',
-      voucherHistory: 'Voucher history',
+      voucherHistory: 'Transactions',
       reviewCashOut: 'Review Cashout',
     },
     form: {
@@ -399,28 +399,112 @@ const en = {
   },
   historyPage: {
     hero: {
-      eyebrow: 'Voucher records',
-      title: 'Voucher History',
+      eyebrow: 'Merchant transactions',
+      title: 'Transactions',
       intro:
-        'Review issued BCH vouchers, check redemption status, and access development receipt previews while printer testing is still being prepared.',
+        'Review Topups and Cash-outs saved on this device. Use the date filter to find customer transactions and check their current status.',
     },
     actions: {
-      sellVoucher: 'Sell Voucher',
+      sellVoucher: 'New Topup',
+    },
+    filters: {
+      date: 'Date',
+      today: 'Today',
+      noDateSelected: 'No date selected',
     },
     summary: {
-      totalVouchers: 'Total vouchers',
-      openActive: 'Open / active',
-      sweptRedeemed: 'Swept / redeemed',
+      totalTransactions: 'Total transactions',
+      totalTopups: 'Total Topups',
+      totalCashOuts: 'Total Cashouts',
+      totalTopupValue: 'Total Topup Value',
+      totalCashOutValue: 'Total Cashout Value',
+      redeemedCount: '{count} redeemed',
+      cashOutRecords: 'Cashout records',
     },
     records: {
-      title: 'Voucher records',
+      title: 'Transaction list',
       subtitle:
-        'Customer-facing voucher information appears first. Technical funding and testing tools are kept inside each record.',
+        'Topups and Cash-outs appear together in time order for the selected date.',
+    },
+    transactions: {
+      emptyTitle: 'No transactions for this date',
+      emptySubtitle:
+        'Choose another date or create a Topup or Cashout to see transactions here.',
+      showing: 'Showing {count} of {total}',
+      showMore: 'Show 10 more',
+      reference: 'Reference',
+      types: {
+        topup: 'Topup',
+        cashOut: 'Cashout',
+      },
+      status: {
+        redeemed: 'Redeemed',
+        notRedeemed: 'Not redeemed',
+        reclaimed: 'Reclaimed',
+        completed: 'Completed',
+        bchReceived: 'BCH received',
+        awaitingPayment: 'Awaiting payment',
+        cancelled: 'Cancelled',
+        failed: 'Failed',
+        pending: 'Pending',
+        error: 'Error',
+      },
+    },
+    detail: {
+      title: 'Transaction details',
+      sections: {
+        transaction: 'Transaction',
+        blockchain: 'Blockchain',
+        quote: 'Quote',
+      },
+      amounts: {
+        topupRequested: 'Topup requested',
+        cashOutRequested: 'Cashout requested',
+        feePaid: 'Fee paid',
+        customerReceivesTopup: 'Customer receives',
+        customerReceivesCash: 'Customer receives cash',
+        topupFeeCaption: 'Customer-facing Topup service fee',
+        cashOutFeeCaption: 'Customer-facing Cashout service fee',
+      },
+      labels: {
+        reference: 'Reference',
+        date: 'Date and time',
+        status: 'Status',
+        deliveryMethod: 'Delivery method',
+        deliveryStatus: 'Delivery status',
+        uniqueVoucherAddress: 'Unique voucher address',
+        treasuryReceivingAddress: 'Treasury receiving address',
+        transactionId: 'Transaction ID',
+        quoteSource: 'Quote source',
+        marketRate: 'Market rate',
+        quoteTime: 'Quote time',
+        notAvailable: 'Not available',
+      },
+      delivery: {
+        printed: 'Printed voucher',
+        digital: 'Digital voucher',
+        selected: 'Selected',
+        deliveryStarted: 'Delivery started',
+        delivered: 'Delivered',
+        uncertain: 'Uncertain',
+      },
+      quoteSources: {
+        developmentQuote: 'Development quote',
+        cached: 'Cached',
+        manual: 'Manual',
+        unknown: 'Unknown',
+      },
+      notices: {
+        printedRecovery:
+          'This Printed Topup has a recovery record. Its original bearer voucher remains governed by the saved recovery state.',
+        replacementTopup:
+          'This is a replacement Topup for an earlier Printed voucher issue.',
+      },
     },
     safetyNotice:
-      'Development safety mode is still active. Receipt preview and redemption tools remain available for testing before the final printer flow is connected.',
+      'Transactions are calculated from local Topup and Cash-out records stored on this device.',
     messages: {
-      couldNotLoadVoucherRecords: 'Could not load voucher records.',
+      couldNotLoadVoucherRecords: 'Could not load transaction records.',
       createdTestVoucher: 'Created test voucher {serial}.',
       couldNotCreateTestVoucher: 'Could not create test voucher.',
       markedManualRedemption: 'Marked {serial} as manually swept/redeemed.',
@@ -1052,7 +1136,7 @@ const en = {
       home: 'Home',
       sellVoucher: 'Top-up',
       cashOut: 'Cash-out',
-      voucherHistory: 'Voucher History',
+      voucherHistory: 'Transactions',
       merchantReports: 'Reports',
       treasuryWallet: 'Treasury Wallet',
       printerSetup: 'Printer Setup',
@@ -1119,7 +1203,7 @@ const en = {
         'Track topups, cash-outs, fees, and merchant activity from this device.',
     },
     actions: {
-      viewHistory: 'View History',
+      viewHistory: 'View Transactions',
       sellVoucher: 'Sell Topup',
       printReport: 'Print Report',
       exportPdf: 'Export PDF',
