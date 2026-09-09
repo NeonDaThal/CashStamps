@@ -1,6 +1,7 @@
 {
   "contractName": "CashOutSettlement",
   "constructorInputs": [
+    { "name": "cashOutCommitment", "type": "bytes32" },
     { "name": "treasuryPkh", "type": "bytes20" },
     { "name": "platformPkh", "type": "bytes20" },
     { "name": "paymentSats", "type": "int" },
@@ -10,25 +11,26 @@
   "abi": [
     { "name": "settle", "inputs": [] }
   ],
-  "bytecode": "OP_TXINPUTCOUNT OP_1 OP_NUMEQUALVERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUALVERIFY OP_2 OP_PICK OP_0 OP_GREATERTHAN OP_VERIFY OP_3 OP_PICK OP_0 OP_GREATERTHAN OP_VERIFY OP_4 OP_PICK OP_0 OP_GREATERTHAN OP_VERIFY OP_2OVER OP_SWAP OP_SUB OP_5 OP_ROLL OP_SUB OP_DUP OP_0 OP_GREATERTHAN OP_VERIFY OP_INPUTINDEX OP_UTXOVALUE OP_4 OP_ROLL OP_NUMEQUALVERIFY 76a914 OP_ROT OP_CAT 88ac OP_CAT 76a914 OP_3 OP_ROLL OP_CAT 88ac OP_CAT OP_0 OP_OUTPUTBYTECODE OP_ROT OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_ROT OP_NUMEQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_EQUALVERIFY OP_1 OP_OUTPUTVALUE OP_NUMEQUAL",
-  "source": "pragma cashscript ^0.13.0;\n\n/**\n * Bitcoin Cash Topup — Cash-out Settlement prototype.\n *\n * D1A NORMAL SETTLEMENT ONLY.\n *\n * This contract deliberately requires no signature.\n *\n * Anyone may submit the settlement transaction, but the covenant only permits:\n *\n *   input:\n *     one exact Cash-out payment UTXO\n *\n *   output 0:\n *     exact Treasury destination\n *     exact merchant entitlement after settlement miner fee\n *\n *   output 1:\n *     exact Platform destination\n *     exact platform allocation\n *\n * This is intentionally isolated from the live Cash-out implementation.\n * Exceptional recovery paths will be designed and tested separately.\n */\ncontract CashOutSettlement(\n    bytes20 treasuryPkh,\n    bytes20 platformPkh,\n    int paymentSats,\n    int platformFeeSats,\n    int settlementFeeSats\n) {\n    function settle() {\n        /**\n         * Normal settlement must spend only the exact selected contract UTXO.\n         *\n         * No additional inputs are allowed to alter the economics of the\n         * transaction.\n         */\n        require(tx.inputs.length == 1);\n\n        /**\n         * Normal settlement has exactly two economic outputs:\n         *\n         * 0 = merchant Treasury\n         * 1 = platform\n         */\n        require(tx.outputs.length == 2);\n\n        /**\n         * Constructor values must describe a usable settlement.\n         */\n        require(paymentSats > 0);\n        require(platformFeeSats > 0);\n        require(settlementFeeSats > 0);\n\n        int treasuryOutputSats =\n            paymentSats - platformFeeSats - settlementFeeSats;\n\n        require(treasuryOutputSats > 0);\n\n        /**\n         * Exact-payment invariant.\n         *\n         * An underpayment, overpayment, dust UTXO, or other unexpected UTXO\n         * cannot use the normal settlement path.\n         */\n        require(\n            tx.inputs[this.activeInputIndex].value == paymentSats\n        );\n\n        /**\n         * Reconstruct the exact permitted P2PKH destinations from the hashes\n         * frozen into this contract instance.\n         */\n        bytes25 treasuryLock =\n            new LockingBytecodeP2PKH(treasuryPkh);\n\n        bytes25 platformLock =\n            new LockingBytecodeP2PKH(platformPkh);\n\n        /**\n         * Merchant output.\n         *\n         * The merchant receives the customer payment minus:\n         *\n         * - the frozen platform allocation; and\n         * - the frozen settlement miner fee.\n         *\n         * Therefore the merchant side absorbs the miner fee.\n         */\n        require(\n            tx.outputs[0].lockingBytecode == treasuryLock\n        );\n\n        require(\n            tx.outputs[0].value == treasuryOutputSats\n        );\n\n        /**\n         * Platform output.\n         *\n         * Neither its destination nor amount can be changed by whoever submits\n         * the permissionless settlement transaction.\n         */\n        require(\n            tx.outputs[1].lockingBytecode == platformLock\n        );\n\n        require(\n            tx.outputs[1].value == platformFeeSats\n        );\n    }\n}\n",
-  "fingerprint": "af40ccdfeb20a64cbbb4c1b86a009dd8ac70f7dd0cf7f9c89047cbec136b3d3f",
+  "bytecode": "OP_TXINPUTCOUNT OP_1 OP_NUMEQUALVERIFY OP_TXOUTPUTCOUNT OP_2 OP_NUMEQUALVERIFY 0000000000000000000000000000000000000000000000000000000000000000 OP_EQUAL OP_NOT OP_VERIFY OP_2 OP_PICK OP_0 OP_GREATERTHAN OP_VERIFY OP_3 OP_PICK OP_0 OP_GREATERTHAN OP_VERIFY OP_4 OP_PICK OP_0 OP_GREATERTHAN OP_VERIFY OP_2OVER OP_SWAP OP_SUB OP_5 OP_ROLL OP_SUB OP_DUP OP_0 OP_GREATERTHAN OP_VERIFY OP_INPUTINDEX OP_UTXOVALUE OP_4 OP_ROLL OP_NUMEQUALVERIFY 76a914 OP_ROT OP_CAT 88ac OP_CAT 76a914 OP_3 OP_ROLL OP_CAT 88ac OP_CAT OP_0 OP_OUTPUTBYTECODE OP_ROT OP_EQUALVERIFY OP_0 OP_OUTPUTVALUE OP_ROT OP_NUMEQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_EQUALVERIFY OP_1 OP_OUTPUTVALUE OP_NUMEQUAL",
+  "source": "pragma cashscript ^0.13.0;\n\n/**\n * Bitcoin Cash Topup — Cash-out Settlement prototype.\n *\n * D1A NORMAL SETTLEMENT ONLY.\n *\n * This contract deliberately requires no signature.\n *\n * Anyone may submit the settlement transaction, but the covenant only permits:\n *\n *   input:\n *     one exact Cash-out payment UTXO\n *\n *   output 0:\n *     exact Treasury destination\n *     exact merchant entitlement after settlement miner fee\n *\n *   output 1:\n *     exact Platform destination\n *     exact platform allocation\n *\n * This is intentionally isolated from the live Cash-out implementation.\n * Exceptional recovery paths will be designed and tested separately.\n */\ncontract CashOutSettlement(\n    bytes32 cashOutCommitment,\n    bytes20 treasuryPkh,\n    bytes20 platformPkh,\n    int paymentSats,\n    int platformFeeSats,\n    int settlementFeeSats\n) {\n    function settle() {\n        /**\n         * Normal settlement must spend only the exact selected contract UTXO.\n         *\n         * No additional inputs are allowed to alter the economics of the\n         * transaction.\n         */\n        require(tx.inputs.length == 1);\n\n        /**\n         * Normal settlement has exactly two economic outputs:\n         *\n         * 0 = merchant Treasury\n         * 1 = platform\n         */\n        require(tx.outputs.length == 2);\n\n        /**\n         * Constructor values must describe a usable settlement.\n         */\n                /**\n         * Bind this instantiated contract to one deterministic Cash-out quote\n         * instance.\n         *\n         * The commitment is generated by the application from the frozen\n         * Cash-out identity/quote snapshot. Requiring it to be non-zero both\n         * fails closed on malformed planning and ensures the constructor value\n         * is materially committed into the instantiated contract bytecode.\n         */\n        require(\n            cashOutCommitment !=\n            0x0000000000000000000000000000000000000000000000000000000000000000\n        );\n\n        require(paymentSats > 0);\n        require(platformFeeSats > 0);\n        require(settlementFeeSats > 0);\n\n        int treasuryOutputSats =\n            paymentSats - platformFeeSats - settlementFeeSats;\n\n        require(treasuryOutputSats > 0);\n\n        /**\n         * Exact-payment invariant.\n         *\n         * An underpayment, overpayment, dust UTXO, or other unexpected UTXO\n         * cannot use the normal settlement path.\n         */\n        require(\n            tx.inputs[this.activeInputIndex].value == paymentSats\n        );\n\n        /**\n         * Reconstruct the exact permitted P2PKH destinations from the hashes\n         * frozen into this contract instance.\n         */\n        bytes25 treasuryLock =\n            new LockingBytecodeP2PKH(treasuryPkh);\n\n        bytes25 platformLock =\n            new LockingBytecodeP2PKH(platformPkh);\n\n        /**\n         * Merchant output.\n         *\n         * The merchant receives the customer payment minus:\n         *\n         * - the frozen platform allocation; and\n         * - the frozen settlement miner fee.\n         *\n         * Therefore the merchant side absorbs the miner fee.\n         */\n        require(\n            tx.outputs[0].lockingBytecode == treasuryLock\n        );\n\n        require(\n            tx.outputs[0].value == treasuryOutputSats\n        );\n\n        /**\n         * Platform output.\n         *\n         * Neither its destination nor amount can be changed by whoever submits\n         * the permissionless settlement transaction.\n         */\n        require(\n            tx.outputs[1].lockingBytecode == platformLock\n        );\n\n        require(\n            tx.outputs[1].value == platformFeeSats\n        );\n    }\n}\n",
+  "fingerprint": "29329a1f5d05ee905c0ca92c1e1fe39b48cd5038d59c8f353ca47928cf07f456",
   "debug": {
-    "bytecode": "c3519dc4529d527900a069537900a069547900a069707c94557a947600a069c0c6547a9d0376a9147b7e0288ac7e0376a914537a7e0288ac7e00cd7b8800cc7b9d51cd8851cc9c",
-    "sourceMap": "40:16:40:32;:36::37;:8::39:1;48:16:48:33:0;:37::38;:8::40:1;53:16:53:27:0;;:30::31;:16:::1;:8::33;54:16:54:31:0;;:34::35;:16:::1;:8::37;55:16:55:33:0;;:36::37;:16:::1;:8::39;58:12:58:41:0;;::::1;:44::61:0;;:12:::1;60:16:60:34:0;:37::38;:16:::1;:8::40;69:22:69:43:0;:12::50:1;:54::65:0;;68:8:70:10:1;77:12:77:49:0;:37::48;:12::49:1;;;80::80::0;:37::48;;:12::49:1;;;93:23:93:24:0;:12::41:1;:45::57:0;92:8:94:10:1;97:23:97:24:0;:12::31:1;:35::53:0;96:8:98:10:1;107:23:107:24:0;:12::41:1;106:8:108:10;111:23:111:24:0;:12::31:1;110:8:112:10",
+    "bytecode": "c3519dc4529d200000000000000000000000000000000000000000000000000000000000000000879169527900a069537900a069547900a069707c94557a947600a069c0c6547a9d0376a9147b7e0288ac7e0376a914537a7e0288ac7e00cd7b8800cc7b9d51cd8851cc9c",
+    "sourceMap": "41:16:41:32;:36::37;:8::39:1;49:16:49:33:0;:37::38;:8::40:1;65:12:65:78:0;64::::1;;63:8:66:10;68:16:68:27:0;;:30::31;:16:::1;:8::33;69:16:69:31:0;;:34::35;:16:::1;:8::37;70:16:70:33:0;;:36::37;:16:::1;:8::39;73:12:73:41:0;;::::1;:44::61:0;;:12:::1;75:16:75:34:0;:37::38;:16:::1;:8::40;84:22:84:43:0;:12::50:1;:54::65:0;;83:8:85:10:1;92:12:92:49:0;:37::48;:12::49:1;;;95::95::0;:37::48;;:12::49:1;;;108:23:108:24:0;:12::41:1;:45::57:0;107:8:109:10:1;112:23:112:24:0;:12::31:1;:35::53:0;111:8:113:10:1;122:23:122:24:0;:12::41:1;121:8:123:10;126:23:126:24:0;:12::31:1;125:8:127:10",
     "logs": [],
     "requires": [
-      { "ip": 7, "line": 40 },
-      { "ip": 10, "line": 48 },
-      { "ip": 15, "line": 53 },
-      { "ip": 20, "line": 54 },
-      { "ip": 25, "line": 55 },
-      { "ip": 35, "line": 60 },
-      { "ip": 40, "line": 68 },
-      { "ip": 55, "line": 92 },
-      { "ip": 59, "line": 96 },
-      { "ip": 62, "line": 106 },
-      { "ip": 66, "line": 110 }
+      { "ip": 8, "line": 41 },
+      { "ip": 11, "line": 49 },
+      { "ip": 15, "line": 63 },
+      { "ip": 20, "line": 68 },
+      { "ip": 25, "line": 69 },
+      { "ip": 30, "line": 70 },
+      { "ip": 40, "line": 75 },
+      { "ip": 45, "line": 83 },
+      { "ip": 60, "line": 107 },
+      { "ip": 64, "line": 111 },
+      { "ip": 67, "line": 121 },
+      { "ip": 71, "line": 125 }
     ]
   },
   "compiler": {
@@ -39,5 +41,5 @@
       "enforceLocktimeGuard": true
     }
   },
-  "updatedAt": "2026-09-06T21:12:48.460Z"
+  "updatedAt": "2026-09-09T20:39:50.984Z"
 }

@@ -29,6 +29,19 @@ const PAYMENT_SATS = 206_000n;
 const PLATFORM_FEE_SATS = 2_000n;
 const SETTLEMENT_FEE_SATS = 500n;
 
+/**
+ * Deterministic fake Cash-out quote-instance commitments.
+ *
+ * Test values only.
+ */
+const CASH_OUT_COMMITMENT = Uint8Array.from(
+  Array.from({ length: 32 }, (_, index) => index + 1)
+);
+
+const OTHER_CASH_OUT_COMMITMENT = Uint8Array.from(
+  Array.from({ length: 32 }, (_, index) => index + 33)
+);
+
 const TREASURY_OUTPUT_SATS =
   PAYMENT_SATS - PLATFORM_FEE_SATS - SETTLEMENT_FEE_SATS;
 
@@ -78,10 +91,11 @@ const TREASURY_LOCK = p2pkhLockingBytecode(TREASURY_PKH);
 const PLATFORM_LOCK = p2pkhLockingBytecode(PLATFORM_PKH);
 const ATTACKER_LOCK = p2pkhLockingBytecode(ATTACKER_PKH);
 
-function createContract(provider) {
+function createContract(provider, cashOutCommitment = CASH_OUT_COMMITMENT) {
   return new Contract(
     artifact,
     [
+      cashOutCommitment,
       TREASURY_PKH,
       PLATFORM_PKH,
       PAYMENT_SATS,
@@ -426,6 +440,48 @@ assertSettlementRejects(
       platformOutputSats: PLATFORM_FEE_SATS - 1n,
     })
 );
+
+/**
+ * --------------------------------------------------------------------------
+ * D1C.3 CONTRACT-IDENTITY BINDING
+ * --------------------------------------------------------------------------
+ */
+
+/**
+ * Re-instantiating the same frozen Cash-out commitment must produce exactly
+ * the same contract identity.
+ */
+{
+  const firstContract = createContract(new MockNetworkProvider());
+
+  const secondContract = createContract(new MockNetworkProvider());
+
+  assert.equal(firstContract.address, secondContract.address);
+
+  console.log(
+    'PASS: same Cash-out commitment produces the same contract identity'
+  );
+}
+
+/**
+ * A different Cash-out commitment must produce a different contract identity,
+ * even when all economic values and settlement destinations are otherwise
+ * identical.
+ */
+{
+  const firstContract = createContract(new MockNetworkProvider());
+
+  const differentCashOutContract = createContract(
+    new MockNetworkProvider(),
+    OTHER_CASH_OUT_COMMITMENT
+  );
+
+  assert.notEqual(firstContract.address, differentCashOutContract.address);
+
+  console.log(
+    'PASS: different Cash-out commitment produces a different contract identity'
+  );
+}
 
 console.log('');
 console.log('Cash-out Settlement D1A adversarial covenant tests passed.');

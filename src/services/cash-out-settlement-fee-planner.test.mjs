@@ -21,6 +21,10 @@ import {
 const PAYMENT_SATS = 206_000n;
 const PLATFORM_FEE_SATS = 2_000n;
 
+const CASH_OUT_COMMITMENT = Uint8Array.from(
+  Array.from({ length: 32 }, (_, index) => index + 1)
+);
+
 /**
  * Prototype normal settlement fee rate.
  *
@@ -84,6 +88,7 @@ function createSettlementCandidate(settlementFeeSats) {
   const contract = new Contract(
     artifact,
     [
+      CASH_OUT_COMMITMENT,
       TREASURY_PKH,
       PLATFORM_PKH,
       PAYMENT_SATS,
