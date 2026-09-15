@@ -77,6 +77,61 @@ export async function getCashOutRecordById(
   return records.find((record) => record.id === id);
 }
 
+/**
+ * Atomically mutate one Cash-out record inside the existing serialized
+ * Cash-out persistence queue.
+ *
+ * The updater is responsible for returning the complete next record.
+ *
+ * Returning the existing record unchanged is treated as an idempotent no-op
+ * and does not rewrite IndexedDB.
+ *
+ * This primitive deliberately contains no BCH/CashScript/libauth logic so the
+ * general Cash-out store remains safe to import from reports and other pure
+ * application services.
+ */
+export async function mutateCashOutRecordAtomically(
+  id: string,
+  updater: (record: CashOutRecord) => CashOutRecord
+): Promise<CashOutRecord | undefined> {
+  return enqueueCashOutRecordsMutation(async () => {
+    const records = await getCashOutRecords();
+
+    const existingRecord = records.find((record) => record.id === id);
+
+    if (!existingRecord) {
+      return undefined;
+    }
+
+    const nextRecord = updater(existingRecord);
+
+    if (nextRecord === existingRecord) {
+      return existingRecord;
+    }
+
+    const updatedRecords = records.map((record) =>
+      record.id === id ? nextRecord : record
+    );
+
+    await writeCashOutRecords(updatedRecords);
+
+    return nextRecord;
+  });
+}
+
+/**
+ * Atomically cross the normal Cash-out settlement write-ahead boundary.
+ *
+ * The exact raw settlement transaction is durably stored before D4 may make
+ * any broadcast attempt.
+ *
+ * Same transaction:
+ *   idempotent.
+ *
+ * Different second transaction:
+ *   permanently rejected.
+ */
+
 export async function updateCashOutRecord(
   id: string,
   updates: Partial<CashOutRecord>

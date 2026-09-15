@@ -1,3 +1,5 @@
+import type { CashOutSettlementIntent } from 'src/types/cash-out-settlement';
+
 export type CashOutStatus =
   | 'draft'
   | 'quote_locked'
@@ -180,6 +182,18 @@ export interface CashOutRecord {
   cancellationReason?: CashOutCancellationReason;
   failedAt?: string;
 
+  /**
+   * Durable normal CashScript settlement transaction.
+   *
+   * This exact raw transaction is persisted BEFORE any settlement broadcast
+   * may occur.
+   *
+   * Once present, another settlement transaction must never silently replace
+   * it.
+   *
+   * Legacy and current pre-CashScript Cash-outs do not contain this field.
+   */
+  settlementIntent?: CashOutSettlementIntent;
   status: CashOutStatus;
 
   printerJobId?: string;

@@ -239,3 +239,76 @@ export interface CashOutSettlementContractPlan {
 
   feePlanningIterations: CashOutSettlementFeePlanningIteration[];
 }
+
+export type CashOutSettlementIntentStatus = 'prepared';
+
+/**
+ * Exact deterministic normal-settlement transaction.
+ *
+ * This is the Cash-out write-ahead payload which D3B will later persist
+ * BEFORE any broadcast operation is allowed.
+ *
+ * Once persisted, this exact raw transaction/txid must never be silently
+ * replaced by another settlement transaction.
+ */
+export interface CashOutSettlementIntent {
+  status: CashOutSettlementIntentStatus;
+
+  cashOutId: string;
+
+  cashOutSerial: string;
+
+  cashOutCommitmentHex: string;
+
+  /**
+   * Exact CashScript contract being spent.
+   */
+  contractAddress: string;
+
+  /**
+   * Exact D2 payment outpoint selected for normal settlement.
+   */
+  sourcePaymentTxid: string;
+
+  sourceOutpointIndex: number;
+
+  sourceValueSats: number;
+
+  /**
+   * Exact encoded transaction bytes.
+   *
+   * D4 must later broadcast these bytes rather than rebuilding the
+   * transaction.
+   */
+  rawTransactionHex: string;
+
+  /**
+   * Deterministic locally-calculated txid of rawTransactionHex.
+   */
+  txid: string;
+
+  rawTransactionBytesLength: number;
+
+  treasuryAddress: string;
+
+  treasuryOutputSats: number;
+
+  platformAddress: string;
+
+  platformOutputSats: number;
+
+  actualFeeSats: number;
+
+  inputCount: 1;
+
+  outputCount: 2;
+
+  /**
+   * D3 creates and persists only.
+   *
+   * Broadcast belongs to D4.
+   */
+  broadcastEnabled: false;
+
+  preparedAt: string;
+}
