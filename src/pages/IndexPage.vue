@@ -7,7 +7,7 @@
         </div>
 
         <div>
-          <p class="eyebrow">{{ t('home.eyebrow') }}</p>
+          <p class="eyebrow">{{ homeEyebrow }}</p>
           <h1>{{ t('home.title') }}</h1>
           <p class="intro">
             {{ t('home.intro') }}
@@ -134,6 +134,7 @@ import { useI18n } from 'vue-i18n';
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import { topupIcon } from 'src/icons/custom-icons';
 import { cashoutIcon } from 'src/icons/custom-icons';
+import { getAppSettings } from 'src/services/app-settings';
 import { getCashOutRecords } from 'src/services/cash-out-store';
 import { getVoucherRecords } from 'src/services/voucher-store';
 import type { CashOutRecord } from 'src/types/cash-out';
@@ -144,8 +145,10 @@ const { t } = useI18n({ useScope: 'global' });
 const voucherRecords = ref<VoucherRecord[]>([]);
 const cashOutRecords = ref<CashOutRecord[]>([]);
 const todayDateKey = getLocalDateKey(new Date().toISOString());
+const businessName = ref(getAppSettings().businessName);
 
 onMounted(() => {
+  businessName.value = getAppSettings().businessName;
   void loadHomeStats();
 });
 
@@ -222,6 +225,10 @@ const totalStats = computed(() => ({
   count: topupStats.value.count + cashOutStats.value.count,
   valueMinor: topupStats.value.valueMinor + cashOutStats.value.valueMinor,
 }));
+
+const homeEyebrow = computed(() => {
+  return businessName.value || t('home.eyebrow');
+});
 
 function formatFiatAmount(amountMinor: number): string {
   try {
