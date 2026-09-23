@@ -1,4 +1,9 @@
-import type { CashOutSettlementIntent } from 'src/types/cash-out-settlement';
+import type {
+  CashOutSettlementBroadcastResult,
+  CashOutSettlementIntent,
+} from 'src/types/cash-out-settlement';
+
+import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
 
 export type CashOutStatus =
   | 'draft'
@@ -194,6 +199,24 @@ export interface CashOutRecord {
    * Legacy and current pre-CashScript Cash-outs do not contain this field.
    */
   settlementIntent?: CashOutSettlementIntent;
+  /**
+   * Latest submission result for the exact durable normal-settlement
+   * transaction.
+   *
+   * D4 must only ever describe the transaction already stored in
+   * settlementIntent.
+   */
+  settlementBroadcast?: CashOutSettlementBroadcastResult;
+
+  /**
+   * Latest strongest network evidence for the exact deterministic settlement
+   * txid.
+   *
+   * Positive evidence is monotonic:
+   *
+   * confirmed > mempool > unknown > unavailable
+   */
+  settlementReconciliation?: TreasuryBroadcastReconciliationResult;
   status: CashOutStatus;
 
   printerJobId?: string;

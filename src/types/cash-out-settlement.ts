@@ -1,3 +1,5 @@
+import type { TreasuryBroadcastResult } from 'src/types/treasury-broadcast';
+
 export type CashOutSettlementPlanVersion = 'cash_out_settlement_v1';
 
 /**
@@ -311,4 +313,40 @@ export interface CashOutSettlementIntent {
   broadcastEnabled: false;
 
   preparedAt: string;
+}
+
+/**
+ * A narrowly-classified explicit Electrum rejection for the exact persisted
+ * settlement transaction.
+ *
+ * input_unavailable:
+ *   The server explicitly rejected the child because one of its inputs was not
+ *   currently available to that server.
+ *
+ * This can happen when the customer-payment parent has not propagated to that
+ * server yet. It can also mean the input is genuinely spent, so this field
+ * deliberately does NOT claim which cause applies.
+ *
+ * Retrying is safe only because D4 may submit the exact same persisted child
+ * transaction. It may never construct a replacement.
+ */
+export type CashOutSettlementExplicitBroadcastRejectionKind =
+  'input_unavailable';
+
+export interface CashOutSettlementExplicitBroadcastRejection {
+  kind: CashOutSettlementExplicitBroadcastRejectionKind;
+
+  retrySameTransaction: true;
+}
+
+/**
+ * Cash-out-specific extension of the shared Treasury broadcast result.
+ *
+ * We deliberately do not change TreasuryBroadcastResult itself because
+ * Treasury Send, Topup funding and voucher reclaim already depend on its
+ * established semantics.
+ */
+export interface CashOutSettlementBroadcastResult
+  extends TreasuryBroadcastResult {
+  explicitRejection?: CashOutSettlementExplicitBroadcastRejection;
 }
