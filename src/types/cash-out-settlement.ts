@@ -333,6 +333,64 @@ export interface CashOutSettlementIntent {
 export type CashOutSettlementExplicitBroadcastRejectionKind =
   'input_unavailable';
 
+export type CashOutSettlementSourceConflictState = 'detected' | 'resolved';
+
+export type CashOutSettlementSourceConflictNetworkStatus =
+  | 'mempool'
+  | 'confirmed';
+
+export type CashOutSettlementSourceConflictResolution =
+  'exact_settlement_confirmed';
+
+/**
+ * Positive evidence that the exact customer-payment outpoint selected for the
+ * normal settlement has been spent by a DIFFERENT transaction.
+ *
+ * Merely failing to find an outpoint is not conflict evidence.
+ *
+ * D5D.2 will be responsible for producing this record only after identifying
+ * a concrete conflicting spender transaction.
+ */
+export interface CashOutSettlementSourceConflictEvidence {
+  state: CashOutSettlementSourceConflictState;
+
+  sourcePaymentTxid: string;
+
+  sourceOutpointIndex: number;
+
+  expectedSettlementTxid: string;
+
+  /**
+   * Transaction which spends the selected source outpoint but is NOT the
+   * deterministic D3 settlement transaction.
+   */
+  conflictingTxid: string;
+
+  conflictingTransactionStatus: CashOutSettlementSourceConflictNetworkStatus;
+
+  /**
+   * 0 for mempool.
+   * Positive block height for confirmed.
+   */
+  conflictingTransactionBlockHeight: number;
+
+  detectedAt: string;
+
+  message: string;
+
+  /**
+   * Conflict resolution is deliberately narrow.
+   *
+   * A detected conflict is not cleared merely because it later disappears from
+   * one mempool view. For the normal D5 path, it is resolved only when the exact
+   * deterministic settlement transaction subsequently receives confirmed
+   * evidence.
+   */
+  resolvedAt?: string;
+
+  resolution?: CashOutSettlementSourceConflictResolution;
+}
+
 export interface CashOutSettlementExplicitBroadcastRejection {
   kind: CashOutSettlementExplicitBroadcastRejectionKind;
 

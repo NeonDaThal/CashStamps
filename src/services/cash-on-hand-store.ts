@@ -13,6 +13,37 @@ import type {
 const CASH_ON_HAND_STATE_KEY = 'bch-voucher-cash-on-hand-state';
 const DEFAULT_CASH_ON_HAND_CURRENCY = 'GBP';
 
+export type CashOnHandMutationEnqueue = <T>(
+  operation: () => Promise<T>
+) => Promise<T>;
+
+/**
+ * Cash on Hand is persisted as one IndexedDB state object.
+ *
+ * Every read -> modify -> write operation must therefore be serialized.
+ * Otherwise overlapping mutations can both read the same old balance and one
+ * later write can erase the other.
+ *
+ * This is particularly important for crash-recovered Cash-out accounting,
+ * where repeated reconciliation must remain idempotent.
+ */
+export function createCashOnHandMutationQueue(): CashOnHandMutationEnqueue {
+  let queue: Promise<void> = Promise.resolve();
+
+  return function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = queue.then(operation, operation);
+
+    queue = result.then(
+      () => undefined,
+      () => undefined
+    );
+
+    return result;
+  };
+}
+
+const enqueueCashOnHandMutation = createCashOnHandMutationQueue();
+
 function createEmptyCashOnHandState(): CashOnHandState {
   return {
     isSetUp: false,
@@ -164,7 +195,7 @@ async function applyIncomingMovement(params: {
     movements: [movement, ...params.state.movements],
   };
 
-  await saveCashOnHandState(updatedState);
+  await writeCashOnHandState(updatedState);
 
   return updatedState;
 }
@@ -212,7 +243,7 @@ async function applyOutgoingMovement(params: {
     movements: [movement, ...params.state.movements],
   };
 
-  await saveCashOnHandState(updatedState);
+  await writeCashOnHandState(updatedState);
 
   return updatedState;
 }
@@ -223,103 +254,154 @@ export async function getCashOnHandState(): Promise<CashOnHandState> {
   return normalizeStoredState(storedState);
 }
 
+async function writeCashOnHandState(state: CashOnHandState): Promise<void> {
+  await set(CASH_ON_HAND_STATE_KEY, normalizeStoredState(state));
+}
+
+/**
+ * Public full-state replacement also participates in the same mutation queue.
+ *
+ * Internal read-modify-write operations use writeCashOnHandState() directly
+ * because they are already executing inside the queue.
+ */
 export async function saveCashOnHandState(
   state: CashOnHandState
 ): Promise<void> {
-  await set(CASH_ON_HAND_STATE_KEY, normalizeStoredState(state));
+  await enqueueCashOnHandMutation(async () => {
+    await writeCashOnHandState(state);
+  });
 }
 
 export async function setUpCashOnHand(
   input: CashOnHandSetupInput
 ): Promise<CashOnHandState> {
-  assertNonNegativeAmountMinor(input.amountMinor);
+  return enqueueCashOnHandMutation(async () => {
+    assertNonNegativeAmountMinor(input.amountMinor);
 
-  const existingState = await getCashOnHandState();
-  const currency = normalizeCurrency(input.currency);
-  const now = input.createdAt ?? new Date().toISOString();
+    const existingState = await getCashOnHandState();
 
-  const movement = createMovement({
-    type: 'setup',
-    amountMinor: input.amountMinor,
-    balanceAfterMinor: input.amountMinor,
-    currency,
-    note: input.note,
-    createdAt: now,
+    const currency = normalizeCurrency(input.currency);
+
+    const now = input.createdAt ?? new Date().toISOString();
+
+    const movement = createMovement({
+      type: 'setup',
+
+      amountMinor: input.amountMinor,
+
+      balanceAfterMinor: input.amountMinor,
+
+      currency,
+
+      note: input.note,
+
+      createdAt: now,
+    });
+
+    const updatedState: CashOnHandState = {
+      isSetUp: true,
+
+      currency,
+
+      balanceMinor: input.amountMinor,
+
+      createdAt: now,
+
+      updatedAt: now,
+
+      movements: [movement, ...existingState.movements],
+    };
+
+    await writeCashOnHandState(updatedState);
+
+    return updatedState;
   });
-
-  const updatedState: CashOnHandState = {
-    isSetUp: true,
-    currency,
-    balanceMinor: input.amountMinor,
-    createdAt: now,
-    updatedAt: now,
-    movements: [movement, ...existingState.movements],
-  };
-
-  await saveCashOnHandState(updatedState);
-
-  return updatedState;
 }
 
 export async function addToCashOnHand(
   input: CashOnHandManualAdjustmentInput
 ): Promise<CashOnHandState> {
-  const state = await getCashOnHandState();
+  return enqueueCashOnHandMutation(async () => {
+    const state = await getCashOnHandState();
 
-  return applyIncomingMovement({
-    state,
-    type: 'manual_add',
-    amountMinor: input.amountMinor,
-    currency: input.currency,
-    note: input.note,
-    createdAt: input.createdAt,
+    return applyIncomingMovement({
+      state,
+
+      type: 'manual_add',
+
+      amountMinor: input.amountMinor,
+
+      currency: input.currency,
+
+      note: input.note,
+
+      createdAt: input.createdAt,
+    });
   });
 }
 
 export async function withdrawFromCashOnHand(
   input: CashOnHandManualAdjustmentInput
 ): Promise<CashOnHandState> {
-  const state = await getCashOnHandState();
+  return enqueueCashOnHandMutation(async () => {
+    const state = await getCashOnHandState();
 
-  return applyOutgoingMovement({
-    state,
-    type: 'manual_withdraw',
-    amountMinor: input.amountMinor,
-    currency: input.currency,
-    note: input.note,
-    createdAt: input.createdAt,
+    return applyOutgoingMovement({
+      state,
+
+      type: 'manual_withdraw',
+
+      amountMinor: input.amountMinor,
+
+      currency: input.currency,
+
+      note: input.note,
+
+      createdAt: input.createdAt,
+    });
   });
 }
 
 export async function clearCashOnHand(note?: string): Promise<CashOnHandState> {
-  const state = await getCashOnHandState();
+  return enqueueCashOnHandMutation(async () => {
+    const state = await getCashOnHandState();
 
-  if (!state.isSetUp) {
-    return state;
-  }
+    if (!state.isSetUp) {
+      return state;
+    }
 
-  const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-  const movement = createMovement({
-    type: 'clear',
-    amountMinor: Math.abs(state.balanceMinor),
-    balanceAfterMinor: 0,
-    currency: state.currency,
-    note,
-    createdAt: now,
+    const movement = createMovement({
+      type: 'clear',
+
+      amountMinor: Math.abs(state.balanceMinor),
+
+      balanceAfterMinor: 0,
+
+      currency: state.currency,
+
+      note,
+
+      createdAt: now,
+    });
+
+    const updatedState: CashOnHandState = {
+      isSetUp: false,
+
+      currency: state.currency,
+
+      balanceMinor: 0,
+
+      updatedAt: now,
+
+      movements: [movement, ...state.movements],
+    };
+
+    await writeCashOnHandState(updatedState);
+
+    return updatedState;
   });
-
-  const updatedState: CashOnHandState = {
-    isSetUp: false,
-    currency: state.currency,
-    balanceMinor: 0,
-    updatedAt: now,
-    movements: [movement, ...state.movements],
-  };
-
-  await saveCashOnHandState(updatedState);
-
-  return updatedState;
 }
 
 export async function hasCashOnHandMovementForRelatedRecord(
@@ -340,31 +422,40 @@ export async function hasCashOnHandMovementForRelatedRecord(
 export async function recordTopupSaleCashReceived(
   input: CashOnHandRelatedMovementInput
 ): Promise<CashOnHandState | undefined> {
-  const state = await getCashOnHandState();
+  return enqueueCashOnHandMutation(async () => {
+    const state = await getCashOnHandState();
 
-  if (!state.isSetUp) {
-    return undefined;
-  }
+    if (!state.isSetUp) {
+      return undefined;
+    }
 
-  if (
-    hasMovementForRelatedRecordInState(
+    if (
+      hasMovementForRelatedRecordInState(
+        state,
+        'topup_sale',
+        input.relatedRecordId
+      )
+    ) {
+      return state;
+    }
+
+    return applyIncomingMovement({
       state,
-      'topup_sale',
-      input.relatedRecordId
-    )
-  ) {
-    return state;
-  }
 
-  return applyIncomingMovement({
-    state,
-    type: 'topup_sale',
-    amountMinor: input.amountMinor,
-    currency: input.currency,
-    relatedRecordId: input.relatedRecordId,
-    relatedRecordType: 'voucher',
-    note: input.note,
-    createdAt: input.createdAt,
+      type: 'topup_sale',
+
+      amountMinor: input.amountMinor,
+
+      currency: input.currency,
+
+      relatedRecordId: input.relatedRecordId,
+
+      relatedRecordType: 'voucher',
+
+      note: input.note,
+
+      createdAt: input.createdAt,
+    });
   });
 }
 
@@ -377,31 +468,47 @@ export async function recordTopupSaleCashReceived(
 export async function recordCashOutPaid(
   input: CashOnHandRelatedMovementInput
 ): Promise<CashOnHandState | undefined> {
-  const state = await getCashOnHandState();
+  return enqueueCashOnHandMutation(async () => {
+    const state = await getCashOnHandState();
 
-  if (!state.isSetUp) {
-    return undefined;
-  }
+    if (!state.isSetUp) {
+      return undefined;
+    }
 
-  if (
-    hasMovementForRelatedRecordInState(
+    /**
+     * This check now occurs INSIDE the serialized read-modify-write boundary.
+     *
+     * Two concurrent crash-recovery attempts therefore cannot both observe
+     * "movement missing" and create duplicate cash_out_paid movements.
+     */
+    if (
+      hasMovementForRelatedRecordInState(
+        state,
+        'cash_out_paid',
+        input.relatedRecordId
+      )
+    ) {
+      return state;
+    }
+
+    return applyOutgoingMovement({
       state,
-      'cash_out_paid',
-      input.relatedRecordId
-    )
-  ) {
-    return state;
-  }
 
-  return applyOutgoingMovement({
-    state,
-    type: 'cash_out_paid',
-    amountMinor: input.amountMinor,
-    currency: input.currency,
-    relatedRecordId: input.relatedRecordId,
-    relatedRecordType: 'cash_out',
-    note: input.note,
-    createdAt: input.createdAt,
-    allowNegativeBalance: true,
+      type: 'cash_out_paid',
+
+      amountMinor: input.amountMinor,
+
+      currency: input.currency,
+
+      relatedRecordId: input.relatedRecordId,
+
+      relatedRecordType: 'cash_out',
+
+      note: input.note,
+
+      createdAt: input.createdAt,
+
+      allowNegativeBalance: true,
+    });
   });
 }

@@ -1,6 +1,7 @@
 import type {
   CashOutSettlementBroadcastResult,
   CashOutSettlementIntent,
+  CashOutSettlementSourceConflictEvidence,
 } from 'src/types/cash-out-settlement';
 
 import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
@@ -218,6 +219,14 @@ export interface CashOutRecord {
    */
   settlementReconciliation?: TreasuryBroadcastReconciliationResult;
   status: CashOutStatus;
+
+  /**
+   * D5 conflict evidence for the exact customer-payment source outpoint.
+   *
+   * This is written only from positive evidence that another transaction spends
+   * that exact outpoint. Absence of the UTXO by itself is not sufficient.
+   */
+  settlementSourceConflict?: CashOutSettlementSourceConflictEvidence;
 
   printerJobId?: string;
   errorMessage?: string;
