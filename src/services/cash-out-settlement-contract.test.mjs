@@ -27,7 +27,7 @@ import {
 
 const PAYMENT_SATS = 206_000n;
 const PLATFORM_FEE_SATS = 2_000n;
-const SETTLEMENT_FEE_SATS = 500n;
+const SETTLEMENT_FEE_SATS = 1_000n;
 
 /**
  * Deterministic fake Cash-out quote-instance commitments.
@@ -406,7 +406,7 @@ assertSettlementRejects('extra attacker output is rejected', () =>
 /**
  * Reduce Treasury by one satoshi:
  *
- * actual miner fee becomes 501 instead of the frozen 500.
+ * actual miner fee becomes 1,001 instead of the frozen 1,000.
  */
 assertSettlementRejects('caller cannot increase the settlement miner fee', () =>
   createSettlementTransaction({
@@ -417,7 +417,7 @@ assertSettlementRejects('caller cannot increase the settlement miner fee', () =>
 /**
  * Increase Treasury by one satoshi:
  *
- * actual miner fee becomes 499 instead of the frozen 500.
+ * actual miner fee becomes 999 instead of the frozen 1,000.
  */
 assertSettlementRejects('caller cannot decrease the settlement miner fee', () =>
   createSettlementTransaction({

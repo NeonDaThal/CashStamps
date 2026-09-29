@@ -408,3 +408,140 @@ export interface CashOutSettlementBroadcastResult
   extends TreasuryBroadcastResult {
   explicitRejection?: CashOutSettlementExplicitBroadcastRejection;
 }
+
+export type CashOutSettlementExceptionalCase =
+  | 'underpayment'
+  | 'overpayment'
+  | 'fragmented_payment'
+  | 'multiple_exact_payments'
+  | 'exact_plus_overpayment'
+  | 'late_payment_after_expiry'
+  | 'late_payment_after_cancellation'
+  | 'normal_settlement_problem';
+
+export type CashOutSettlementRecoveryEligibility = 'eligible' | 'blocked';
+
+export type CashOutSettlementRecoveryBlockReason =
+  | 'normal_settlement_available'
+  | 'no_customer_value_received'
+  | 'network_state_unavailable'
+  | 'source_conflict_active'
+  | 'confirmed_conflicting_spender'
+  | 'cash_out_already_completed'
+  | 'normal_settlement_not_proven_unusable'
+  | 'unsupported_exception';
+
+export interface CashOutSettlementRecoveryAssessment {
+  exceptionalCase: CashOutSettlementExceptionalCase;
+
+  eligibility: CashOutSettlementRecoveryEligibility;
+
+  /**
+   * Total positively observed BCH belonging to this exceptional Cash-out.
+   *
+   * This is evidence only at D6A. It does not yet define the recovery
+   * transaction economics.
+   */
+  observedSats: number;
+
+  /**
+   * The original normal-path amount expected from the customer.
+   */
+  requiredSats: number;
+
+  /**
+   * Concrete UTXOs belonging to the exceptional payment set.
+   *
+   * D6D will later bind these exactly before a recovery transaction can be
+   * created.
+   */
+  observedOutpointCount: number;
+
+  blockReason?: CashOutSettlementRecoveryBlockReason;
+
+  message: string;
+}
+
+export type CashOutSettlementRecoveryEconomicsVersion = 'cash_out_recovery_v1';
+
+export type CashOutSettlementRecoveryVariance =
+  | 'underpayment'
+  | 'exact'
+  | 'overpayment';
+
+export interface CashOutSettlementRecoveryEconomicsInput {
+  cashOutId: string;
+
+  /**
+   * Original BCH amount required by the locked Cash-out.
+   *
+   * Exceptional recovery never reprices this value.
+   */
+  requiredSats: number;
+
+  /**
+   * Exact sum of the exceptional UTXOs selected for recovery.
+   *
+   * D6D will later bind those UTXOs individually.
+   */
+  recoveryInputSats: number;
+
+  /**
+   * Original platform allocation calculated from the frozen Cash-out terms.
+   *
+   * Recovery must not recalculate this from the mistaken payment amount.
+   */
+  platformFeeSats: number;
+
+  /**
+   * Exact deterministic recovery transaction miner fee.
+   *
+   * D6 later freezes this through the same fixed-point principle used by
+   * normal settlement.
+   */
+  recoveryFeeSats: number;
+}
+
+export interface CashOutSettlementRecoveryEconomics {
+  version: CashOutSettlementRecoveryEconomicsVersion;
+
+  cashOutId: string;
+
+  requiredSats: number;
+
+  recoveryInputSats: number;
+
+  platformFeeSats: number;
+
+  recoveryFeeSats: number;
+
+  treasuryOutputSats: number;
+
+  /**
+   * Signed difference between actual recovered BCH and original required BCH.
+   *
+   * negative = customer underpaid
+   * zero     = exact total
+   * positive = customer overpaid
+   */
+  paymentVarianceSats: number;
+
+  variance: CashOutSettlementRecoveryVariance;
+
+  /**
+   * Positive only for an underpayment.
+   *
+   * If the merchant still hands over the original fiat cash amount, this is
+   * BCH value the merchant has chosen to absorb.
+   */
+  merchantShortfallSats: number;
+
+  /**
+   * Positive only for an overpayment.
+   *
+   * This is not service-fee revenue and does not increase the platform fee.
+   * Customer-resolution handling is deliberately separate from this
+   * settlement calculation.
+   */
+  customerSurplusSats: number;
+}
