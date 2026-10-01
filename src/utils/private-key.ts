@@ -36,7 +36,7 @@ export class PrivateKey {
     // Ensure that the Private Key is valid.
     if (!secp256k1.validatePrivateKey(bytes)) {
       throw new Error(
-        `Private Key is invalid: Must be >= 0x01 and <= 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140.`
+        'Private Key is invalid: Must be >= 0x01 and <= 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364140.'
       );
     }
 

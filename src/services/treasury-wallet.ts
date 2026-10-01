@@ -1,5 +1,7 @@
-import { generateBip39Mnemonic } from '@bitauth/libauth';
+import { generateBip39Mnemonic, secp256k1 } from '@bitauth/libauth';
 import { del, get, set } from 'idb-keyval';
+
+import { SignatureTemplate, type Contract } from 'cashscript';
 
 import { ELECTRUM_SERVERS } from 'src/config';
 import { ElectrumService } from 'src/services/electrum';
@@ -57,6 +59,113 @@ async function deriveTreasuryAddressFromMnemonic(
   const wallet = await deriveTreasuryWalletAtIndex(mnemonic, 0);
 
   return wallet.getAddress();
+}
+
+/**
+ * D6E.1B — narrow Treasury Cash-out recovery-signing boundary.
+ *
+ * This is the only production boundary that exceptional Cash-out recovery
+ * transaction construction should use to obtain Treasury authorization.
+ *
+ * It deliberately does NOT expose:
+ *
+ * - the Treasury mnemonic;
+ * - the Treasury wallet object;
+ * - raw private-key bytes;
+ * - private-key hex;
+ * - WIF;
+ * - a reusable general-purpose signer.
+ *
+ * Instead, it derives the Treasury master wallet internally at index 0 and
+ * returns only the CashScript unlocker required for one recover() input.
+ *
+ * This function:
+ *
+ * - does not discover recovery inputs;
+ * - does not construct outputs;
+ * - does not calculate the recovery fee;
+ * - does not persist anything;
+ * - does not broadcast anything.
+ *
+ * The caller must already have the exact instantiated Cash-out contract and
+ * frozen positive recovery fee.
+ */
+export async function createTreasuryCashOutRecoveryUnlocker(
+  contract: Contract,
+  recoveryFeeSats: number
+) {
+  if (!Number.isSafeInteger(recoveryFeeSats) || recoveryFeeSats <= 0) {
+    throw new Error(
+      'Cash-out recovery miner fee must be a positive safe integer.'
+    );
+  }
+
+  const treasuryWalletRecord = await getTreasuryWalletRecord();
+
+  if (!treasuryWalletRecord) {
+    throw new Error(
+      'Treasury wallet is not set up for Cash-out recovery signing.'
+    );
+  }
+
+  /**
+   * The Cash-out covenant commits treasuryPkh to the Treasury master wallet,
+   * which is derivation index 0.
+   *
+   * Cash-out receiving child addresses use later derivation indexes and must
+   * never be used as the recovery authority.
+   */
+  const treasuryWallet = await deriveTreasuryWalletAtIndex(
+    treasuryWalletRecord.mnemonic,
+    0
+  );
+
+  /**
+   * Fail closed if durable Treasury metadata and deterministic derivation no
+   * longer describe the same Treasury wallet.
+   */
+  const derivedTreasuryAddress = treasuryWallet.getAddress();
+
+  if (derivedTreasuryAddress !== treasuryWalletRecord.address) {
+    throw new Error(
+      'Derived Treasury recovery signer does not match the stored Treasury address.'
+    );
+  }
+
+  /**
+   * Private-key material remains inside this narrow boundary.
+   *
+   * Do not return, persist, log or otherwise expose these bytes.
+   */
+  const treasuryPrivateKeyBytes = treasuryWallet.toBytes();
+
+  const merchantPublicKey = secp256k1.derivePublicKeyCompressed(
+    treasuryPrivateKeyBytes
+  );
+
+  if (typeof merchantPublicKey === 'string') {
+    throw new Error(
+      `Could not derive Treasury recovery public key: ${merchantPublicKey}`
+    );
+  }
+
+  const recoverUnlockerFactory = contract.unlock['recover'];
+
+  if (typeof recoverUnlockerFactory !== 'function') {
+    throw new Error('Cash-out settlement contract does not expose recover().');
+  }
+
+  /**
+   * SignatureTemplate retains the signing capability required when CashScript
+   * later serializes/evaluates the transaction.
+   *
+   * Only the resulting contract Unlocker crosses this boundary.
+   */
+  return recoverUnlockerFactory(
+    merchantPublicKey,
+    new SignatureTemplate(treasuryPrivateKeyBytes),
+    BigInt(recoveryFeeSats)
+  );
 }
 
 async function deriveTreasuryWalletAtIndexWithElectrum(
