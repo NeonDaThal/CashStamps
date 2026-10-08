@@ -164,15 +164,22 @@ function addSelectedUtxos(provider, contract) {
   return [first, second];
 }
 
-function createRecoveryUnlocker(contract, privateKey = MERCHANT_PRIVATE_KEY) {
+function createRecoveryUnlocker(
+  contract,
+  privateKey = MERCHANT_PRIVATE_KEY,
+  recoveryFeeSats = RECOVERY_FEE_SATS
+) {
   return contract.unlock.recover(
     MERCHANT_PUBLIC_KEY,
     new SignatureTemplate(privateKey),
-    RECOVERY_FEE_SATS
+    recoveryFeeSats
   );
 }
 
-function buildTwoInputRecovery(privateKey = MERCHANT_PRIVATE_KEY) {
+function buildTwoInputRecovery(
+  privateKey = MERCHANT_PRIVATE_KEY,
+  recoveryFeeSats = RECOVERY_FEE_SATS
+) {
   const provider = new MockNetworkProvider();
 
   const contract = createContract(provider);
@@ -185,7 +192,7 @@ function buildTwoInputRecovery(privateKey = MERCHANT_PRIVATE_KEY) {
   );
 
   const treasuryOutputSats =
-    totalInputSats - PLATFORM_FEE_SATS - RECOVERY_FEE_SATS;
+    totalInputSats - PLATFORM_FEE_SATS - recoveryFeeSats;
 
   const transactionBuilder = new TransactionBuilder({
     provider,
@@ -202,7 +209,7 @@ function buildTwoInputRecovery(privateKey = MERCHANT_PRIVATE_KEY) {
   for (const selectedInput of selectedInputs) {
     transactionBuilder.addInput(
       selectedInput,
-      createRecoveryUnlocker(contract, privateKey)
+      createRecoveryUnlocker(contract, privateKey, recoveryFeeSats)
     );
   }
 
@@ -328,6 +335,82 @@ function buildTwoInputRecovery(privateKey = MERCHANT_PRIVATE_KEY) {
 
   console.log(
     'PASS: wrong Treasury recovery signature is rejected by recover()'
+  );
+}
+
+/**
+ * D6E.3 fixed-point proof.
+ *
+ * The final recovery fee must be discovered from the actual final signed
+ * transaction rather than hard-coded from previous measurements.
+ */
+{
+  let proposedRecoveryFeeSats = 1n;
+
+  let fixedPoint = null;
+
+  for (let iteration = 1; iteration <= 20; iteration += 1) {
+    let candidate;
+
+    try {
+      candidate = buildTwoInputRecovery(
+        MERCHANT_PRIVATE_KEY,
+        proposedRecoveryFeeSats
+      );
+
+      candidate.transactionBuilder.debug();
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.name === 'TransactionFeePerByteTooLowError' ||
+          error.constructor.name === 'TransactionFeePerByteTooLowError')
+      ) {
+        proposedRecoveryFeeSats *= 2n;
+
+        continue;
+      }
+
+      throw error;
+    }
+
+    const rawTransactionHex = candidate.transactionBuilder
+      .build()
+      .trim()
+      .toLowerCase();
+
+    const transactionBytes = BigInt(rawTransactionHex.length / 2);
+
+    const requiredRecoveryFeeSats = transactionBytes;
+
+    if (proposedRecoveryFeeSats === requiredRecoveryFeeSats) {
+      fixedPoint = {
+        iteration,
+
+        recoveryFeeSats: proposedRecoveryFeeSats,
+
+        transactionBytes,
+      };
+
+      break;
+    }
+
+    proposedRecoveryFeeSats = requiredRecoveryFeeSats;
+  }
+
+  assert.notEqual(
+    fixedPoint,
+    null,
+    'Recovery fee planning must reach an exact fixed point.'
+  );
+
+  assert.equal(
+    fixedPoint.recoveryFeeSats,
+    fixedPoint.transactionBytes,
+    'Final recovery fee must equal final signed byte size at 1 sat/byte.'
+  );
+
+  console.log(
+    `PASS: recovery fee reaches signed-transaction fixed point at ${fixedPoint.recoveryFeeSats} sats`
   );
 }
 

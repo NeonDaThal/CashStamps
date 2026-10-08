@@ -1,3 +1,5 @@
+import { hashTransaction, hexToBin } from '@bitauth/libauth';
+
 import {
   Contract,
   TransactionBuilder,
@@ -10,10 +12,15 @@ import cashOutSettlementArtifactJson from 'src/contracts/artifacts/CashOutSettle
 
 import type { CashOutSettlementRecoveryInputAuthorization } from './cash-out-settlement-recovery-input-authorization';
 
-import type { CashOutSettlementRecoveryPlan } from './cash-out-settlement-recovery-plan';
+import {
+  buildCashOutSettlementRecoveryPlan,
+  type CashOutSettlementRecoveryPlan,
+} from './cash-out-settlement-recovery-plan';
 
 import {
   buildCashOutSettlementRecoverySigningRequest,
+  createCashOutSettlementRecoverySignedTransactionArtifact,
+  type CashOutSettlementRecoverySignedTransactionArtifact,
   type CashOutSettlementRecoverySigningRequest,
 } from './cash-out-settlement-recovery-signing';
 
@@ -32,6 +39,12 @@ const HEX_32_PATTERN = /^[0-9a-f]{64}$/;
 const HEX_20_PATTERN = /^[0-9a-f]{40}$/;
 
 const RAW_TRANSACTION_HEX_PATTERN = /^[0-9a-f]+$/;
+
+const TXID_PATTERN = /^[0-9a-f]{64}$/;
+
+export const CASH_OUT_SETTLEMENT_RECOVERY_FEE_RATE_SATS_PER_BYTE = 1;
+
+const MAX_RECOVERY_FEE_PLANNING_ITERATIONS = 20;
 
 /**
  * Deliberately infer the unlocker type from TransactionBuilder itself rather
@@ -87,9 +100,59 @@ export interface CashOutSettlementRecoveryTransactionCandidate {
   signingRequest: CashOutSettlementRecoverySigningRequest;
 }
 
+export interface CashOutSettlementRecoveryFeePlanningIteration {
+  iteration: number;
+
+  proposedRecoveryFeeSats: number;
+
+  transactionSizeBytes: number;
+
+  requiredRecoveryFeeSats: number;
+}
+
+export interface FinalizeCashOutSettlementRecoveryTransactionInput {
+  contractPlan: CashOutSettlementContractPlan;
+
+  /**
+   * Canonical D6C input set already selected before transaction construction.
+   *
+   * D6E must never discover or substitute recovery inputs.
+   */
+  inputSet: Parameters<
+    typeof buildCashOutSettlementRecoveryPlan
+  >[0]['inputSet'];
+
+  authorization: CashOutSettlementRecoveryInputAuthorization;
+
+  provider: NetworkProvider;
+
+  /**
+   * Optional deterministic timestamp for tests/replay.
+   *
+   * It is metadata only and does not participate in transaction identity.
+   */
+  preparedAt?: string;
+}
+
+export interface CashOutSettlementRecoveryFinalizedTransaction {
+  recoveryPlan: CashOutSettlementRecoveryPlan;
+
+  artifact: CashOutSettlementRecoverySignedTransactionArtifact;
+
+  feePlanningIterations: CashOutSettlementRecoveryFeePlanningIteration[];
+}
+
 function fail(message: string): never {
   throw new Error(
     `Invalid Cash-out recovery transaction candidate: ${message}`
+  );
+}
+
+function isRecoveryFeeTooLowError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === 'TransactionFeePerByteTooLowError' ||
+      error.constructor.name === 'TransactionFeePerByteTooLowError')
   );
 }
 
@@ -482,4 +545,215 @@ export async function createCashOutSettlementRecoveryTransactionCandidate(
 
     signingRequest,
   };
+}
+
+/**
+ * D6E.3 — finalize one exact exceptional-recovery transaction.
+ *
+ * This is the production fixed-point boundary.
+ *
+ * Starting from the already-authorized D6C/D6D input set, it repeatedly:
+ *
+ * 1. freezes a recovery plan using the proposed miner fee;
+ * 2. constructs and signs the exact CashScript recovery transaction;
+ * 3. measures the actual final serialized transaction;
+ * 4. calculates the required miner fee at the frozen 1 sat/byte policy;
+ * 5. repeats until proposed fee === required fee.
+ *
+ * Only after reaching that exact fixed point does it:
+ *
+ * - calculate the deterministic txid from the exact signed raw bytes;
+ * - pass the transaction through the D6E.1/D6C.5 signed-artifact boundary.
+ *
+ * This function performs no persistence and no broadcast.
+ */
+export async function finalizeCashOutSettlementRecoveryTransaction(
+  input: FinalizeCashOutSettlementRecoveryTransactionInput,
+  dependencies: CashOutSettlementRecoveryTransactionDependencies
+): Promise<CashOutSettlementRecoveryFinalizedTransaction> {
+  const feePlanningIterations: CashOutSettlementRecoveryFeePlanningIteration[] =
+    [];
+
+  /**
+   * Start from the minimum valid positive recovery fee.
+   *
+   * This is only the first proposal — never the final fee unless the actual
+   * signed transaction independently proves it.
+   */
+  let proposedRecoveryFeeSats = 1;
+
+  for (
+    let iteration = 1;
+    iteration <= MAX_RECOVERY_FEE_PLANNING_ITERATIONS;
+    iteration += 1
+  ) {
+    /**
+     * Recovery economics always reuse the original frozen Cash-out terms.
+     *
+     * Exceptional customer payment shapes never cause repricing or a larger
+     * platform allocation.
+     */
+    const recoveryPlan = buildCashOutSettlementRecoveryPlan({
+      cashOutId: input.contractPlan.settlementPlan.cashOutId,
+
+      requiredSats: input.contractPlan.settlementPlan.paymentSats,
+
+      platformFeeSats: input.contractPlan.settlementPlan.platformOutputSats,
+
+      recoveryFeeSats: proposedRecoveryFeeSats,
+
+      inputSet: input.inputSet,
+
+      treasuryDestination:
+        input.contractPlan.settlementPlan.treasuryDestination,
+
+      platformDestination:
+        input.contractPlan.settlementPlan.platformDestination,
+    });
+
+    let candidate: CashOutSettlementRecoveryTransactionCandidate;
+
+    try {
+      candidate = await createCashOutSettlementRecoveryTransactionCandidate(
+        {
+          contractPlan: input.contractPlan,
+
+          recoveryPlan,
+
+          authorization: input.authorization,
+
+          provider: input.provider,
+        },
+
+        dependencies
+      );
+    } catch (error: unknown) {
+      /**
+       * A very small bootstrap fee may be below CashScript's standard minimum
+       * relay-fee policy before we have been able to measure the final signed
+       * transaction.
+       *
+       * Increase only that proposed fee and try the exact same authorized
+       * transaction again.
+       *
+       * No input, destination or original Cash-out economics are changed.
+       */
+      if (isRecoveryFeeTooLowError(error)) {
+        const increasedProposal = proposedRecoveryFeeSats * 2;
+
+        if (
+          !Number.isSafeInteger(increasedProposal) ||
+          increasedProposal <= proposedRecoveryFeeSats
+        ) {
+          fail(
+            'could not safely increase the recovery fee bootstrap proposal.'
+          );
+        }
+
+        feePlanningIterations.push({
+          iteration,
+
+          proposedRecoveryFeeSats,
+
+          transactionSizeBytes: 0,
+
+          requiredRecoveryFeeSats: increasedProposal,
+        });
+
+        proposedRecoveryFeeSats = increasedProposal;
+
+        continue;
+      }
+
+      throw error;
+    }
+
+    const requiredRecoveryFeeSats =
+      candidate.transactionBytes *
+      CASH_OUT_SETTLEMENT_RECOVERY_FEE_RATE_SATS_PER_BYTE;
+
+    if (
+      !Number.isSafeInteger(requiredRecoveryFeeSats) ||
+      requiredRecoveryFeeSats <= 0
+    ) {
+      fail(
+        'calculated fixed-point recovery miner fee is not a positive safe integer.'
+      );
+    }
+
+    feePlanningIterations.push({
+      iteration,
+
+      proposedRecoveryFeeSats,
+
+      transactionSizeBytes: candidate.transactionBytes,
+
+      requiredRecoveryFeeSats,
+    });
+
+    if (proposedRecoveryFeeSats === requiredRecoveryFeeSats) {
+      /**
+       * The exact signed transaction has reached its fee/size fixed point.
+       *
+       * Nothing may reconstruct or alter it after this point.
+       */
+      const rawTransactionBytes = hexToBin(candidate.rawTransactionHex);
+
+      if (rawTransactionBytes.length !== candidate.transactionBytes) {
+        fail(
+          'final recovery raw transaction byte length changed during txid calculation.'
+        );
+      }
+
+      const txid = hashTransaction(rawTransactionBytes).trim().toLowerCase();
+
+      if (!TXID_PATTERN.test(txid)) {
+        fail(
+          'could not calculate a valid deterministic recovery transaction ID.'
+        );
+      }
+
+      const preparedAt = input.preparedAt ?? new Date().toISOString();
+
+      const artifact = createCashOutSettlementRecoverySignedTransactionArtifact(
+        {
+          plan: recoveryPlan,
+
+          authorization: input.authorization,
+
+          signed: {
+            rawTransactionHex: candidate.rawTransactionHex,
+
+            txid,
+
+            transactionBytes: candidate.transactionBytes,
+
+            transactionSummary: candidate.transactionSummary,
+          },
+
+          preparedAt,
+        }
+      );
+
+      return {
+        recoveryPlan,
+
+        artifact,
+
+        feePlanningIterations,
+      };
+    }
+
+    /**
+     * Rebuild the complete signed transaction with the newly measured fee.
+     *
+     * We do not mutate the previous candidate because the recovery fee is
+     * covenant-significant and changes the Treasury output.
+     */
+    proposedRecoveryFeeSats = requiredRecoveryFeeSats;
+  }
+
+  fail(
+    'recovery miner-fee planning did not converge within the maximum iteration count.'
+  );
 }

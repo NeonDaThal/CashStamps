@@ -4,6 +4,8 @@ import type {
   CashOutSettlementSourceConflictEvidence,
 } from 'src/types/cash-out-settlement';
 
+import type { CashOutSettlementRecoverySignedTransactionArtifact } from 'src/services/cash-out-settlement-recovery-signing';
+
 import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
 
 export type CashOutStatus =
@@ -200,6 +202,19 @@ export interface CashOutRecord {
    * Legacy and current pre-CashScript Cash-outs do not contain this field.
    */
   settlementIntent?: CashOutSettlementIntent;
+
+  /**
+   * Durable exceptional-recovery CashScript transaction.
+   *
+   * This is separate from settlementIntent because normal settlement and
+   * exceptional merchant recovery are different transaction paths.
+   *
+   * The exact signed recovery transaction is persisted BEFORE D6F may make
+   * any broadcast attempt.
+   *
+   * Once present, another recovery transaction must never silently replace it.
+   */
+  recoveryIntent?: CashOutSettlementRecoverySignedTransactionArtifact;
   /**
    * Latest submission result for the exact durable normal-settlement
    * transaction.
