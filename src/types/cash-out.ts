@@ -215,6 +215,24 @@ export interface CashOutRecord {
    * Once present, another recovery transaction must never silently replace it.
    */
   recoveryIntent?: CashOutSettlementRecoverySignedTransactionArtifact;
+
+  /**
+   * Latest submission result for the exact durable exceptional-recovery
+   * transaction.
+   *
+   * D6F may only describe the transaction already stored in recoveryIntent.
+   */
+  recoveryBroadcast?: CashOutSettlementBroadcastResult;
+
+  /**
+   * Latest strongest network evidence for the exact deterministic recovery
+   * transaction ID.
+   *
+   * Positive evidence is monotonic:
+   *
+   * confirmed > mempool > unknown > unavailable
+   */
+  recoveryReconciliation?: TreasuryBroadcastReconciliationResult;
   /**
    * Latest submission result for the exact durable normal-settlement
    * transaction.

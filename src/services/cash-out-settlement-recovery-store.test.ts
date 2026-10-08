@@ -1,4 +1,12 @@
-import { applyCashOutSettlementRecoveryIntent } from './cash-out-settlement-recovery-store';
+import {
+  applyCashOutSettlementRecoveryBroadcast,
+  applyCashOutSettlementRecoveryIntent,
+  applyCashOutSettlementRecoveryReconciliation,
+} from './cash-out-settlement-recovery-store';
+
+import type { CashOutSettlementBroadcastResult } from 'src/types/cash-out-settlement';
+
+import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
 
 import type { CashOutSettlementRecoverySignedTransactionArtifact } from './cash-out-settlement-recovery-signing';
 
@@ -188,6 +196,88 @@ function createIntent(
   );
 
   pass('different second recovery transaction is rejected');
+}
+
+/**
+ * D6F network state must remain bound to the exact durable recovery txid.
+ */
+{
+  const intent = createIntent();
+
+  const record = {
+    ...createRecord(),
+
+    recoveryIntent: intent,
+  };
+
+  const foreignBroadcast: CashOutSettlementBroadcastResult = {
+    status: 'uncertain',
+
+    txid: 'b'.repeat(64),
+
+    broadcastEnabled: true,
+
+    requestAttempted: true,
+
+    attemptedAt: '2026-10-08T13:00:00.000Z',
+
+    errorMessage: 'Synthetic ambiguous test result.',
+  };
+
+  assertThrows(() =>
+    applyCashOutSettlementRecoveryBroadcast(record, foreignBroadcast)
+  );
+
+  pass('recovery broadcast state for a different txid is rejected');
+}
+
+/**
+ * Positive recovery reconciliation evidence is monotonic.
+ */
+{
+  const intent = createIntent();
+
+  const confirmed: TreasuryBroadcastReconciliationResult = {
+    txid: intent.txid,
+
+    status: 'confirmed',
+
+    blockHeight: 900_000,
+
+    serverChecks: [],
+
+    checkedAt: '2026-10-08T13:00:00.000Z',
+
+    message: 'Synthetic confirmed recovery transaction.',
+  };
+
+  const record = {
+    ...createRecord(),
+
+    recoveryIntent: intent,
+
+    recoveryReconciliation: confirmed,
+  };
+
+  const weaker: TreasuryBroadcastReconciliationResult = {
+    txid: intent.txid,
+
+    status: 'unknown',
+
+    serverChecks: [],
+
+    checkedAt: '2026-10-08T13:01:00.000Z',
+
+    message: 'Synthetic later unknown result.',
+  };
+
+  const result = applyCashOutSettlementRecoveryReconciliation(record, weaker);
+
+  assertEqual(result, record);
+
+  pass(
+    'confirmed recovery evidence cannot be downgraded by a later unknown result'
+  );
 }
 
 console.log('');
