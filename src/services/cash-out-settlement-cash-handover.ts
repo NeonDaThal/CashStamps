@@ -115,25 +115,31 @@ export function evaluateCashOutCashHandover(
 }
 
 /**
- * Pure D5E business transition.
+ * Shared physical-cash business transition.
  *
  * IMPORTANT:
  *
- * This function represents the merchant confirming AFTER physically handing
- * cash to the customer.
+ * This function does NOT decide whether BCH settlement/recovery is safe.
  *
- * It does not:
+ * Its caller must already have established the appropriate safety condition:
  *
- * - perform network calls;
- * - perform settlement;
- * - alter Cash on Hand;
- * - create report movements;
- * - print a receipt.
+ * - normal settlement safety for the D5 path; or
+ * - confirmed exceptional-recovery safety for the D6 path.
  *
- * D5F will separately reconcile completed Cash-outs into Cash-on-Hand
- * accounting.
+ * This function represents only the human/business event:
+ *
+ * "The merchant has physically handed the agreed cash to the customer."
+ *
+ * It remains deliberately independent of:
+ *
+ * - normal settlement evidence;
+ * - exceptional recovery evidence;
+ * - network calls;
+ * - Cash on Hand;
+ * - reports;
+ * - receipt printing.
  */
-export function applyCashOutCashHandoverConfirmation(
+export function applyCashOutPhysicalCashHandoverConfirmation(
   cashOut: CashOutRecord,
   confirmation: CashOutCashHandoverConfirmation
 ): CashOutRecord {
@@ -144,18 +150,24 @@ export function applyCashOutCashHandoverConfirmation(
   }
 
   /**
-   * Duplicate merchant presses after a successful completion must not create a
-   * second business event or rewrite completedAt.
+   * Duplicate merchant confirmation after completion is idempotent.
+   *
+   * In particular, completedAt must never be replaced by a later retry.
    */
   if (cashOut.status === 'completed') {
     return cashOut;
   }
 
-  const decision = evaluateCashOutCashHandover(cashOut);
-
-  if (!decision.allowed) {
+  /**
+   * Every physical completion path, whether normal settlement or exceptional
+   * recovery, must cross the same received -> completed boundary.
+   *
+   * Recovery must therefore first persist its confirmed BCH-side result as
+   * received before physical cash can be completed.
+   */
+  if (cashOut.status !== 'received') {
     throw new Error(
-      `Cash handover is blocked: ${decision.reason}. ${decision.message}`
+      'Physical cash handover may only complete a received Cash-out.'
     );
   }
 
@@ -170,4 +182,48 @@ export function applyCashOutCashHandoverConfirmation(
 
     updatedAt: confirmation.confirmedAt,
   };
+}
+
+/**
+ * Pure D5E NORMAL-settlement business transition.
+ *
+ * This remains the normal Cash-out path.
+ *
+ * Normal settlement safety is checked first. Only after D5 considers the exact
+ * deterministic normal settlement safe does execution enter the shared
+ * physical-cash transition.
+ *
+ * Exceptional recovery must NOT call this function because its safety evidence
+ * is different. D6 will use its own recovery-safety boundary and then call the
+ * same shared physical-cash transition.
+ */
+export function applyCashOutCashHandoverConfirmation(
+  cashOut: CashOutRecord,
+  confirmation: CashOutCashHandoverConfirmation
+): CashOutRecord {
+  /**
+   * Preserve the existing runtime guard before any other decision.
+   */
+  if (confirmation.merchantConfirmedCashHandedOver !== true) {
+    throw new Error(
+      'Explicit merchant confirmation that cash was handed over is required.'
+    );
+  }
+
+  /**
+   * Preserve existing duplicate-confirmation semantics.
+   */
+  if (cashOut.status === 'completed') {
+    return cashOut;
+  }
+
+  const decision = evaluateCashOutCashHandover(cashOut);
+
+  if (!decision.allowed) {
+    throw new Error(
+      `Cash handover is blocked: ${decision.reason}. ${decision.message}`
+    );
+  }
+
+  return applyCashOutPhysicalCashHandoverConfirmation(cashOut, confirmation);
 }
