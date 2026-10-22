@@ -57,6 +57,111 @@ function normalizeAddress(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function requirePositiveSafeInteger(value: number, fieldName: string): number {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${fieldName} must be a positive safe integer.`);
+  }
+
+  return value;
+}
+
+/**
+ * Prove that a shape-based exceptional-case label actually describes the
+ * exact canonical recovery inputs.
+ *
+ * Contextual exceptional cases such as a late payment or a positively proven
+ * normal-settlement problem may legitimately contain one exact payment, so
+ * those cases are validated by their lifecycle/state boundaries instead.
+ */
+export function assertCashOutSettlementRecoveryInputShape(
+  exceptionalCase: CashOutSettlementRecoveryAssessment['exceptionalCase'],
+  requiredSats: number,
+  inputSet: CashOutSettlementRecoveryInputSet
+): void {
+  const required = requirePositiveSafeInteger(
+    requiredSats,
+    'Cash-out recovery required sats'
+  );
+
+  const total = inputSet.totalInputSats;
+
+  const count = inputSet.inputCount;
+
+  const values = inputSet.inputs.map((entry) => entry.satoshis);
+
+  switch (exceptionalCase) {
+    case 'underpayment':
+      if (count !== 1 || total >= required) {
+        throw new Error(
+          'Underpayment recovery requires exactly one payment below the required Cash-out amount.'
+        );
+      }
+
+      return;
+
+    case 'overpayment':
+      if (count !== 1 || total <= required) {
+        throw new Error(
+          'Overpayment recovery requires exactly one payment above the required Cash-out amount.'
+        );
+      }
+
+      return;
+
+    case 'fragmented_payment':
+      if (count < 2 || values.some((value) => value >= required)) {
+        throw new Error(
+          'Fragmented-payment recovery requires multiple individually incomplete payments.'
+        );
+      }
+
+      return;
+
+    case 'multiple_exact_payments':
+      if (count < 2 || !values.every((value) => value === required)) {
+        throw new Error(
+          'Multiple-exact-payment recovery requires multiple payments each equal to the required Cash-out amount.'
+        );
+      }
+
+      return;
+
+    case 'exact_plus_overpayment':
+      if (
+        count < 2 ||
+        total <= required ||
+        !values.some((value) => value === required)
+      ) {
+        throw new Error(
+          'Exact-plus-overpayment recovery requires an exact payment plus additional customer BCH.'
+        );
+      }
+
+      return;
+
+    case 'late_payment_after_expiry':
+    case 'late_payment_after_cancellation':
+    case 'normal_settlement_problem':
+      /**
+       * These are contextual rather than amount-shape classifications.
+       *
+       * One exact payment can legitimately enter one of these exceptional
+       * cases because of timing or a positively proven settlement failure.
+       */
+      return;
+
+    default: {
+      const exhaustiveCheck: never = exceptionalCase;
+
+      throw new Error(
+        `Unsupported Cash-out recovery exceptional case: ${String(
+          exhaustiveCheck
+        )}`
+      );
+    }
+  }
+}
+
 /**
  * D6D.3
  *
@@ -92,6 +197,31 @@ export function authorizeCashOutSettlementRecoveryInputs(
       'Cash-out recovery inputs cannot be authorized because exceptional recovery is not eligible.'
     );
   }
+
+  const requiredSats = requirePositiveSafeInteger(
+    input.recoveryAssessment.requiredSats,
+    'Cash-out recovery assessment required sats'
+  );
+
+  if (input.recoveryAssessment.observedSats !== input.inputSet.totalInputSats) {
+    throw new Error(
+      'Cash-out recovery assessment amount does not match the canonical recovery input set.'
+    );
+  }
+
+  if (
+    input.recoveryAssessment.observedOutpointCount !== input.inputSet.inputCount
+  ) {
+    throw new Error(
+      'Cash-out recovery assessment input count does not match the canonical recovery input set.'
+    );
+  }
+
+  assertCashOutSettlementRecoveryInputShape(
+    input.recoveryAssessment.exceptionalCase,
+    requiredSats,
+    input.inputSet
+  );
 
   if (input.binding.cashOutId !== cashOutId) {
     throw new Error('Recovery input binding belongs to a different Cash-out.');

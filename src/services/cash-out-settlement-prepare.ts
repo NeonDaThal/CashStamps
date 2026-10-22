@@ -45,7 +45,7 @@ export interface CashOutSettlementPreparationDependencies {
 
   createCashOutSettlementIntent(
     input: CreateCashOutSettlementIntentInput
-  ): CashOutSettlementIntent;
+  ): Promise<CashOutSettlementIntent>;
 }
 
 const DEFAULT_DEPENDENCIES: CashOutSettlementPreparationDependencies = {
@@ -189,6 +189,18 @@ export async function prepareAndStoreCashOutSettlementWithDependencies(
   }
 
   /**
+   * D6I.1B — recovery and normal settlement are mutually exclusive
+   * fee-paying paths.
+   *
+   * Fail before transaction construction/Treasury signing.
+   */
+  if (current.recoveryIntent) {
+    throw new Error(
+      'Cash-out already has a durable recovery transaction and cannot prepare a normal settlement transaction.'
+    );
+  }
+
+  /**
    * Critical restart/re-entry rule:
    *
    * once an exact transaction has crossed the write-ahead boundary, its
@@ -215,7 +227,7 @@ export async function prepareAndStoreCashOutSettlementWithDependencies(
    * No durable intent exists yet, so this is the only path permitted to
    * construct the deterministic settlement transaction.
    */
-  const intent = dependencies.createCashOutSettlementIntent({
+  const intent = await dependencies.createCashOutSettlementIntent({
     contractPlan,
 
     candidate,

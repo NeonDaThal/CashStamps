@@ -3,6 +3,7 @@ import { hexToBin } from '@bitauth/libauth';
 import {
   Contract,
   Network,
+  SignatureTemplate,
   TransactionBuilder,
   type Artifact,
   type NetworkProvider,
@@ -54,6 +55,32 @@ const CASH_OUT_SETTLEMENT_ARTIFACT =
  * produces the same transaction size as the later real selected payment UTXO.
  */
 const SETTLEMENT_SIZE_PROBE_TXID = '00'.repeat(32);
+
+/**
+ * Deterministic TEST-ONLY signing material used exclusively to measure the
+ * serialized size of the authenticated settle() unlocking bytecode.
+ *
+ * Private key = 1 on secp256k1.
+ *
+ * This key:
+ * - is not a Treasury key;
+ * - controls no application funds;
+ * - is never used for production signing;
+ * - exists only because SignatureTemplate needs a fixed-size real signature
+ *   shape for exact fee planning.
+ *
+ * The corresponding compressed public key has the same serialized size as
+ * every production compressed Treasury public key.
+ */
+const SETTLEMENT_SIZE_PROBE_PRIVATE_KEY = Uint8Array.from([
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+]);
+
+const SETTLEMENT_SIZE_PROBE_PUBLIC_KEY = hexToBin(
+  '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
+);
 
 function requireCashOutCommitmentHex(value: string): string {
   const normalized =
@@ -177,7 +204,13 @@ function createSettlementCandidate(input: {
 
     maximumFeeSatsPerByte: 10,
   })
-    .addInput(settlementSizeProbeUtxo, settleUnlockerFactory())
+    .addInput(
+      settlementSizeProbeUtxo,
+      settleUnlockerFactory(
+        SETTLEMENT_SIZE_PROBE_PUBLIC_KEY,
+        new SignatureTemplate(SETTLEMENT_SIZE_PROBE_PRIVATE_KEY)
+      )
+    )
     .addOutput({
       to: settlementPlan.treasuryDestination.address,
 

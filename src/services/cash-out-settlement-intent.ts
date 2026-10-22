@@ -381,6 +381,22 @@ export function applyCashOutSettlementIntent(
   cashOut: CashOutRecord,
   intent: CashOutSettlementIntent
 ): CashOutRecord {
+  /**
+   * D6I.1B — one fee-paying path per Cash-out.
+   *
+   * Once exceptional recovery has crossed its durable write-ahead boundary,
+   * normal settlement must never create another independently signed
+   * platform-fee transaction for this Cash-out.
+   *
+   * Exceptional/manual resolution of later BCH is deliberately outside the
+   * automated MVP path.
+   */
+  if (cashOut.recoveryIntent) {
+    throw new Error(
+      'Cash-out already has a durable recovery transaction and cannot prepare a normal settlement transaction.'
+    );
+  }
+
   if (cashOut.settlementIntent) {
     /**
      * Do not trust persisted state merely because it already exists.

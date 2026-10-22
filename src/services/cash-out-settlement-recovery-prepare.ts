@@ -5,7 +5,12 @@ import {
   type CashOutSettlementRecoverySignedTransactionArtifact,
 } from './cash-out-settlement-recovery-signing';
 
-import type { CashOutSettlementRecoveryInputAuthorization } from './cash-out-settlement-recovery-input-authorization';
+import {
+  authorizeCashOutSettlementRecoveryInputs,
+  type CashOutSettlementRecoveryInputAuthorization,
+} from './cash-out-settlement-recovery-input-authorization';
+
+import type { CashOutSettlementRecoveryInputBinding } from './cash-out-settlement-recovery-input-binding';
 
 import { buildCashOutSettlementRecoveryPlan } from './cash-out-settlement-recovery-plan';
 
@@ -17,20 +22,32 @@ import {
 
 import { storeCashOutSettlementRecoveryIntent } from './cash-out-settlement-recovery-store';
 
-import { createTreasuryCashOutRecoveryUnlocker } from './treasury-wallet';
-
 import { getCashOutRecordById } from 'src/services/cash-out-store';
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
-import type { CashOutSettlementContractPlan } from 'src/types/cash-out-settlement';
+import type {
+  CashOutSettlementContractPlan,
+  CashOutSettlementRecoveryAssessment,
+} from 'src/types/cash-out-settlement';
 
 export interface PrepareCashOutSettlementRecoveryInput {
   contractPlan: CashOutSettlementContractPlan;
 
   inputSet: FinalizeCashOutSettlementRecoveryTransactionInput['inputSet'];
 
-  authorization: CashOutSettlementRecoveryInputAuthorization;
+  /**
+   * Current exceptional-recovery assessment.
+   *
+   * Preparation re-authorizes this assessment against the exact bound input set
+   * immediately before the only path that may invoke the Treasury signer.
+   */
+  recoveryAssessment: CashOutSettlementRecoveryAssessment;
+
+  /**
+   * Current positive network binding for the exact canonical recovery inputs.
+   */
+  binding: CashOutSettlementRecoveryInputBinding;
 
   provider: NetworkProvider;
 
@@ -60,14 +77,93 @@ const DEFAULT_DEPENDENCIES: CashOutSettlementRecoveryPreparationDependencies = {
 
   storeCashOutSettlementRecoveryIntent,
 
-  finalizeCashOutSettlementRecoveryTransaction: (input) =>
-    finalizeCashOutSettlementRecoveryTransaction(input, {
+  async finalizeCashOutSettlementRecoveryTransaction(input) {
+    /**
+     * Keep the isolated recovery preparation/test path free from the Treasury
+     * wallet → Electrum module graph under Node 18.
+     *
+     * Production loads the real narrow signer only when signing is actually
+     * required.
+     */
+    const { createTreasuryCashOutRecoveryUnlocker } = await import(
+      './treasury-wallet'
+    );
+
+    return finalizeCashOutSettlementRecoveryTransaction(input, {
       createRecoveryUnlocker: createTreasuryCashOutRecoveryUnlocker,
-    }),
+    });
+  },
 };
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function authorizeCurrentRecoveryPreparation(
+  input: PrepareCashOutSettlementRecoveryInput,
+  current: CashOutRecord,
+  cashOutId: string
+): CashOutSettlementRecoveryInputAuthorization {
+  /**
+   * The exceptional assessment must still describe the frozen amount belonging
+   * to the current Cash-out record.
+   *
+   * This prevents an otherwise internally-consistent stale assessment from
+   * being reused after the Cash-out's required amount differs.
+   */
+  if (input.recoveryAssessment.requiredSats !== current.bchSatsRequired) {
+    throw new Error(
+      'Cash-out recovery assessment no longer matches the current Cash-out required amount.'
+    );
+  }
+
+  /**
+   * D6I.1C — preparation itself crosses the final authorization boundary.
+   *
+   * Do not trust a previously-created authorization object supplied by a
+   * caller. Re-prove that the assessment, canonical input set and current
+   * network binding all describe the same exceptional payment.
+   */
+  return authorizeCashOutSettlementRecoveryInputs({
+    cashOutId,
+
+    recoveryAssessment: input.recoveryAssessment,
+
+    inputSet: input.inputSet,
+
+    binding: input.binding,
+  });
+}
+
+function assertRecoveryPreparationStillAllowed(current: CashOutRecord): void {
+  /**
+   * An authorization may have been valid when originally assessed but become
+   * stale before Treasury signing.
+   *
+   * Re-check durable current state immediately before the signing path.
+   */
+  if (current.status === 'completed') {
+    throw new Error(
+      'Completed Cash-outs cannot prepare an exceptional recovery transaction.'
+    );
+  }
+
+  const conflict = current.settlementSourceConflict;
+
+  if (conflict?.state === 'detected') {
+    throw new Error(
+      'Cash-out exceptional recovery cannot be prepared while conflicting-spender evidence is active.'
+    );
+  }
+
+  if (
+    current.settlementReconciliation?.status === 'mempool' ||
+    current.settlementReconciliation?.status === 'confirmed'
+  ) {
+    throw new Error(
+      'Cash-out normal settlement already has positive network evidence and exceptional recovery cannot be prepared.'
+    );
+  }
 }
 
 /**
@@ -79,7 +175,8 @@ function normalize(value: string): string {
  */
 function validatePersistedRecoveryIntent(
   intent: CashOutSettlementRecoverySignedTransactionArtifact,
-  input: PrepareCashOutSettlementRecoveryInput
+  input: PrepareCashOutSettlementRecoveryInput,
+  authorization: CashOutSettlementRecoveryInputAuthorization
 ): void {
   const settlementPlan = input.contractPlan.settlementPlan;
 
@@ -142,7 +239,7 @@ function validatePersistedRecoveryIntent(
   const revalidated = createCashOutSettlementRecoverySignedTransactionArtifact({
     plan: recoveryPlan,
 
-    authorization: input.authorization,
+    authorization,
 
     signed: {
       rawTransactionHex: intent.rawTransactionHex,
@@ -213,17 +310,28 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
 ): Promise<CashOutRecord> {
   const cashOutId = input.contractPlan.settlementPlan.cashOutId;
 
-  if (input.authorization.cashOutId !== cashOutId) {
-    throw new Error(
-      'Cash-out recovery authorization belongs to a different Cash-out than the contract plan.'
-    );
-  }
-
   const current = await dependencies.getCashOutRecordById(cashOutId);
 
   if (!current) {
     throw new Error(
       'Cash-out record could not be found while preparing exceptional recovery.'
+    );
+  }
+
+  /**
+   * D6I.1B — normal settlement and recovery are mutually exclusive
+   * fee-paying paths.
+   *
+   * Once a normal signed transaction has crossed the durable write-ahead
+   * boundary, the automated MVP recovery path must not sign another transaction
+   * carrying the platform allocation.
+   *
+   * Any later exceptional BCH requires manual operational resolution rather than
+   * a second automatic fee-paying transaction.
+   */
+  if (current.settlementIntent) {
+    throw new Error(
+      'Cash-out already has a durable normal settlement transaction and cannot prepare an exceptional recovery transaction.'
     );
   }
 
@@ -236,10 +344,34 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
    * Do NOT call the signer again.
    */
   if (current.recoveryIntent) {
-    validatePersistedRecoveryIntent(current.recoveryIntent, input);
+    const authorization = authorizeCurrentRecoveryPreparation(
+      input,
+      current,
+      cashOutId
+    );
+
+    validatePersistedRecoveryIntent(
+      current.recoveryIntent,
+      input,
+      authorization
+    );
 
     return current;
   }
+
+  /**
+   * No durable recovery transaction exists yet.
+   *
+   * Before entering the only branch that may invoke the Treasury recovery
+   * signer, re-check current durable Cash-out state.
+   */
+  assertRecoveryPreparationStillAllowed(current);
+
+  const authorization = authorizeCurrentRecoveryPreparation(
+    input,
+    current,
+    cashOutId
+  );
 
   /**
    * No durable recovery transaction exists yet.
@@ -253,7 +385,7 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
 
       inputSet: input.inputSet,
 
-      authorization: input.authorization,
+      authorization,
 
       provider: input.provider,
 
@@ -293,7 +425,7 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
    * This matters for a concurrent/re-entrant preparation race: storage, not
    * the caller's in-memory artifact, is authoritative.
    */
-  validatePersistedRecoveryIntent(stored.recoveryIntent, input);
+  validatePersistedRecoveryIntent(stored.recoveryIntent, input, authorization);
 
   return stored;
 }

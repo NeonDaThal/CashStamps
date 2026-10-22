@@ -68,6 +68,19 @@ export function applyCashOutSettlementRecoveryIntent(
     );
   }
 
+  /**
+   * D6I.1B — one fee-paying path per Cash-out.
+   *
+   * Once normal settlement has crossed its durable write-ahead boundary,
+   * exceptional recovery must never create another independently signed
+   * platform-fee transaction for the same Cash-out.
+   */
+  if (record.settlementIntent) {
+    throw new Error(
+      'Cash-out already has a durable normal settlement transaction and cannot prepare an exceptional recovery transaction.'
+    );
+  }
+
   const existing = record.recoveryIntent;
 
   if (!existing) {

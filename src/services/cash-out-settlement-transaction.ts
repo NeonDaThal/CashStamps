@@ -249,6 +249,12 @@ function instantiateContract(
   return contract;
 }
 
+export interface CashOutSettlementTransactionDependencies {
+  createTreasuryCashOutNormalSettlementUnlocker(
+    contract: Contract
+  ): Promise<Parameters<TransactionBuilder['addInput']>[1]>;
+}
+
 export interface CreateCashOutSettlementIntentInput {
   contractPlan: CashOutSettlementContractPlan;
 
@@ -270,9 +276,10 @@ export interface CreateCashOutSettlementIntentInput {
  *
  * This function NEVER broadcasts.
  */
-export function createCashOutSettlementIntent(
-  input: CreateCashOutSettlementIntentInput
-): CashOutSettlementIntent {
+export async function createCashOutSettlementIntentWithDependencies(
+  input: CreateCashOutSettlementIntentInput,
+  dependencies: CashOutSettlementTransactionDependencies
+): Promise<CashOutSettlementIntent> {
   const { contractPlan, candidate, provider } = input;
 
   if (provider.network !== Network.MAINNET) {
@@ -288,6 +295,15 @@ export function createCashOutSettlementIntent(
   const settlementPlan = contractPlan.settlementPlan;
 
   const contract = instantiateContract(contractPlan, provider);
+
+  /**
+   * Obtain the narrow Treasury-authorized settle() unlocker.
+   *
+   * Signing authority is acquired only after the exact contract plan and
+   * candidate have already passed validation.
+   */
+  const settlementUnlocker =
+    await dependencies.createTreasuryCashOutNormalSettlementUnlocker(contract);
 
   const sourcePaymentTxid = requireCanonicalTxid(
     candidate.txid,
@@ -312,12 +328,6 @@ export function createCashOutSettlementIntent(
     satoshis: BigInt(sourceValueSats),
   };
 
-  const settleUnlockerFactory = contract.unlock['settle'];
-
-  if (typeof settleUnlockerFactory !== 'function') {
-    throw new Error('Cash-out settlement artifact does not expose settle().');
-  }
-
   const transactionBuilder = new TransactionBuilder({
     provider,
 
@@ -325,7 +335,7 @@ export function createCashOutSettlementIntent(
 
     maximumFeeSatsPerByte: 10,
   })
-    .addInput(sourceUtxo, settleUnlockerFactory())
+    .addInput(sourceUtxo, settlementUnlocker)
     .addOutput({
       to: settlementPlan.treasuryDestination.address,
 
@@ -445,4 +455,27 @@ export function createCashOutSettlementIntent(
 
     preparedAt,
   };
+}
+
+/**
+ * Production normal Cash-out settlement constructor.
+ *
+ * The Treasury signer is loaded lazily here so the pure/dependency-injected
+ * transaction constructor remains usable by the isolated Node 18 test runner
+ * without pulling Electrum into its module graph.
+ *
+ * Builds and Treasury-signs the exact deterministic transaction locally.
+ *
+ * This function never broadcasts.
+ */
+export async function createCashOutSettlementIntent(
+  input: CreateCashOutSettlementIntentInput
+): Promise<CashOutSettlementIntent> {
+  const { createTreasuryCashOutNormalSettlementUnlocker } = await import(
+    'src/services/treasury-wallet'
+  );
+
+  return createCashOutSettlementIntentWithDependencies(input, {
+    createTreasuryCashOutNormalSettlementUnlocker,
+  });
 }

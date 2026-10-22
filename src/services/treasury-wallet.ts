@@ -62,6 +62,87 @@ async function deriveTreasuryAddressFromMnemonic(
 }
 
 /**
+ * D6I.1A — narrow Treasury normal Cash-out settlement-signing boundary.
+ *
+ * Normal settle() is now Treasury-authorized so an unrelated third party
+ * cannot independently settle duplicate exact-payment UTXOs and force
+ * additional platform fees.
+ *
+ * This boundary deliberately does NOT expose:
+ *
+ * - the Treasury mnemonic;
+ * - the Treasury wallet object;
+ * - raw private-key bytes;
+ * - private-key hex;
+ * - WIF;
+ * - a reusable general-purpose signer.
+ *
+ * It derives the Treasury master wallet internally at index 0 and returns only
+ * the CashScript unlocker for this exact instantiated settle() contract call.
+ *
+ * It does not:
+ *
+ * - select the customer payment;
+ * - construct outputs;
+ * - persist anything;
+ * - broadcast anything.
+ */
+export async function createTreasuryCashOutNormalSettlementUnlocker(
+  contract: Contract
+) {
+  const treasuryWalletRecord = await getTreasuryWalletRecord();
+
+  if (!treasuryWalletRecord) {
+    throw new Error(
+      'Treasury wallet is not set up for Cash-out settlement signing.'
+    );
+  }
+
+  /**
+   * The covenant commits treasuryPkh to the Treasury master wallet at
+   * derivation index 0.
+   */
+  const treasuryWallet = await deriveTreasuryWalletAtIndex(
+    treasuryWalletRecord.mnemonic,
+    0
+  );
+
+  const derivedTreasuryAddress = treasuryWallet.getAddress();
+
+  if (derivedTreasuryAddress !== treasuryWalletRecord.address) {
+    throw new Error(
+      'Derived Treasury settlement signer does not match the stored Treasury address.'
+    );
+  }
+
+  /**
+   * Private-key material remains entirely inside this narrow boundary.
+   */
+  const treasuryPrivateKeyBytes = treasuryWallet.toBytes();
+
+  const merchantPublicKey = secp256k1.derivePublicKeyCompressed(
+    treasuryPrivateKeyBytes
+  );
+
+  if (typeof merchantPublicKey === 'string') {
+    throw new Error(
+      `Could not derive Treasury settlement public key: ${merchantPublicKey}`
+    );
+  }
+
+  const settleUnlockerFactory = contract.unlock['settle'];
+
+  if (typeof settleUnlockerFactory !== 'function') {
+    throw new Error('Cash-out settlement contract does not expose settle().');
+  }
+
+  return settleUnlockerFactory(
+    merchantPublicKey,
+    new SignatureTemplate(treasuryPrivateKeyBytes)
+  );
+}
+
+/**
  * D6E.1B — narrow Treasury Cash-out recovery-signing boundary.
  *
  * This is the only production boundary that exceptional Cash-out recovery

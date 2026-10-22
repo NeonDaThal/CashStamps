@@ -139,6 +139,54 @@ function createBinding() {
   };
 }
 
+function createExactSinglePaymentBinding() {
+  const inputSet = buildCashOutSettlementRecoveryInputSet([
+    {
+      txid: TXID_A,
+
+      vout: 0,
+
+      satoshis: 206_000,
+
+      contractAddress: CONTRACT_ADDRESS,
+    },
+  ]);
+
+  return {
+    inputSet,
+
+    binding: bindCashOutSettlementRecoveryInputSetToNetworkEvidence({
+      cashOutId: CASH_OUT_ID,
+
+      expectedContractAddress: CONTRACT_ADDRESS,
+
+      inputSet,
+
+      networkEvidence: {
+        source: 'electrum_listunspent',
+
+        available: true,
+
+        contractAddress: CONTRACT_ADDRESS,
+
+        utxos: [
+          {
+            txid: TXID_A,
+
+            vout: 0,
+
+            satoshis: 206_000,
+
+            height: 900_001,
+
+            tokenDataPresent: false,
+          },
+        ],
+      },
+    }),
+  };
+}
+
 /**
  * Fully eligible + bound input set succeeds.
  */
@@ -307,6 +355,112 @@ function createBinding() {
   );
 
   pass('bound recovery input ordering must remain canonical');
+}
+
+/**
+ * D6I.1C — assessment amount must describe the exact selected inputs.
+ */
+{
+  const { inputSet, binding } = createBinding();
+
+  const mismatchedAssessment = {
+    ...createEligibleAssessment(),
+
+    observedSats: 205_999,
+  };
+
+  assertThrows(() =>
+    authorizeCashOutSettlementRecoveryInputs({
+      cashOutId: CASH_OUT_ID,
+
+      recoveryAssessment: mismatchedAssessment,
+
+      inputSet,
+
+      binding,
+    })
+  );
+
+  pass(
+    'recovery assessment amount must match the exact canonical recovery inputs'
+  );
+}
+
+/**
+ * D6I.1C — assessment input count must describe the exact selected inputs.
+ */
+{
+  const { inputSet, binding } = createBinding();
+
+  const mismatchedAssessment = {
+    ...createEligibleAssessment(),
+
+    observedOutpointCount: 1,
+  };
+
+  assertThrows(() =>
+    authorizeCashOutSettlementRecoveryInputs({
+      cashOutId: CASH_OUT_ID,
+
+      recoveryAssessment: mismatchedAssessment,
+
+      inputSet,
+
+      binding,
+    })
+  );
+
+  pass(
+    'recovery assessment input count must match the exact canonical recovery inputs'
+  );
+}
+
+/**
+ * D6I.1C — one exact normal payment cannot be relabelled as an amount-shape
+ * exception.
+ */
+{
+  const falseExceptionalCases = [
+    'underpayment',
+    'overpayment',
+    'fragmented_payment',
+    'multiple_exact_payments',
+    'exact_plus_overpayment',
+  ] as const;
+
+  for (const exceptionalCase of falseExceptionalCases) {
+    const { inputSet, binding } = createExactSinglePaymentBinding();
+
+    const assessment: CashOutSettlementRecoveryAssessment = {
+      exceptionalCase,
+
+      eligibility: 'eligible',
+
+      observedSats: 206_000,
+
+      requiredSats: 206_000,
+
+      observedOutpointCount: 1,
+
+      message: 'Deliberately false exceptional classification.',
+    };
+
+    assertThrows(() =>
+      authorizeCashOutSettlementRecoveryInputs({
+        cashOutId: CASH_OUT_ID,
+
+        recoveryAssessment: assessment,
+
+        inputSet,
+
+        binding,
+      })
+    );
+  }
+
+  pass(
+    'one exact payment cannot be falsely authorized as a shape-based exceptional payment'
+  );
 }
 
 console.log('');

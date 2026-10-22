@@ -1,6 +1,9 @@
-import { MockNetworkProvider, Network } from 'cashscript';
+import { MockNetworkProvider, Network, SignatureTemplate } from 'cashscript';
 
-import { createCashOutSettlementIntent } from 'src/services/cash-out-settlement-transaction';
+import {
+  createCashOutSettlementIntentWithDependencies,
+  type CashOutSettlementTransactionDependencies,
+} from 'src/services/cash-out-settlement-transaction';
 
 import { buildCashOutSettlementContractPlan } from 'src/services/cash-out-settlement-contract-plan';
 
@@ -12,8 +15,26 @@ import { applyCashOutSettlementIntent } from 'src/services/cash-out-settlement-i
 
 import { prepareAndStoreCashOutSettlementWithDependencies } from 'src/services/cash-out-settlement-prepare';
 
+/**
+ * Deterministic TEST-ONLY Treasury identity.
+ *
+ * Private key = 1.
+ * This controls no application funds.
+ */
 const TREASURY_ADDRESS =
-  'bitcoincash:qqqsyqcyq5rqwzqfpg9scrgwpugpzysnzstne440kw';
+  'bitcoincash:qp63uahgrxged4z5jswyt5dn5v3lzsem6cy4spdc2h';
+
+const TEST_TREASURY_PRIVATE_KEY = Uint8Array.from([
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+]);
+
+const TEST_TREASURY_PUBLIC_KEY = Uint8Array.from([
+  0x02, 0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95,
+  0xce, 0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59,
+  0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98,
+]);
 
 const CASH_OUT_COMMITMENT = '01'.repeat(32);
 
@@ -88,6 +109,24 @@ function createMainnetMockProvider(): MockNetworkProvider {
 
   return provider;
 }
+
+const TEST_TRANSACTION_DEPENDENCIES: CashOutSettlementTransactionDependencies =
+  {
+    async createTreasuryCashOutNormalSettlementUnlocker(contract) {
+      const settleUnlockerFactory = contract.unlock['settle'];
+
+      if (typeof settleUnlockerFactory !== 'function') {
+        throw new Error(
+          'Test Cash-out settlement contract does not expose settle().'
+        );
+      }
+
+      return settleUnlockerFactory(
+        TEST_TREASURY_PUBLIC_KEY,
+        new SignatureTemplate(TEST_TREASURY_PRIVATE_KEY)
+      );
+    },
+  };
 
 function assertEqual(
   actual: unknown,
@@ -196,25 +235,31 @@ function createCandidate(
  * same transaction.
  */
 {
-  const first = createCashOutSettlementIntent({
-    contractPlan,
+  const first = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate(),
+      candidate: createCandidate(),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
-  const second = createCashOutSettlementIntent({
-    contractPlan,
+  const second = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate(),
+      candidate: createCandidate(),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
   assertDeepEqual(first, second);
 
@@ -243,25 +288,31 @@ function createCandidate(
  * Timestamp is audit metadata only and must not affect transaction identity.
  */
 {
-  const first = createCashOutSettlementIntent({
-    contractPlan,
+  const first = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate(),
+      candidate: createCandidate(),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: '2026-09-10T12:00:00.000Z',
-  });
+      preparedAt: '2026-09-10T12:00:00.000Z',
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
-  const second = createCashOutSettlementIntent({
-    contractPlan,
+  const second = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate(),
+      candidate: createCandidate(),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: '2026-09-10T12:01:00.000Z',
-  });
+      preparedAt: '2026-09-10T12:01:00.000Z',
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
   assertEqual(first.rawTransactionHex, second.rawTransactionHex);
 
@@ -276,27 +327,33 @@ function createCandidate(
  * Changing the selected parent outpoint must change the settlement txid.
  */
 {
-  const first = createCashOutSettlementIntent({
-    contractPlan,
+  const first = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate(),
+      candidate: createCandidate(),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
-  const second = createCashOutSettlementIntent({
-    contractPlan,
+  const second = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      txid: 'cd'.repeat(32),
-    }),
+      candidate: createCandidate({
+        txid: 'cd'.repeat(32),
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
   assertNotEqual(first.rawTransactionHex, second.rawTransactionHex);
 
@@ -312,29 +369,35 @@ function createCandidate(
  * outpoint and therefore a different settlement transaction.
  */
 {
-  const first = createCashOutSettlementIntent({
-    contractPlan,
+  const first = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      vout: 1,
-    }),
+      candidate: createCandidate({
+        vout: 1,
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
-  const second = createCashOutSettlementIntent({
-    contractPlan,
+  const second = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      vout: 2,
-    }),
+      candidate: createCandidate({
+        vout: 2,
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
   assertNotEqual(first.txid, second.txid);
 
@@ -346,32 +409,38 @@ function createCandidate(
 /**
  * Candidate cannot be borrowed from another Cash-out or contract.
  */
-assertThrows(() => {
-  createCashOutSettlementIntent({
-    contractPlan,
+await assertRejects(async () => {
+  await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      cashOutId: 'different-cash-out',
-    }),
+      candidate: createCandidate({
+        cashOutId: 'different-cash-out',
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 });
 
-assertThrows(() => {
-  createCashOutSettlementIntent({
-    contractPlan,
+await assertRejects(async () => {
+  await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      contractAddress: 'bitcoincash:pdifferentcontractaddressfortestonly',
-    }),
+      candidate: createCandidate({
+        contractAddress: 'bitcoincash:pdifferentcontractaddressfortestonly',
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 });
 
 console.log(
@@ -382,32 +451,38 @@ console.log(
  * Under/over-valued candidates fail closed even if someone constructs the
  * type manually instead of going through D2.
  */
-assertThrows(() => {
-  createCashOutSettlementIntent({
-    contractPlan,
+await assertRejects(async () => {
+  await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      satoshis: contractPlan.settlementPlan.paymentSats - 1,
-    }),
+      candidate: createCandidate({
+        satoshis: contractPlan.settlementPlan.paymentSats - 1,
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 });
 
-assertThrows(() => {
-  createCashOutSettlementIntent({
-    contractPlan,
+await assertRejects(async () => {
+  await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      satoshis: contractPlan.settlementPlan.paymentSats + 1,
-    }),
+      candidate: createCandidate({
+        satoshis: contractPlan.settlementPlan.paymentSats + 1,
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 });
 
 console.log('PASS: non-exact manually-constructed candidates fail closed');
@@ -415,32 +490,38 @@ console.log('PASS: non-exact manually-constructed candidates fail closed');
 /**
  * Malformed outpoints fail closed.
  */
-assertThrows(() => {
-  createCashOutSettlementIntent({
-    contractPlan,
+await assertRejects(async () => {
+  await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      txid: 'abcd',
-    }),
+      candidate: createCandidate({
+        txid: 'abcd',
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 });
 
-assertThrows(() => {
-  createCashOutSettlementIntent({
-    contractPlan,
+await assertRejects(async () => {
+  await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      vout: -1,
-    }),
+      candidate: createCandidate({
+        vout: -1,
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 });
 
 console.log('PASS: malformed settlement outpoints are rejected');
@@ -448,16 +529,19 @@ console.log('PASS: malformed settlement outpoints are rejected');
 /**
  * D3 transaction construction must remain mainnet-bound.
  */
-assertThrows(() => {
-  createCashOutSettlementIntent({
-    contractPlan,
+await assertRejects(async () => {
+  await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate(),
+      candidate: createCandidate(),
 
-    provider: new MockNetworkProvider(),
+      provider: new MockNetworkProvider(),
 
-    preparedAt: PREPARED_AT,
-  });
+      preparedAt: PREPARED_AT,
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 });
 
 console.log('PASS: non-mainnet settlement construction is rejected');
@@ -468,15 +552,18 @@ console.log('PASS: non-mainnet settlement construction is rejected');
  * --------------------------------------------------------------------------
  */
 
-const preparedIntent = createCashOutSettlementIntent({
-  contractPlan,
+const preparedIntent = await createCashOutSettlementIntentWithDependencies(
+  {
+    contractPlan,
 
-  candidate: createCandidate(),
+    candidate: createCandidate(),
 
-  provider: createMainnetMockProvider(),
+    provider: createMainnetMockProvider(),
 
-  preparedAt: PREPARED_AT,
-});
+    preparedAt: PREPARED_AT,
+  },
+  TEST_TRANSACTION_DEPENDENCIES
+);
 
 const RECEIVED_CASH_OUT: CashOutRecord = {
   ...CASH_OUT,
@@ -513,15 +600,19 @@ console.log(
  * Re-applying the SAME deterministic settlement remains idempotent.
  */
 {
-  const sameTransactionLaterTimestamp = createCashOutSettlementIntent({
-    contractPlan,
+  const sameTransactionLaterTimestamp =
+    await createCashOutSettlementIntentWithDependencies(
+      {
+        contractPlan,
 
-    candidate: createCandidate(),
+        candidate: createCandidate(),
 
-    provider: createMainnetMockProvider(),
+        provider: createMainnetMockProvider(),
 
-    preparedAt: '2026-09-10T12:05:00.000Z',
-  });
+        preparedAt: '2026-09-10T12:05:00.000Z',
+      },
+      TEST_TRANSACTION_DEPENDENCIES
+    );
 
   const reapplied = applyCashOutSettlementIntent(
     withIntent,
@@ -540,18 +631,21 @@ console.log(
 /**
  * Once persisted, another customer outpoint cannot replace it.
  */
-assertThrows(() => {
-  const differentIntent = createCashOutSettlementIntent({
-    contractPlan,
+await assertRejects(async () => {
+  const differentIntent = await createCashOutSettlementIntentWithDependencies(
+    {
+      contractPlan,
 
-    candidate: createCandidate({
-      txid: 'cd'.repeat(32),
-    }),
+      candidate: createCandidate({
+        txid: 'cd'.repeat(32),
+      }),
 
-    provider: createMainnetMockProvider(),
+      provider: createMainnetMockProvider(),
 
-    preparedAt: '2026-09-10T12:05:00.000Z',
-  });
+      preparedAt: '2026-09-10T12:05:00.000Z',
+    },
+    TEST_TRANSACTION_DEPENDENCIES
+  );
 
   applyCashOutSettlementIntent(withIntent, differentIntent);
 });
@@ -712,10 +806,13 @@ async function runD3CPreparationTests(): Promise<void> {
           return persistedRecord;
         },
 
-        createCashOutSettlementIntent(input) {
+        async createCashOutSettlementIntent(input) {
           createCalls += 1;
 
-          return createCashOutSettlementIntent(input);
+          return createCashOutSettlementIntentWithDependencies(
+            input,
+            TEST_TRANSACTION_DEPENDENCIES
+          );
         },
       }
     );
@@ -778,7 +875,7 @@ async function runD3CPreparationTests(): Promise<void> {
           );
         },
 
-        createCashOutSettlementIntent() {
+        async createCashOutSettlementIntent() {
           createCalls += 1;
 
           throw new Error(
@@ -840,7 +937,7 @@ async function runD3CPreparationTests(): Promise<void> {
             return alreadyPersisted;
           },
 
-          createCashOutSettlementIntent() {
+          async createCashOutSettlementIntent() {
             createCalls += 1;
 
             return preparedIntent;
@@ -888,7 +985,7 @@ async function runD3CPreparationTests(): Promise<void> {
             return undefined;
           },
 
-          createCashOutSettlementIntent() {
+          async createCashOutSettlementIntent() {
             createCalls += 1;
 
             return preparedIntent;
@@ -937,10 +1034,13 @@ async function runD3CPreparationTests(): Promise<void> {
             return undefined;
           },
 
-          createCashOutSettlementIntent(input) {
+          async createCashOutSettlementIntent(input) {
             createCalls += 1;
 
-            return createCashOutSettlementIntent(input);
+            return createCashOutSettlementIntentWithDependencies(
+              input,
+              TEST_TRANSACTION_DEPENDENCIES
+            );
           },
         }
       );

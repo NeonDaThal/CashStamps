@@ -24,6 +24,17 @@ const CONFLICT_TXID = '33'.repeat(32);
 
 const REQUIRED_SATS = 206_000;
 
+const ALL_EXCEPTIONAL_CASES: CashOutSettlementExceptionalCase[] = [
+  'underpayment',
+  'overpayment',
+  'fragmented_payment',
+  'multiple_exact_payments',
+  'exact_plus_overpayment',
+  'late_payment_after_expiry',
+  'late_payment_after_cancellation',
+  'normal_settlement_problem',
+];
+
 function reconciliation(
   status: 'mempool' | 'confirmed' | 'unknown' | 'unavailable'
 ): TreasuryBroadcastReconciliationResult {
@@ -459,6 +470,48 @@ function runD6A3Tests(): void {
 
     console.log(
       'PASS: confirmed normal settlement cannot be bypassed by recovery'
+    );
+  }
+
+  /**
+   * D6I.1C
+   *
+   * A caller must not be able to bypass positive normal-settlement evidence by
+   * changing only the exceptional-case label.
+   *
+   * Confirmed normal settlement dominates every recovery case.
+   */
+  {
+    for (const exceptionalCase of ALL_EXCEPTIONAL_CASES) {
+      const result = evaluateCashOutSettlementRecoveryEligibility(
+        cashOut({
+          settlementReconciliation: reconciliation('confirmed'),
+        }),
+
+        evidence(exceptionalCase, {
+          ...(exceptionalCase === 'normal_settlement_problem'
+            ? {
+                normalSettlementState: 'demonstrably_unusable' as const,
+              }
+            : {}),
+        })
+      );
+
+      assertEqual(
+        result.eligibility,
+        'blocked',
+        `${exceptionalCase} must be blocked after confirmed normal settlement.`
+      );
+
+      assertEqual(
+        result.blockReason,
+        'normal_settlement_available',
+        `${exceptionalCase} must not bypass confirmed normal settlement.`
+      );
+    }
+
+    console.log(
+      'PASS: confirmed normal settlement blocks every exceptional recovery label'
     );
   }
 

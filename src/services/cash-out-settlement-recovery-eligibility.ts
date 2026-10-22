@@ -139,15 +139,40 @@ export function evaluateCashOutSettlementRecoveryEligibility(
   }
 
   /**
+   * D6I.1C — positive or already-durable normal settlement state dominates
+   * every exceptional recovery label.
+   *
+   * Recovery must never be unlocked merely by presenting a different
+   * exceptionalCase string after the normal fee-paying path has already been
+   * committed or has positive network evidence.
+   *
+   * D6I.1B deliberately makes the MVP stricter:
+   *
+   * once a durable normal settlement intent exists, automated exceptional
+   * recovery is no longer available. Any genuinely abnormal later situation
+   * requires manual operational resolution.
+   */
+  if (
+    cashOut.settlementIntent ||
+    cashOut.settlementReconciliation?.status === 'mempool' ||
+    cashOut.settlementReconciliation?.status === 'confirmed'
+  ) {
+    return blocked(
+      exceptionalCase,
+      observedSats,
+      cashOut.bchSatsRequired,
+      observedOutpointCount,
+      'normal_settlement_available',
+      'The normal deterministic settlement path is already committed or has positive network evidence and cannot be replaced by exceptional recovery.'
+    );
+  }
+
+  /**
    * Exceptional recovery must never become an easier alternative to the
    * ordinary D1-D5 deterministic settlement path.
    */
   if (exceptionalCase === 'normal_settlement_problem') {
-    if (
-      cashOut.settlementReconciliation?.status === 'mempool' ||
-      cashOut.settlementReconciliation?.status === 'confirmed' ||
-      evidence.normalSettlementState === 'available'
-    ) {
+    if (evidence.normalSettlementState === 'available') {
       return blocked(
         exceptionalCase,
         observedSats,

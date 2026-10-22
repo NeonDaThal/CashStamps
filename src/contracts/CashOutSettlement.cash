@@ -7,7 +7,7 @@ pragma cashscript ^0.13.0;
  *
  * settle()
  *
- * Permissionless deterministic settlement for one exact customer-payment
+ * Merchant-authorized deterministic settlement for one exact customer-payment
  * UTXO.
  *
  * EXCEPTIONAL PATH
@@ -36,14 +36,40 @@ contract CashOutSettlement(
     int settlementFeeSats
 ) {
     /**
-     * D1-D5 NORMAL SETTLEMENT.
+ * D1-D5 NORMAL SETTLEMENT.
+ *
+ * Normal settlement is merchant/Treasury-authorized.
+ *
+ * The covenant still fixes the exact customer-payment input economics,
+ * Treasury destination, platform destination and miner fee.
+ *
+ * Requiring the Treasury authority prevents an unrelated third party from
+ * independently settling another duplicate exact-payment UTXO and forcing
+ * another platform fee.
+ *
+ * Once the application has produced the ONE exact signed settlement
+ * transaction, anyone may still broadcast or rebroadcast those same bytes.
+ */
+function settle(
+    pubkey merchantPk,
+    sig merchantSig
+) {
+    /**
+     * Merchant authorization.
      *
-     * This function deliberately requires no signature.
-     *
-     * Anyone may submit the one exact deterministic settlement transaction,
-     * but the covenant fixes its economics and destinations.
+     * treasuryPkh is frozen into this exact Cash-out contract instance.
      */
-    function settle() {
+    require(
+        hash160(merchantPk) ==
+        treasuryPkh
+    );
+
+    require(
+        checkSig(
+            merchantSig,
+            merchantPk
+        )
+    );
         /**
          * Normal settlement must spend only the exact selected contract UTXO.
          */
