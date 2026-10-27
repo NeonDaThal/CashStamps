@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { secp256k1 } from '@bitauth/libauth';
+
 import {
   Contract,
+  FailedRequireError,
   MockNetworkProvider,
   SignatureTemplate,
   TransactionBuilder,
@@ -73,6 +76,20 @@ const TREASURY_PUBLIC_KEY = Uint8Array.from([
   0xce, 0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59,
   0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98,
 ]);
+
+/**
+ * Different TEST-ONLY Treasury identity: private scalar = 2.
+ */
+const WRONG_TREASURY_PRIVATE_KEY = Uint8Array.from([
+  ...Array(31).fill(0),
+  0x02,
+]);
+
+const WRONG_TREASURY_PUBLIC_KEY = secp256k1.derivePublicKeyCompressed(
+  WRONG_TREASURY_PRIVATE_KEY
+);
+
+assert.ok(WRONG_TREASURY_PUBLIC_KEY instanceof Uint8Array);
 
 const TREASURY_PKH = Uint8Array.from([
   0x75, 0x1e, 0x76, 0xe8, 0x19, 0x91, 0x96, 0xd4, 0x54, 0x94, 0x1c, 0x45, 0xd1,
@@ -150,6 +167,7 @@ function addContractUtxo(provider, contract, satoshis) {
  *
  * Options let adversarial tests mutate:
  *
+ * - Treasury public key and private signing key independently;
  * - the selected contract UTXO value;
  * - Treasury destination/value;
  * - Platform destination/value;
@@ -186,8 +204,8 @@ function createSettlementTransaction(options = {}) {
   transactionBuilder.addInput(
     selectedPaymentUtxo,
     contract.unlock.settle(
-      TREASURY_PUBLIC_KEY,
-      new SignatureTemplate(TREASURY_PRIVATE_KEY)
+      options.treasuryPublicKey ?? TREASURY_PUBLIC_KEY,
+      new SignatureTemplate(options.treasuryPrivateKey ?? TREASURY_PRIVATE_KEY)
     )
   );
 
@@ -209,8 +227,8 @@ function createSettlementTransaction(options = {}) {
     transactionBuilder.addInput(
       extraInput,
       contract.unlock.settle(
-        TREASURY_PUBLIC_KEY,
-        new SignatureTemplate(TREASURY_PRIVATE_KEY)
+        options.treasuryPublicKey ?? TREASURY_PUBLIC_KEY,
+        new SignatureTemplate(options.treasuryPrivateKey ?? TREASURY_PRIVATE_KEY)
       )
     );
   }
@@ -269,6 +287,25 @@ function assertSettlementRejects(name, createAttempt) {
   console.log(`PASS: ${name}`);
 }
 
+function assertSettlementAuthenticationRejects(name, options, expectedStatement) {
+  const transactionBuilder = createSettlementTransaction(options);
+
+  assert.throws(
+    () => transactionBuilder.debug(),
+    (error) => {
+      assert.ok(error instanceof FailedRequireError);
+      assert.equal(error.artifact.contractName, 'CashOutSettlement');
+      assert.equal(error.inputIndex, 0);
+      assert.match(error.reason, expectedStatement);
+
+      return true;
+    },
+    `${name}: expected the Treasury authentication require to fail.`
+  );
+
+  console.log(`PASS: ${name}`);
+}
+
 /**
  * --------------------------------------------------------------------------
  * BASE COVENANT PROOF
@@ -277,6 +314,24 @@ function assertSettlementRejects(name, createAttempt) {
 
 assertSettlementAccepts('exact Treasury and platform settlement succeeds', () =>
   createSettlementTransaction()
+);
+
+assertSettlementAuthenticationRejects(
+  'wrong Treasury public key with its matching signer fails the frozen Treasury hash check',
+  {
+    treasuryPublicKey: WRONG_TREASURY_PUBLIC_KEY,
+    treasuryPrivateKey: WRONG_TREASURY_PRIVATE_KEY,
+  },
+  /Failing statement:\s*require\(\s*hash160\(merchantPk\)\s*==\s*treasuryPkh\s*\);/
+);
+
+assertSettlementAuthenticationRejects(
+  'correct Treasury public key with a different signing key fails checkSig',
+  {
+    treasuryPublicKey: TREASURY_PUBLIC_KEY,
+    treasuryPrivateKey: WRONG_TREASURY_PRIVATE_KEY,
+  },
+  /Failing statement:\s*require\(\s*checkSig\(\s*merchantSig,\s*merchantPk\s*\)\s*\);/
 );
 
 assertSettlementRejects('wrong Treasury destination is rejected', () =>

@@ -45,11 +45,12 @@ const PLATFORM_FEE_SATS = 2_000n;
 const NORMAL_SETTLEMENT_FEE_SATS = 505n;
 
 /**
- * Already-measured two-input Recovery v1 fixed point.
+ * Measured two-input Recovery v1 fixed point for the current artifact:
+ * 100,000 + 106,000 sats serialize to 1,160 bytes at 1 sat/byte.
  *
- * D6E.3 will calculate this dynamically rather than hard-code it.
+ * The dynamic fixed-point proof below independently checks this measurement.
  */
-const RECOVERY_FEE_SATS = 1_138n;
+const RECOVERY_FEE_SATS = 1_160n;
 
 const CASH_OUT_COMMITMENT = Uint8Array.from(
   Array.from({ length: 32 }, (_, index) => index + 1)
