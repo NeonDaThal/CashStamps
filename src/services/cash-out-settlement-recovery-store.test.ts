@@ -143,11 +143,30 @@ function createIntent(
 
   const intent = createIntent();
 
-  const updated = applyCashOutSettlementRecoveryIntent(original, intent);
+  let guardCalls = 0;
+
+  const updated = applyCashOutSettlementRecoveryIntent(original, intent, (current) => {
+    assertEqual(current, original);
+    guardCalls += 1;
+  });
 
   assertEqual(updated.recoveryIntent, intent);
+  assertEqual(guardCalls, 1);
 
   pass('first recovery transaction is attached to the Cash-out record');
+}
+
+{
+  const original = createRecord();
+  const intent = createIntent();
+
+  assertThrows(() => applyCashOutSettlementRecoveryIntent(original, intent));
+  assertThrows(() => applyCashOutSettlementRecoveryIntent(original, intent, () => {
+    throw new Error('Current state is no longer safe.');
+  }));
+  assertEqual(original.recoveryIntent, undefined);
+
+  pass('first attachment fails closed without a successful current-state commit guard');
 }
 
 /**
@@ -170,6 +189,8 @@ function createIntent(
      * Existing durable metadata remains authoritative.
      */
     preparedAt: '2026-10-08T12:00:01.000Z',
+  }, () => {
+    throw new Error('An identical durable replay must not revalidate new preparation.');
   });
 
   assertEqual(result, record);

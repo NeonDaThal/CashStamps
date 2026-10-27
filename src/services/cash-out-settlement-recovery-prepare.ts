@@ -10,7 +10,15 @@ import {
   type CashOutSettlementRecoveryInputAuthorization,
 } from './cash-out-settlement-recovery-input-authorization';
 
-import type { CashOutSettlementRecoveryInputBinding } from './cash-out-settlement-recovery-input-binding';
+import {
+  bindCashOutSettlementRecoveryInputSetToNetworkEvidence,
+  type CashOutSettlementRecoveryInputBinding,
+  type CashOutSettlementRecoveryNetworkEvidence,
+} from './cash-out-settlement-recovery-input-binding';
+
+import { observeCashOutSettlementRecoveryNetworkEvidence } from './cash-out-settlement-recovery-network-evidence';
+
+import type { AddressListUnspent } from './electrum-types';
 
 import { buildCashOutSettlementRecoveryPlan } from './cash-out-settlement-recovery-plan';
 
@@ -20,7 +28,10 @@ import {
   type FinalizeCashOutSettlementRecoveryTransactionInput,
 } from './cash-out-settlement-recovery-transaction';
 
-import { storeCashOutSettlementRecoveryIntent } from './cash-out-settlement-recovery-store';
+import {
+  storeCashOutSettlementRecoveryIntent,
+  type CashOutSettlementRecoveryCommitGuard,
+} from './cash-out-settlement-recovery-store';
 
 import { getCashOutRecordById } from 'src/services/cash-out-store';
 
@@ -45,7 +56,8 @@ export interface PrepareCashOutSettlementRecoveryInput {
   recoveryAssessment: CashOutSettlementRecoveryAssessment;
 
   /**
-   * Current positive network binding for the exact canonical recovery inputs.
+   * Retained for API compatibility. NEW preparation obtains its own live
+   * binding; durable replay uses the metadata already frozen in its artifact.
    */
   binding: CashOutSettlementRecoveryInputBinding;
 
@@ -64,8 +76,13 @@ export interface CashOutSettlementRecoveryPreparationDependencies {
 
   storeCashOutSettlementRecoveryIntent(
     cashOutId: string,
-    intent: CashOutSettlementRecoverySignedTransactionArtifact
+    intent: CashOutSettlementRecoverySignedTransactionArtifact,
+    validateNewIntent: CashOutSettlementRecoveryCommitGuard
   ): Promise<CashOutRecord | undefined>;
+
+  observeRecoveryNetworkEvidence(
+    contractAddress: string
+  ): Promise<CashOutSettlementRecoveryNetworkEvidence>;
 
   finalizeCashOutSettlementRecoveryTransaction(
     input: FinalizeCashOutSettlementRecoveryTransactionInput
@@ -76,6 +93,34 @@ const DEFAULT_DEPENDENCIES: CashOutSettlementRecoveryPreparationDependencies = {
   getCashOutRecordById,
 
   storeCashOutSettlementRecoveryIntent,
+
+  async observeRecoveryNetworkEvidence(contractAddress) {
+    // Keep Electrum's runtime out of the durable replay and isolated test paths.
+    const { ElectrumService } = await import('src/services/electrum');
+    const { ELECTRUM_SERVERS } = await import('src/config');
+    const electrum = new ElectrumService(ELECTRUM_SERVERS);
+
+    try {
+      await electrum.start();
+
+      return await observeCashOutSettlementRecoveryNetworkEvidence({
+        contractAddress,
+        electrum: {
+          request: (endpoint, ...params) =>
+            electrum.request<AddressListUnspent>(endpoint, ...params),
+        },
+      });
+    } catch {
+      return {
+        source: 'electrum_listunspent',
+        available: false,
+        contractAddress,
+        utxos: [],
+      };
+    } finally {
+      await electrum.stop();
+    }
+  },
 
   async finalizeCashOutSettlementRecoveryTransaction(input) {
     /**
@@ -104,6 +149,12 @@ function authorizeCurrentRecoveryPreparation(
   current: CashOutRecord,
   cashOutId: string
 ): CashOutSettlementRecoveryInputAuthorization {
+  if (current.id !== cashOutId) {
+    throw new Error(
+      'Cash-out recovery preparation belongs to a different Cash-out.'
+    );
+  }
+
   /**
    * The exceptional assessment must still describe the frozen amount belonging
    * to the current Cash-out record.
@@ -136,6 +187,12 @@ function authorizeCurrentRecoveryPreparation(
 }
 
 function assertRecoveryPreparationStillAllowed(current: CashOutRecord): void {
+  if (current.settlementIntent) {
+    throw new Error(
+      'Cash-out already has a durable normal settlement transaction and cannot prepare an exceptional recovery transaction.'
+    );
+  }
+
   /**
    * An authorization may have been valid when originally assessed but become
    * stale before Treasury signing.
@@ -344,8 +401,25 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
    * Do NOT call the signer again.
    */
   if (current.recoveryIntent) {
+    const intent = current.recoveryIntent;
+
     const authorization = authorizeCurrentRecoveryPreparation(
-      input,
+      {
+        ...input,
+        binding: {
+          version: 'cash_out_recovery_input_binding_v1',
+          cashOutId: intent.cashOutId,
+          contractAddress: intent.contractAddress,
+          evidenceSource: 'electrum_listunspent',
+          inputSetId: intent.inputSetId,
+          inputCount: intent.signingRequest.inputCount,
+          totalInputSats: intent.signingRequest.totalInputSats,
+          inputs: intent.signingRequest.inputs.map((entry) => ({
+            ...entry,
+            contractAddress: intent.contractAddress,
+          })),
+        },
+      },
       current,
       cashOutId
     );
@@ -367,11 +441,67 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
    */
   assertRecoveryPreparationStillAllowed(current);
 
-  const authorization = authorizeCurrentRecoveryPreparation(
-    input,
-    current,
-    cashOutId
+  // Own the preparation snapshot across all awaits. Caller mutation cannot
+  // change the frozen terms, assessment, or selected input set during signing.
+  const snapshot = {
+    ...input,
+    ...structuredClone({
+      contractPlan: input.contractPlan,
+      inputSet: input.inputSet,
+      recoveryAssessment: input.recoveryAssessment,
+    }),
+  };
+  const recordIdentity = { serial: current.serial, createdAt: current.createdAt };
+
+  const networkEvidence = await dependencies.observeRecoveryNetworkEvidence(
+    snapshot.contractPlan.contractAddress
   );
+
+  snapshot.binding = bindCashOutSettlementRecoveryInputSetToNetworkEvidence({
+    cashOutId,
+    expectedContractAddress: snapshot.contractPlan.contractAddress,
+    inputSet: snapshot.inputSet,
+    networkEvidence,
+  });
+
+  const authorizeNewIntent = (record: CashOutRecord) => {
+    assertRecoveryPreparationStillAllowed(record);
+
+    if (
+      record.serial !== recordIdentity.serial ||
+      record.createdAt !== recordIdentity.createdAt
+    ) {
+      throw new Error('Cash-out recovery preparation record identity changed.');
+    }
+
+    if (
+      record.bchSatsRequired !== snapshot.contractPlan.settlementPlan.paymentSats
+    ) {
+      throw new Error(
+        'Cash-out recovery required amount differs from the frozen contract.'
+      );
+    }
+
+    return authorizeCurrentRecoveryPreparation(snapshot, record, cashOutId);
+  };
+
+  const beforeSigning = await dependencies.getCashOutRecordById(cashOutId);
+
+  if (!beforeSigning) {
+    throw new Error('Cash-out disappeared before recovery signing.');
+  }
+
+  // Boundary A: after network observation, immediately before finalization.
+  const authorization = authorizeNewIntent(beforeSigning);
+
+  if (beforeSigning.recoveryIntent) {
+    validatePersistedRecoveryIntent(
+      beforeSigning.recoveryIntent,
+      snapshot,
+      authorization
+    );
+    return beforeSigning;
+  }
 
   /**
    * No durable recovery transaction exists yet.
@@ -381,20 +511,45 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
    */
   const finalized =
     await dependencies.finalizeCashOutSettlementRecoveryTransaction({
-      contractPlan: input.contractPlan,
+      contractPlan: structuredClone(snapshot.contractPlan),
 
-      inputSet: input.inputSet,
+      inputSet: structuredClone(snapshot.inputSet),
 
-      authorization,
+      authorization: structuredClone(authorization),
 
-      provider: input.provider,
+      provider: snapshot.provider,
 
-      ...(input.preparedAt !== undefined
+      ...(snapshot.preparedAt !== undefined
         ? {
-            preparedAt: input.preparedAt,
+            preparedAt: snapshot.preparedAt,
           }
         : {}),
     });
+
+  const validateNewIntent: CashOutSettlementRecoveryCommitGuard = (record) => {
+    const currentAuthorization = authorizeNewIntent(record);
+
+    if (JSON.stringify(currentAuthorization) !== JSON.stringify(authorization)) {
+      throw new Error(
+        'Cash-out recovery authorization changed during preparation.'
+      );
+    }
+
+    validatePersistedRecoveryIntent(
+      finalized.artifact,
+      snapshot,
+      currentAuthorization
+    );
+  };
+
+  const afterSigning = await dependencies.getCashOutRecordById(cashOutId);
+
+  if (!afterSigning) {
+    throw new Error('Cash-out disappeared during recovery signing.');
+  }
+
+  // Boundary B: a signing await must not carry stale safety state into storage.
+  validateNewIntent(afterSigning);
 
   /**
    * Cross the durable write-ahead boundary.
@@ -404,7 +559,10 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
   const stored = await dependencies.storeCashOutSettlementRecoveryIntent(
     cashOutId,
 
-    finalized.artifact
+    finalized.artifact,
+
+    // Boundary C: the SAME rule runs inside the serialized record updater.
+    validateNewIntent
   );
 
   if (!stored) {
@@ -425,7 +583,7 @@ export async function prepareAndStoreCashOutSettlementRecoveryWithDependencies(
    * This matters for a concurrent/re-entrant preparation race: storage, not
    * the caller's in-memory artifact, is authoritative.
    */
-  validatePersistedRecoveryIntent(stored.recoveryIntent, input, authorization);
+  validatePersistedRecoveryIntent(stored.recoveryIntent, snapshot, authorization);
 
   return stored;
 }

@@ -16,6 +16,15 @@ function sameJsonValue(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+/** Transient validation only; never persisted with the record or artifact. */
+export type CashOutSettlementRecoveryCommitGuard = (
+  current: CashOutRecord
+) => void;
+
+export interface CashOutSettlementRecoveryIntentStoreDependencies {
+  mutateCashOutRecordAtomically: typeof mutateCashOutRecordAtomically;
+}
+
 /**
  * Determine whether two durable recovery artifacts represent the exact same
  * signed transaction and recovery authorization.
@@ -60,7 +69,8 @@ function isSameRecoveryIntent(
  */
 export function applyCashOutSettlementRecoveryIntent(
   record: CashOutRecord,
-  intent: CashOutSettlementRecoverySignedTransactionArtifact
+  intent: CashOutSettlementRecoverySignedTransactionArtifact,
+  validateNewIntent?: CashOutSettlementRecoveryCommitGuard
 ): CashOutRecord {
   if (intent.cashOutId !== record.id) {
     throw new Error(
@@ -84,6 +94,16 @@ export function applyCashOutSettlementRecoveryIntent(
   const existing = record.recoveryIntent;
 
   if (!existing) {
+    if (!validateNewIntent) {
+      throw new Error(
+        'New Cash-out recovery intent requires current preparation commit validation.'
+      );
+    }
+
+    // Synchronous: validate the record the serialized updater actually read,
+    // immediately before its first attachment of these signed bytes.
+    validateNewIntent(record);
+
     return {
       ...record,
 
@@ -108,15 +128,21 @@ export function applyCashOutSettlementRecoveryIntent(
  *
  * This function never broadcasts.
  */
-export async function storeCashOutSettlementRecoveryIntent(
+export async function storeCashOutSettlementRecoveryIntentWithDependencies(
   cashOutId: string,
-  intent: CashOutSettlementRecoverySignedTransactionArtifact
+  intent: CashOutSettlementRecoverySignedTransactionArtifact,
+  validateNewIntent: CashOutSettlementRecoveryCommitGuard,
+  dependencies: CashOutSettlementRecoveryIntentStoreDependencies
 ): Promise<CashOutRecord | undefined> {
-  return mutateCashOutRecordAtomically(
+  return dependencies.mutateCashOutRecordAtomically(
     cashOutId,
 
     (record) => {
-      const next = applyCashOutSettlementRecoveryIntent(record, intent);
+      const next = applyCashOutSettlementRecoveryIntent(
+        record,
+        intent,
+        validateNewIntent
+      );
 
       if (next === record) {
         return record;
@@ -128,6 +154,19 @@ export async function storeCashOutSettlementRecoveryIntent(
         updatedAt: new Date().toISOString(),
       };
     }
+  );
+}
+
+export async function storeCashOutSettlementRecoveryIntent(
+  cashOutId: string,
+  intent: CashOutSettlementRecoverySignedTransactionArtifact,
+  validateNewIntent: CashOutSettlementRecoveryCommitGuard
+): Promise<CashOutRecord | undefined> {
+  return storeCashOutSettlementRecoveryIntentWithDependencies(
+    cashOutId,
+    intent,
+    validateNewIntent,
+    { mutateCashOutRecordAtomically }
   );
 }
 

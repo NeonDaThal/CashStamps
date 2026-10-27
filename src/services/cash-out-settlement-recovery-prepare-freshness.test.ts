@@ -60,11 +60,17 @@ async function assertBlockedBeforeSigning(
 ): Promise<void> {
   let finalizeCalls = 0;
   let storeCalls = 0;
+  let observationCalls = 0;
 
   await assertRejectsContaining(async () => {
     await prepareAndStoreCashOutSettlementRecoveryWithDependencies(TEST_INPUT, {
       async getCashOutRecordById() {
         return current;
+      },
+
+      async observeRecoveryNetworkEvidence() {
+        observationCalls += 1;
+        throw new Error('Blocked preparation must not observe the network.');
       },
 
       async storeCashOutSettlementRecoveryIntent() {
@@ -93,6 +99,10 @@ async function assertBlockedBeforeSigning(
     throw new Error(
       `Expected zero recovery store calls, received ${storeCalls}.`
     );
+  }
+
+  if (observationCalls !== 0) {
+    throw new Error(`Expected zero network observations, received ${observationCalls}.`);
   }
 
   console.log(`PASS: ${passMessage}`);

@@ -194,6 +194,7 @@ console.log('PASS: durable normal settlement intent blocks recovery intent');
 {
   let finalizeCalls = 0;
   let storeCalls = 0;
+  let observationCalls = 0;
 
   const contractPlan = {
     settlementPlan: {
@@ -220,6 +221,11 @@ console.log('PASS: durable normal settlement intent blocks recovery intent');
           return RECORD_WITH_NORMAL_INTENT;
         },
 
+        async observeRecoveryNetworkEvidence() {
+          observationCalls += 1;
+          throw new Error('Normal intent must block recovery network observation.');
+        },
+
         async storeCashOutSettlementRecoveryIntent() {
           storeCalls += 1;
 
@@ -239,6 +245,7 @@ console.log('PASS: durable normal settlement intent blocks recovery intent');
 
   assertEqual(finalizeCalls, 0);
   assertEqual(storeCalls, 0);
+  assertEqual(observationCalls, 0);
 
   console.log(
     'PASS: normal settlement intent blocks recovery before signing or storage'
