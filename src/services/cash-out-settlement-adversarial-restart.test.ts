@@ -1,5 +1,6 @@
 import {
   recoverCashOutSettlementConflictAwareAfterRestartWithDependencies,
+  checkCashOutSettlementCurrentHandoverSafetyWithDependencies,
   type CashOutSettlementConflictAwareRestartDependencies,
   type CashOutSettlementRestartRecoveryResult,
 } from 'src/services/cash-out-settlement-restart-recovery';
@@ -101,14 +102,18 @@ const INTENT: CashOutSettlementIntent = {
 };
 
 function reconciliation(
-  status: 'mempool' | 'confirmed'
+  status: 'mempool' | 'confirmed' | 'unknown' | 'unavailable'
 ): TreasuryBroadcastReconciliationResult {
   return {
     txid: SETTLEMENT_TXID,
 
     status,
 
-    blockHeight: status === 'confirmed' ? 900_000 : 0,
+    ...(status === 'confirmed'
+      ? { blockHeight: 900_000 }
+      : status === 'mempool'
+      ? { blockHeight: 0 }
+      : {}),
 
     serverChecks: [],
 
@@ -328,6 +333,9 @@ interface Harness {
     inspection: CashOutSettlementConflictInspectionResult
   ) => void;
 
+  setObservation: (observation: TreasuryBroadcastReconciliationResult) => void;
+  getObservationCalls: () => number;
+
   getCashOut: () => CashOutRecord;
 
   getCashOnHand: () => CashOnHandState;
@@ -347,6 +355,8 @@ function createHarness(
   let durableCashOnHand = clone(initialCashOnHand);
 
   let currentInspection = clone(initialInspection);
+  let currentObservation = reconciliation('mempool');
+  let observationCalls = 0;
 
   let cashOutWriteCount = 0;
 
@@ -407,6 +417,15 @@ function createHarness(
 
       inspectConflict: async () => clone(currentInspection),
 
+      observeSettlement: async (intent) => {
+        observationCalls += 1;
+        assertEqual(intent.txid, SETTLEMENT_TXID);
+        assertEqual(intent.rawTransactionHex, INTENT.rawTransactionHex);
+        assertEqual(intent.sourcePaymentTxid, CUSTOMER_TXID);
+        assertEqual(intent.sourceOutpointIndex, 2);
+        return clone(currentObservation);
+      },
+
       storeConflict: async (id, evidence) => {
         if (id !== durableCashOut.id) {
           return undefined;
@@ -465,10 +484,10 @@ function createHarness(
     mutateCashOutRecordAtomically,
 
     recoverConflictAware: (id) =>
-      recoverCashOutSettlementConflictAwareAfterRestartWithDependencies(
-        id,
-        restartDependencies
-      ),
+      checkCashOutSettlementCurrentHandoverSafetyWithDependencies(id, {
+        ...restartDependencies,
+        getCashOutRecordById: async () => clone(durableCashOut),
+      }),
   };
 
   const accountingDependencies: CashOutSettlementAccountingDependencies = {
@@ -579,6 +598,11 @@ function createHarness(
       currentInspection = clone(inspection);
     },
 
+    setObservation: (observation) => {
+      currentObservation = clone(observation);
+    },
+    getObservationCalls: () => observationCalls,
+
     getCashOut: () => clone(durableCashOut),
 
     getCashOnHand: () => clone(durableCashOnHand),
@@ -621,10 +645,10 @@ async function runD5GTests(): Promise<void> {
   /**
    * Matrix 2:
    *
-   * Auxiliary conflict inspection temporarily unavailable, but no positive
+   * Current conflict inspection temporarily unavailable, but no positive
    * conflict has ever been stored.
    *
-   * Do not fabricate a double-spend.
+   * Deny handover without fabricating a double-spend or erasing history.
    */
   {
     const harness = createHarness(cashOut(), unavailableInspection());
@@ -633,12 +657,48 @@ async function runD5GTests(): Promise<void> {
 
     assertEqual(recovered.conflictInspection.status, 'inspection_unavailable');
 
-    assertEqual(recovered.merchantSafety.safeToHandCash, true);
+    assertEqual(recovered.merchantSafety.safeToHandCash, false);
 
-    assertEqual(recovered.merchantSafety.reason, 'settlement_mempool');
+    assertEqual(
+      recovered.merchantSafety.reason,
+      'current_conflict_inspection_unavailable'
+    );
+    await assertRejects(() => harness.complete(), 'preflight is unsafe');
+    assertEqual(harness.getCashOut().status, 'received');
+    assertEqual(harness.getCashOut().completedAt, undefined);
+    assertEqual(harness.getCashOut().settlementSourceConflict, undefined);
+    assertEqual(harness.getCashMovementWriteCount(), 0);
 
     console.log(
-      'PASS: unavailable auxiliary conflict scan does not invent a conflict'
+      'PASS: unavailable current conflict scan blocks cash without inventing a conflict'
+    );
+  }
+
+  for (const status of ['unknown', 'unavailable'] as const) {
+    const harness = createHarness(cashOut());
+    const first = await harness.restart();
+    assertEqual(first.merchantSafety.safeToHandCash, true);
+    const historical = JSON.stringify(harness.getCashOut());
+    harness.setObservation(reconciliation(status));
+    await assertRejects(() => harness.complete(), 'preflight is unsafe');
+    assertEqual(harness.getObservationCalls(), 2);
+    assertEqual(JSON.stringify(harness.getCashOut()), historical);
+    assertEqual(harness.getCashMovementWriteCount(), 0);
+    assertEqual(harness.getCashOut().completedAt, undefined);
+
+    const restarted = createHarness(clone(harness.getCashOut()));
+    restarted.setObservation(reconciliation(status));
+    await assertRejects(() => restarted.complete(), 'preflight is unsafe');
+    assertEqual(restarted.getObservationCalls(), 1);
+    assertEqual(JSON.stringify(restarted.getCashOut()), historical);
+    assertEqual(restarted.getCashOutWriteCount(), 0);
+    assertEqual(restarted.getCashMovementWriteCount(), 0);
+    assertEqual(
+      JSON.stringify(restarted.getCashOut().settlementIntent),
+      JSON.stringify(INTENT)
+    );
+    console.log(
+      `PASS: current ${status} checks cannot reuse prior permission before or after restart, mutate cash, or replace the transaction`
     );
   }
 

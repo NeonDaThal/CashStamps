@@ -150,11 +150,11 @@ function runD5D1Tests(): void {
 
     assertEqual(
       evaluateCashOutSettlementMerchantSafety(record).safeToHandCash,
-      true
+      false
     );
 
     console.log(
-      'PASS: normal positive settlement remains merchant-safe with no conflict evidence'
+      'PASS: absence of durable conflict alone cannot authorise historical mempool handover'
     );
   }
 

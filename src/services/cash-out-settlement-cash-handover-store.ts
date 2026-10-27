@@ -7,6 +7,8 @@ import {
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
+import type { CashOutSettlementCurrentHandoverContext } from './cash-out-settlement-merchant-safety';
+
 export interface CashOutCashHandoverStoreDependencies {
   mutateCashOutRecordAtomically: (
     id: string,
@@ -31,28 +33,38 @@ const productionDependencies: CashOutCashHandoverStoreDependencies = {
 export async function confirmCashOutCashHandoverAtomicallyWithDependencies(
   cashOutId: string,
   confirmation: CashOutCashHandoverConfirmation,
-  dependencies: CashOutCashHandoverStoreDependencies
+  dependencies: CashOutCashHandoverStoreDependencies,
+  currentHandover?: CashOutSettlementCurrentHandoverContext
 ): Promise<CashOutRecord | undefined> {
   return dependencies.mutateCashOutRecordAtomically(
     cashOutId,
 
-    (current) => applyCashOutCashHandoverConfirmation(current, confirmation)
+    (current) =>
+      applyCashOutCashHandoverConfirmation(
+        current,
+        confirmation,
+        currentHandover
+      )
   );
 }
 
 export async function confirmCashOutCashHandoverAtomically(
   cashOutId: string,
-  confirmation: CashOutCashHandoverConfirmation
+  confirmation: CashOutCashHandoverConfirmation,
+  currentHandover?: CashOutSettlementCurrentHandoverContext
 ): Promise<CashOutRecord | undefined> {
   return confirmCashOutCashHandoverAtomicallyWithDependencies(
     cashOutId,
     confirmation,
-    productionDependencies
+    productionDependencies,
+    currentHandover
   );
 }
 
 export interface CashOutCashHandoverPreflightResult {
   record: CashOutRecord;
+
+  currentHandover?: CashOutSettlementCurrentHandoverContext;
 
   merchantSafety: {
     safeToHandCash: boolean;
@@ -108,11 +120,15 @@ export async function confirmCashOutCashHandoverWithDependencies(
   }
 
   const wasAlreadyCompleted = preflight.record.status === 'completed';
+  const currentHandover = preflight.currentHandover
+    ? structuredClone(preflight.currentHandover)
+    : undefined;
 
   const stored = await confirmCashOutCashHandoverAtomicallyWithDependencies(
     cashOutId,
     confirmation,
-    dependencies
+    dependencies,
+    currentHandover
   );
 
   if (!stored) {
@@ -140,7 +156,7 @@ export async function confirmCashOutCashHandover(
   cashOutId: string,
   confirmation: CashOutCashHandoverConfirmation
 ): Promise<CashOutCashHandoverConfirmationResult> {
-  const { recoverCashOutSettlementConflictAwareAfterRestart } = await import(
+  const { checkCashOutSettlementCurrentHandoverSafety } = await import(
     'src/services/cash-out-settlement-restart-recovery'
   );
 
@@ -152,7 +168,7 @@ export async function confirmCashOutCashHandover(
     {
       mutateCashOutRecordAtomically,
 
-      recoverConflictAware: recoverCashOutSettlementConflictAwareAfterRestart,
+      recoverConflictAware: checkCashOutSettlementCurrentHandoverSafety,
     }
   );
 }

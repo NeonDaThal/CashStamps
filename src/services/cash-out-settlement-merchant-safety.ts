@@ -4,6 +4,19 @@ import type { CashOutRecord } from 'src/types/cash-out';
 
 import { evaluateCashOutSettlementSourceConflict } from 'src/services/cash-out-settlement-conflict';
 
+import type { CashOutSettlementConflictInspectionResult } from './cash-out-settlement-conflict-inspector';
+import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
+
+/** One handover attempt's observations. Never part of CashOutRecord/storage. */
+export interface CashOutSettlementCurrentHandoverContext {
+  cashOutId: string;
+  settlementTxid: string;
+  sourcePaymentTxid: string;
+  sourceOutpointIndex: number;
+  settlementObservation: TreasuryBroadcastReconciliationResult;
+  conflictInspection: CashOutSettlementConflictInspectionResult;
+}
+
 export type CashOutSettlementMerchantSafetyReason =
   | 'settlement_mempool'
   | 'settlement_confirmed'
@@ -19,6 +32,9 @@ export type CashOutSettlementMerchantSafetyReason =
   | 'settlement_unknown'
   | 'settlement_unavailable'
   | 'settlement_source_conflict'
+  | 'current_handover_context_required'
+  | 'current_handover_context_mismatch'
+  | 'current_conflict_inspection_unavailable'
   | 'invalid_settlement_state';
 
 export interface CashOutSettlementMerchantSafety {
@@ -111,8 +127,8 @@ function safe(
  * - store-free;
  * - UI-free.
  *
- * It derives the merchant cash-handover decision from the durable Cash-out
- * evidence produced by D2, D3 and D4.
+ * It combines durable D2/D3/D4 evidence with this attempt's current checks for
+ * unconfirmed handover. Historical mempool evidence alone is insufficient.
  *
  * IMPORTANT:
  *
@@ -122,7 +138,8 @@ function safe(
  * that action before the existing received -> completed transition may occur.
  */
 export function evaluateCashOutSettlementMerchantSafety(
-  cashOut: CashOutRecord
+  cashOut: CashOutRecord,
+  currentHandover?: CashOutSettlementCurrentHandoverContext
 ): CashOutSettlementMerchantSafety {
   /**
    * The cash-handover action is valid only while the business lifecycle is
@@ -270,7 +287,7 @@ export function evaluateCashOutSettlementMerchantSafety(
 
   const reconciliation = cashOut.settlementReconciliation;
 
-  if (!reconciliation) {
+  if (!reconciliation && !currentHandover) {
     return unsafe(
       'missing_settlement_reconciliation',
 
@@ -278,12 +295,97 @@ export function evaluateCashOutSettlementMerchantSafety(
     );
   }
 
-  switch (reconciliation.status) {
-    case 'confirmed':
-      return safe('confirmed');
+  // Confirmed durable evidence retains its existing semantics. A mempool
+  // observation, however, authorizes only the handover attempt that checked it.
+  if (reconciliation?.status === 'confirmed' && !currentHandover) {
+    return safe('confirmed');
+  }
 
+  if (currentHandover) {
+    const inspection = currentHandover.conflictInspection;
+    const settlementTxid = normaliseTransactionId(intent.txid);
+
+    if (
+      !inspection ||
+      !currentHandover.settlementObservation ||
+      currentHandover.cashOutId !== cashOut.id ||
+      normaliseTransactionId(currentHandover.settlementTxid) !==
+        settlementTxid ||
+      normaliseTransactionId(currentHandover.sourcePaymentTxid) !==
+        sourcePaymentTxid ||
+      currentHandover.sourceOutpointIndex !== intent.sourceOutpointIndex ||
+      normaliseTransactionId(currentHandover.settlementObservation.txid) !==
+        settlementTxid ||
+      normaliseTransactionId(inspection.expectedSettlementTxid) !==
+        settlementTxid ||
+      normaliseTransactionId(inspection.sourcePaymentTxid) !==
+        sourcePaymentTxid ||
+      inspection.sourceOutpointIndex !== intent.sourceOutpointIndex
+    ) {
+      return unsafe(
+        'current_handover_context_mismatch',
+        'Current handover checks do not belong to this exact Cash-out settlement and source outpoint.'
+      );
+    }
+
+    if (inspection.status === 'conflict_detected') {
+      return unsafe(
+        'settlement_source_conflict',
+        'Current inspection detected a conflicting spender.'
+      );
+    }
+
+    if (reconciliation?.status === 'confirmed') {
+      return safe('confirmed');
+    }
+
+    try {
+      // Validate the current observation without replacing historical evidence.
+      validateCashOutSettlementNetworkState({
+        ...cashOut,
+        settlementReconciliation: currentHandover.settlementObservation,
+      });
+    } catch {
+      return unsafe(
+        'invalid_settlement_state',
+        'Current settlement observation is invalid.'
+      );
+    }
+
+    switch (currentHandover.settlementObservation.status) {
+      case 'confirmed':
+        return safe('confirmed');
+      case 'mempool':
+        return inspection.status === 'no_conflict_observed'
+          ? safe('mempool')
+          : unsafe(
+              'current_conflict_inspection_unavailable',
+              'Unconfirmed cash handover requires a current successful exact-outpoint conflict inspection.'
+            );
+      case 'unknown':
+        return unsafe(
+          'settlement_unknown',
+          'The exact settlement is not currently observed on the network.'
+        );
+      case 'unavailable':
+        return unsafe(
+          'settlement_unavailable',
+          'The exact settlement cannot currently be checked.'
+        );
+      default:
+        return unsafe(
+          'invalid_settlement_state',
+          'Current settlement status is unsupported.'
+        );
+    }
+  }
+
+  switch (reconciliation?.status) {
     case 'mempool':
-      return safe('mempool');
+      return unsafe(
+        'current_handover_context_required',
+        'Historical mempool evidence requires new settlement and conflict checks for this handover attempt.'
+      );
 
     case 'unknown':
       return unsafe(

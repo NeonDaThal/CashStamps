@@ -1,4 +1,7 @@
-import { evaluateCashOutSettlementMerchantSafety } from 'src/services/cash-out-settlement-merchant-safety';
+import {
+  evaluateCashOutSettlementMerchantSafety,
+  type CashOutSettlementCurrentHandoverContext,
+} from 'src/services/cash-out-settlement-merchant-safety';
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
@@ -51,9 +54,13 @@ function validateTimestamp(value: string, fieldName: string): void {
  * This does not mutate anything.
  */
 export function evaluateCashOutCashHandover(
-  cashOut: CashOutRecord
+  cashOut: CashOutRecord,
+  currentHandover?: CashOutSettlementCurrentHandoverContext
 ): CashOutCashHandoverDecision {
-  const merchantSafety = evaluateCashOutSettlementMerchantSafety(cashOut);
+  const merchantSafety = evaluateCashOutSettlementMerchantSafety(
+    cashOut,
+    currentHandover
+  );
 
   /**
    * completed means the merchant already confirmed that physical cash was
@@ -199,7 +206,8 @@ export function applyCashOutPhysicalCashHandoverConfirmation(
  */
 export function applyCashOutCashHandoverConfirmation(
   cashOut: CashOutRecord,
-  confirmation: CashOutCashHandoverConfirmation
+  confirmation: CashOutCashHandoverConfirmation,
+  currentHandover?: CashOutSettlementCurrentHandoverContext
 ): CashOutRecord {
   /**
    * Preserve the existing runtime guard before any other decision.
@@ -217,7 +225,7 @@ export function applyCashOutCashHandoverConfirmation(
     return cashOut;
   }
 
-  const decision = evaluateCashOutCashHandover(cashOut);
+  const decision = evaluateCashOutCashHandover(cashOut, currentHandover);
 
   if (!decision.allowed) {
     throw new Error(

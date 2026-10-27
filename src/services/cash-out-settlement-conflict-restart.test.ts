@@ -1,5 +1,6 @@
 import {
   recoverCashOutSettlementConflictAwareAfterRestartWithDependencies,
+  checkCashOutSettlementCurrentHandoverSafetyWithDependencies,
   type CashOutSettlementConflictAwareRestartDependencies,
   type CashOutSettlementRestartRecoveryResult,
 } from 'src/services/cash-out-settlement-restart-recovery';
@@ -70,14 +71,18 @@ const INTENT: CashOutSettlementIntent = {
 };
 
 function reconciliation(
-  status: 'mempool' | 'confirmed'
+  status: 'mempool' | 'confirmed' | 'unknown' | 'unavailable'
 ): TreasuryBroadcastReconciliationResult {
   return {
     txid: SETTLEMENT_TXID,
 
     status,
 
-    blockHeight: status === 'confirmed' ? 900_000 : 0,
+    ...(status === 'confirmed'
+      ? { blockHeight: 900_000 }
+      : status === 'mempool'
+      ? { blockHeight: 0 }
+      : {}),
 
     serverChecks: [],
 
@@ -193,7 +198,8 @@ function assertEqual(
 
 function createHarness(
   initialRecord: CashOutRecord,
-  conflictResult: CashOutSettlementConflictInspectionResult
+  conflictResult: CashOutSettlementConflictInspectionResult,
+  currentObservation = reconciliation('mempool')
 ): {
   dependencies: CashOutSettlementConflictAwareRestartDependencies;
 
@@ -202,6 +208,8 @@ function createHarness(
   getStoreCalls: () => number;
 
   getResolveCalls: () => number;
+
+  getObservationCalls: () => number;
 } {
   let durableRecord = JSON.parse(
     JSON.stringify(initialRecord)
@@ -210,6 +218,7 @@ function createHarness(
   let storeCalls = 0;
 
   let resolveCalls = 0;
+  let observationCalls = 0;
 
   const dependencies: CashOutSettlementConflictAwareRestartDependencies = {
     recoverNetwork: async () => {
@@ -242,6 +251,12 @@ function createHarness(
     },
 
     inspectConflict: async () => conflictResult,
+
+    observeSettlement: async (intent) => {
+      observationCalls += 1;
+      assertEqual(intent.txid, SETTLEMENT_TXID);
+      return structuredClone(currentObservation);
+    },
 
     storeConflict: async (_id, evidence) => {
       storeCalls += 1;
@@ -296,10 +311,39 @@ function createHarness(
     getStoreCalls: () => storeCalls,
 
     getResolveCalls: () => resolveCalls,
+    getObservationCalls: () => observationCalls,
   };
 }
 
 async function runD5D3CTests(): Promise<void> {
+  {
+    const record = cashOut();
+    const harness = createHarness(record, inspection('no_conflict_observed'));
+    harness.dependencies.recoverNetwork = async () => {
+      throw new Error(
+        'Handover preflight must not enter the D4 submission/recovery executor.'
+      );
+    };
+    const result =
+      await checkCashOutSettlementCurrentHandoverSafetyWithDependencies(
+        CASH_OUT_ID,
+        {
+          ...harness.dependencies,
+          getCashOutRecordById: async () => harness.getRecord(),
+        }
+      );
+    assertEqual(result.merchantSafety.safeToHandCash, true);
+    assertEqual(harness.getObservationCalls(), 1);
+    assertEqual(JSON.stringify(result.record), JSON.stringify(record));
+    assertEqual(
+      result.currentHandover?.settlementObservation.txid,
+      SETTLEMENT_TXID
+    );
+    console.log(
+      'PASS: current handover preflight only reads the exact transaction and conflict evidence without entering broadcast/reconstruction'
+    );
+  }
+
   /**
    * This is the core D5D security test:
    *
@@ -363,9 +407,14 @@ async function runD5D3CTests(): Promise<void> {
     assertEqual(result.merchantSafety.safeToHandCash, true);
 
     assertEqual(result.merchantSafety.reason, 'settlement_mempool');
+    assertEqual(harness.getObservationCalls(), 1);
+    assertEqual(
+      JSON.stringify(result.record.settlementReconciliation),
+      JSON.stringify(record.settlementReconciliation)
+    );
 
     console.log(
-      'PASS: absence of positive conflict evidence preserves normal mempool settlement safety'
+      'PASS: fresh exact mempool and successful conflict observations authorise handover without replacing history'
     );
   }
 
@@ -390,10 +439,40 @@ async function runD5D3CTests(): Promise<void> {
 
     assertEqual(result.conflictInspection.status, 'inspection_unavailable');
 
-    assertEqual(result.merchantSafety.safeToHandCash, true);
+    assertEqual(result.merchantSafety.safeToHandCash, false);
+    assertEqual(
+      result.merchantSafety.reason,
+      'current_conflict_inspection_unavailable'
+    );
+    assertEqual(result.record.settlementSourceConflict, undefined);
+    assertEqual(
+      JSON.stringify(result.record.settlementReconciliation),
+      JSON.stringify(record.settlementReconciliation)
+    );
 
     console.log(
-      'PASS: unavailable auxiliary conflict inspection does not fabricate contradictory evidence'
+      'PASS: unavailable current conflict inspection denies cash without fabricating a conflict or erasing history'
+    );
+  }
+
+  for (const status of ['unknown', 'unavailable'] as const) {
+    const record = cashOut();
+    const harness = createHarness(
+      record,
+      inspection('no_conflict_observed'),
+      reconciliation(status)
+    );
+    const result =
+      await recoverCashOutSettlementConflictAwareAfterRestartWithDependencies(
+        CASH_OUT_ID,
+        harness.dependencies
+      );
+    assertEqual(harness.getObservationCalls(), 1);
+    assertEqual(result.merchantSafety.safeToHandCash, false);
+    assertEqual(result.merchantSafety.reason, `settlement_${status}`);
+    assertEqual(JSON.stringify(result.record), JSON.stringify(record));
+    console.log(
+      `PASS: historical mempool plus current ${status} lookup denies handover and preserves the durable record`
     );
   }
 
@@ -490,6 +569,7 @@ async function runD5D3CTests(): Promise<void> {
     assertEqual(result.merchantSafety.safeToHandCash, true);
 
     assertEqual(result.merchantSafety.reason, 'settlement_confirmed');
+    assertEqual(harness.getObservationCalls(), 0);
 
     console.log(
       'PASS: exact confirmation explicitly resolves a disappeared mempool conflict after restart'

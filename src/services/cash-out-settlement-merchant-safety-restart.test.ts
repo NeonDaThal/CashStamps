@@ -1,4 +1,7 @@
-import { evaluateCashOutSettlementMerchantSafety } from 'src/services/cash-out-settlement-merchant-safety';
+import {
+  evaluateCashOutSettlementMerchantSafety,
+  type CashOutSettlementCurrentHandoverContext,
+} from 'src/services/cash-out-settlement-merchant-safety';
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
@@ -171,19 +174,19 @@ function assertRestartSafety(
 
 function runD5BTests(): void {
   /**
-   * Positive mempool evidence is durable merchant-safe evidence.
+   * Historical mempool evidence survives; handover permission does not.
    */
   {
     assertRestartSafety(
       createCashOut(),
 
-      true,
+      false,
 
-      'settlement_mempool'
+      'current_handover_context_required'
     );
 
     console.log(
-      'PASS: mempool merchant-safe evidence survives a full record restart round-trip'
+      'PASS: historical mempool evidence requires a new handover context before and after restart'
     );
   }
 
@@ -331,13 +334,51 @@ function runD5BTests(): void {
         settlementReconciliation: createReconciliation('mempool'),
       }),
 
-      true,
+      false,
 
-      'settlement_mempool'
+      'current_handover_context_required'
     );
 
     console.log(
-      'PASS: positive reconciliation remains authoritative after restart despite earlier broadcast ambiguity'
+      'PASS: historical positive reconciliation cannot recreate handover permission after restart'
+    );
+  }
+
+  {
+    const record = createCashOut();
+    const context: CashOutSettlementCurrentHandoverContext = {
+      cashOutId: CASH_OUT_ID,
+      settlementTxid: SETTLEMENT_TXID,
+      sourcePaymentTxid: CUSTOMER_TXID,
+      sourceOutpointIndex: 0,
+      settlementObservation: createReconciliation('mempool'),
+      conflictInspection: {
+        status: 'no_conflict_observed',
+        expectedSettlementTxid: SETTLEMENT_TXID,
+        sourcePaymentTxid: CUSTOMER_TXID,
+        sourceOutpointIndex: 0,
+        checkedTransactionCount: 1,
+      },
+    };
+    assertEqual(
+      evaluateCashOutSettlementMerchantSafety(record, context).safeToHandCash,
+      true
+    );
+    const staleRecord = {
+      ...record,
+      currentHandover: context,
+      safeToHandCash: true,
+    };
+    const restarted = simulateRestart(staleRecord);
+    const after = evaluateCashOutSettlementMerchantSafety(restarted);
+    assertEqual(after.safeToHandCash, false);
+    assertEqual(after.reason, 'current_handover_context_required');
+    assertEqual(
+      JSON.stringify(restarted.settlementReconciliation),
+      JSON.stringify(record.settlementReconciliation)
+    );
+    console.log(
+      'PASS: restart ignores even a stale persisted context or safe flag and requires new checks'
     );
   }
 

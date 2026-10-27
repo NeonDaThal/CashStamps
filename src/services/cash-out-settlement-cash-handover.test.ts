@@ -5,6 +5,8 @@ import {
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
+import type { CashOutSettlementCurrentHandoverContext } from './cash-out-settlement-merchant-safety';
+
 import type {
   CashOutSettlementIntent,
   CashOutSettlementSourceConflictEvidence,
@@ -177,13 +179,30 @@ function assertThrows(
   throw new Error(`Expected operation to throw "${expectedMessagePart}".`);
 }
 
+function currentContext(): CashOutSettlementCurrentHandoverContext {
+  return {
+    cashOutId: CASH_OUT_ID,
+    settlementTxid: SETTLEMENT_TXID,
+    sourcePaymentTxid: CUSTOMER_TXID,
+    sourceOutpointIndex: 2,
+    settlementObservation: reconciliation('mempool'),
+    conflictInspection: {
+      status: 'no_conflict_observed',
+      expectedSettlementTxid: SETTLEMENT_TXID,
+      sourcePaymentTxid: CUSTOMER_TXID,
+      sourceOutpointIndex: 2,
+      checkedTransactionCount: 1,
+    },
+  };
+}
+
 function runD5E1Tests(): void {
   /**
    * Positive settlement mempool evidence authorises the physical handover
    * under the frozen zero-conf merchant-risk policy.
    */
   {
-    const decision = evaluateCashOutCashHandover(cashOut());
+    const decision = evaluateCashOutCashHandover(cashOut(), currentContext());
 
     assertEqual(decision.allowed, true);
 
@@ -207,7 +226,8 @@ function runD5E1Tests(): void {
         merchantConfirmedCashHandedOver: true,
 
         confirmedAt: CONFIRMED_AT,
-      }
+      },
+      currentContext()
     );
 
     assertEqual(
@@ -452,13 +472,32 @@ function runD5E1Tests(): void {
             merchantConfirmedCashHandedOver: true,
 
             confirmedAt: 'not-a-date',
-          }
+          },
+          currentContext()
         ),
 
       'must be a valid timestamp'
     );
 
     console.log('PASS: malformed cash-handover timestamp fails closed');
+  }
+
+  {
+    const original = cashOut();
+    assertEqual(evaluateCashOutCashHandover(original).allowed, false);
+    assertThrows(
+      () =>
+        applyCashOutCashHandoverConfirmation(original, {
+          merchantConfirmedCashHandedOver: true,
+          confirmedAt: CONFIRMED_AT,
+        }),
+      'settlement_not_safe'
+    );
+    assertEqual(original.status, 'received');
+    assertEqual(original.completedAt, undefined);
+    console.log(
+      'PASS: historical mempool evidence without current context cannot complete physical cash handover'
+    );
   }
 
   /**

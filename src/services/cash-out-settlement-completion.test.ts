@@ -15,6 +15,11 @@ import {
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
+import {
+  evaluateCashOutSettlementMerchantSafety,
+  type CashOutSettlementCurrentHandoverContext,
+} from './cash-out-settlement-merchant-safety';
+
 import type {
   CashOutSettlementIntent,
   CashOutSettlementSourceConflictEvidence,
@@ -244,7 +249,11 @@ async function assertRejects(
 
 function createHarness(
   initialCashOut: CashOutRecord,
-  initialCashOnHand: CashOnHandState = cashOnHand()
+  initialCashOnHand: CashOnHandState = cashOnHand(),
+  currentObservation = reconciliation(),
+  currentConflictStatus:
+    | 'no_conflict_observed'
+    | 'inspection_unavailable' = 'no_conflict_observed'
 ): {
   completionDependencies: CashOutSettlementCompletionDependencies;
 
@@ -304,30 +313,30 @@ function createHarness(
     recoverConflictAware: async () => {
       const snapshot = clone(durableCashOut);
 
-      const activeConflict =
-        snapshot.settlementSourceConflict?.state === 'detected';
-
-      const completed = snapshot.status === 'completed';
+      const currentHandover: CashOutSettlementCurrentHandoverContext = {
+        cashOutId: CASH_OUT_ID,
+        settlementTxid: SETTLEMENT_TXID,
+        sourcePaymentTxid: CUSTOMER_TXID,
+        sourceOutpointIndex: 2,
+        settlementObservation: clone(currentObservation),
+        conflictInspection: {
+          status: currentConflictStatus,
+          expectedSettlementTxid: SETTLEMENT_TXID,
+          sourcePaymentTxid: CUSTOMER_TXID,
+          sourceOutpointIndex: 2,
+          checkedTransactionCount: 1,
+        },
+      };
 
       return {
         record: snapshot,
 
-        merchantSafety: {
-          safeToHandCash:
-            !completed &&
-            !activeConflict &&
-            snapshot.status === 'received' &&
-            (snapshot.settlementReconciliation?.status === 'mempool' ||
-              snapshot.settlementReconciliation?.status === 'confirmed'),
+        currentHandover,
 
-          reason: completed
-            ? 'cash_out_already_completed'
-            : activeConflict
-            ? 'settlement_source_conflict'
-            : snapshot.settlementReconciliation?.status === 'confirmed'
-            ? 'settlement_confirmed'
-            : 'settlement_mempool',
-        },
+        merchantSafety: evaluateCashOutSettlementMerchantSafety(
+          snapshot,
+          currentHandover
+        ),
       };
     },
   };
@@ -434,6 +443,62 @@ const CONFIRMATION = {
 };
 
 async function runD5F3Tests(): Promise<void> {
+  for (const status of ['unknown', 'unavailable'] as const) {
+    const historical = cashOut();
+    const currentObservation: TreasuryBroadcastReconciliationResult = {
+      ...reconciliation(),
+      status,
+      blockHeight: undefined,
+    };
+    const harness = createHarness(historical, cashOnHand(), currentObservation);
+    await assertRejects(
+      () =>
+        completeCashOutSettlementWithDependencies(
+          CASH_OUT_ID,
+          CONFIRMATION,
+          harness.completionDependencies
+        ),
+      'preflight is unsafe'
+    );
+    assertEqual(harness.getCashOut().status, 'received');
+    assertEqual(harness.getCashOut().completedAt, undefined);
+    assertEqual(harness.getCashOutWriteCount(), 0);
+    assertEqual(harness.getCashMovementWriteCount(), 0);
+    assertEqual(harness.getCashOnHand().balanceMinor, 50_000);
+    assertEqual(
+      JSON.stringify(harness.getCashOut().settlementReconciliation),
+      JSON.stringify(historical.settlementReconciliation)
+    );
+    console.log(
+      `PASS: historical mempool plus current ${status} preflight produces no completion or accounting mutation`
+    );
+  }
+
+  {
+    const harness = createHarness(
+      cashOut(),
+      cashOnHand(),
+      reconciliation(),
+      'inspection_unavailable'
+    );
+    await assertRejects(
+      () =>
+        completeCashOutSettlementWithDependencies(
+          CASH_OUT_ID,
+          CONFIRMATION,
+          harness.completionDependencies
+        ),
+      'preflight is unsafe'
+    );
+    assertEqual(harness.getCashOut().completedAt, undefined);
+    assertEqual(harness.getCashOutWriteCount(), 0);
+    assertEqual(harness.getCashMovementWriteCount(), 0);
+    assertEqual(harness.getCashOnHand().balanceMinor, 50_000);
+    console.log(
+      'PASS: unavailable current conflict inspection cannot reach completion or Cash-on-Hand accounting'
+    );
+  }
+
   /**
    * Normal path:
    *

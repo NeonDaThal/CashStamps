@@ -323,9 +323,12 @@ async function runD5CTests(): Promise<void> {
 
     assertEqual(result.networkOutcome, 'mempool');
 
-    assertEqual(result.merchantSafety.safeToHandCash, true);
+    assertEqual(result.merchantSafety.safeToHandCash, false);
 
-    assertEqual(result.merchantSafety.reason, 'settlement_mempool');
+    assertEqual(
+      result.merchantSafety.reason,
+      'current_handover_context_required'
+    );
 
     assertEqual(result.record.settlementIntent?.txid, SETTLEMENT_TXID);
 
@@ -377,7 +380,7 @@ async function runD5CTests(): Promise<void> {
 
     assertEqual(result.networkOutcome, 'mempool');
 
-    assertEqual(result.merchantSafety.safeToHandCash, true);
+    assertEqual(result.merchantSafety.safeToHandCash, false);
 
     console.log(
       'PASS: restart after ambiguous broadcast reconciles the same txid without rebroadcast'
@@ -481,7 +484,7 @@ async function runD5CTests(): Promise<void> {
 
     assertEqual(harness.getReconciliationCalls(), 1);
 
-    assertEqual(result.merchantSafety.safeToHandCash, true);
+    assertEqual(result.merchantSafety.safeToHandCash, false);
 
     assertEqual(
       result.record.settlementIntent?.rawTransactionHex,
@@ -515,10 +518,10 @@ async function runD5CTests(): Promise<void> {
 
     assertEqual(result.networkOutcome, 'mempool');
 
-    assertEqual(result.merchantSafety.safeToHandCash, true);
+    assertEqual(result.merchantSafety.safeToHandCash, false);
 
     console.log(
-      'PASS: already-positive durable settlement evidence requires no network work after restart'
+      'PASS: D4 preserves durable mempool evidence without network work but cannot authorise cash handover'
     );
   }
 
@@ -614,8 +617,8 @@ async function runD5CTests(): Promise<void> {
   /**
    * Finally simulate another complete process death after successful recovery.
    *
-   * The durable record alone must still reproduce the safe decision and exact
-   * settlement identity.
+   * The durable record preserves exact settlement identity, while each new
+   * unconfirmed handover attempt must obtain its own current safety context.
    */
   {
     const harness = createLifecycleHarness({
@@ -644,7 +647,7 @@ async function runD5CTests(): Promise<void> {
         harness.dependencies
       );
 
-    assertEqual(firstRecovery.merchantSafety.safeToHandCash, true);
+    assertEqual(firstRecovery.merchantSafety.safeToHandCash, false);
 
     const durableAfterRecovery = simulateRestart(harness.getDurableRecord());
 
@@ -672,7 +675,7 @@ async function runD5CTests(): Promise<void> {
 
     assertEqual(secondProcess.getReconciliationCalls(), 0);
 
-    assertEqual(secondRecovery.merchantSafety.safeToHandCash, true);
+    assertEqual(secondRecovery.merchantSafety.safeToHandCash, false);
 
     assertEqual(secondRecovery.record.settlementIntent?.txid, SETTLEMENT_TXID);
 

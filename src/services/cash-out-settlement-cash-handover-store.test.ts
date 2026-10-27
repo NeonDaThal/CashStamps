@@ -7,6 +7,8 @@ import {
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
+import type { CashOutSettlementCurrentHandoverContext } from './cash-out-settlement-merchant-safety';
+
 import type {
   CashOutSettlementIntent,
   CashOutSettlementSourceConflictEvidence,
@@ -140,6 +142,23 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function currentContext(): CashOutSettlementCurrentHandoverContext {
+  return {
+    cashOutId: CASH_OUT_ID,
+    settlementTxid: SETTLEMENT_TXID,
+    sourcePaymentTxid: CUSTOMER_TXID,
+    sourceOutpointIndex: 2,
+    settlementObservation: reconciliation('mempool'),
+    conflictInspection: {
+      status: 'no_conflict_observed',
+      expectedSettlementTxid: SETTLEMENT_TXID,
+      sourcePaymentTxid: CUSTOMER_TXID,
+      sourceOutpointIndex: 2,
+      checkedTransactionCount: 1,
+    },
+  };
+}
+
 function assertEqual(
   actual: unknown,
   expected: unknown,
@@ -236,7 +255,8 @@ async function runD5E2Tests(): Promise<void> {
           confirmedAt: CONFIRMED_AT,
         },
 
-        harness.dependencies
+        harness.dependencies,
+        currentContext()
       );
 
     assertEqual(completed?.status, 'completed');
@@ -317,6 +337,8 @@ async function runD5E2Tests(): Promise<void> {
 
         return {
           record: safeSnapshot,
+
+          currentHandover: currentContext(),
 
           merchantSafety: {
             safeToHandCash: true,
@@ -422,6 +444,8 @@ async function runD5E2Tests(): Promise<void> {
       recoverConflictAware: async () => ({
         record: harness.getRecord(),
 
+        currentHandover: currentContext(),
+
         merchantSafety: {
           safeToHandCash: true,
 
@@ -450,6 +474,65 @@ async function runD5E2Tests(): Promise<void> {
 
     console.log(
       'PASS: safe preflight plus safe latest durable state completes once'
+    );
+  }
+
+  const mismatches: Array<
+    (context: CashOutSettlementCurrentHandoverContext) => void
+  > = [
+    (context) => {
+      context.cashOutId = 'another-cash-out';
+    },
+    (context) => {
+      context.settlementTxid = '99'.repeat(32);
+    },
+    (context) => {
+      context.settlementObservation.txid = '99'.repeat(32);
+    },
+    (context) => {
+      context.conflictInspection.sourcePaymentTxid = '99'.repeat(32);
+    },
+    (context) => {
+      context.conflictInspection.sourceOutpointIndex = 3;
+    },
+  ];
+  for (const mutate of mismatches) {
+    const harness = createAtomicHarness(cashOut());
+    const context = currentContext();
+    mutate(context);
+    await assertRejects(
+      () =>
+        confirmCashOutCashHandoverAtomicallyWithDependencies(
+          CASH_OUT_ID,
+          { merchantConfirmedCashHandedOver: true, confirmedAt: CONFIRMED_AT },
+          harness.dependencies,
+          context
+        ),
+      'settlement_not_safe'
+    );
+    assertEqual(harness.getRecord().status, 'received');
+    assertEqual(harness.getRecord().completedAt, undefined);
+    assertEqual(harness.getWriteCount(), 0);
+  }
+  console.log(
+    'PASS: serialized completion rejects context for another Cash-out, settlement or selected source'
+  );
+
+  {
+    const harness = createAtomicHarness(cashOut());
+    await assertRejects(
+      () =>
+        confirmCashOutCashHandoverAtomicallyWithDependencies(
+          CASH_OUT_ID,
+          { merchantConfirmedCashHandedOver: true, confirmedAt: CONFIRMED_AT },
+          harness.dependencies
+        ),
+      'settlement_not_safe'
+    );
+    assertEqual(harness.getRecord().completedAt, undefined);
+    assertEqual(harness.getWriteCount(), 0);
+    console.log(
+      'PASS: atomic completion cannot use historical mempool evidence without current context'
     );
   }
 

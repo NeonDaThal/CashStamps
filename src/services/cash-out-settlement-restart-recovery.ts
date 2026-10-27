@@ -8,11 +8,19 @@ import {
 import {
   evaluateCashOutSettlementMerchantSafety,
   type CashOutSettlementMerchantSafety,
+  type CashOutSettlementCurrentHandoverContext,
 } from 'src/services/cash-out-settlement-merchant-safety';
 
 import type { CashOutSettlementConflictInspectionResult } from 'src/services/cash-out-settlement-conflict-inspector';
 
-import type { CashOutSettlementSourceConflictEvidence } from 'src/types/cash-out-settlement';
+import type {
+  CashOutSettlementIntent,
+  CashOutSettlementSourceConflictEvidence,
+} from 'src/types/cash-out-settlement';
+
+import type { TreasuryBroadcastReconciliationResult } from 'src/types/treasury-broadcast-reconciliation';
+
+import { getCashOutRecordById } from './cash-out-store';
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
@@ -24,6 +32,10 @@ export interface CashOutSettlementConflictAwareRestartDependencies {
   inspectConflict: (
     cashOut: CashOutRecord
   ) => Promise<CashOutSettlementConflictInspectionResult>;
+
+  observeSettlement: (
+    intent: CashOutSettlementIntent
+  ) => Promise<TreasuryBroadcastReconciliationResult>;
 
   storeConflict: (
     cashOutId: string,
@@ -41,6 +53,8 @@ export interface CashOutSettlementConflictAwareRestartDependencies {
 export interface CashOutSettlementConflictAwareRestartResult
   extends CashOutSettlementRestartRecoveryResult {
   conflictInspection: CashOutSettlementConflictInspectionResult;
+
+  currentHandover?: CashOutSettlementCurrentHandoverContext;
 }
 
 export interface CashOutSettlementRestartRecoveryResult {
@@ -90,8 +104,8 @@ function buildRestartRecoveryResult(
  * - broadcasting only the D3-persisted transaction;
  * - persisting broadcast/reconciliation evidence.
  *
- * D5 then derives the merchant cash-handover decision from the resulting
- * durable record.
+ * D5 preserves the resulting durable evidence. Unconfirmed handover additionally
+ * requires the current settlement/conflict checks in the preflight below.
  */
 export async function recoverCashOutSettlementAfterRestartWithDependencies(
   cashOutId: string,
@@ -128,13 +142,13 @@ export async function recoverCashOutSettlementAfterRestart(
  * Ordering is security-sensitive:
  *
  * 1. D4 resumes/reconciles the exact persisted settlement transaction.
- * 2. D5D inspects the exact customer source outpoint for a different spender.
+ * 2. Recheck unconfirmed settlement now, then inspect the exact source outpoint.
  * 3. Proven conflict evidence is persisted before the final merchant decision.
  * 4. Existing conflict evidence is never erased by "no conflict observed".
  * 5. A prior mempool conflict may be explicitly resolved only when:
  *      - the current inspection sees no conflict; AND
  *      - the exact deterministic settlement is confirmed.
- * 6. Merchant safety is derived from the final durable record.
+ * 6. Merchant safety combines the final durable record and current observations.
  */
 export async function recoverCashOutSettlementConflictAwareAfterRestartWithDependencies(
   cashOutId: string,
@@ -144,7 +158,40 @@ export async function recoverCashOutSettlementConflictAwareAfterRestartWithDepen
 
   let record = networkRecovery.record;
 
+  const intent = record.settlementIntent;
+
+  if (!intent || record.id !== cashOutId) {
+    throw new Error(
+      'Current handover checks require the exact durable Cash-out settlement intent.'
+    );
+  }
+
+  // Own the checked identity across both awaits and any conflict-store writes.
+  const checkedIntent = structuredClone(intent);
+  const checkedCashOutId = record.id;
+
+  // Historical mempool evidence is not a current observation. This explicit
+  // read runs even if D4 skipped reconciliation because evidence was durable.
+  // Confirmed and completed records do not need transient mempool permission.
+  const settlementObservation =
+    record.status !== 'completed' &&
+    record.settlementReconciliation?.status !== 'confirmed'
+      ? await dependencies.observeSettlement(checkedIntent)
+      : undefined;
+
   const conflictInspection = await dependencies.inspectConflict(record);
+
+  if (
+    conflictInspection.expectedSettlementTxid.trim().toLowerCase() !==
+      checkedIntent.txid.trim().toLowerCase() ||
+    conflictInspection.sourcePaymentTxid.trim().toLowerCase() !==
+      checkedIntent.sourcePaymentTxid.trim().toLowerCase() ||
+    conflictInspection.sourceOutpointIndex !== checkedIntent.sourceOutpointIndex
+  ) {
+    throw new Error(
+      'Current conflict inspection belongs to a different settlement or source outpoint.'
+    );
+  }
 
   if (conflictInspection.status === 'conflict_detected') {
     const evidence = conflictInspection.evidence;
@@ -197,6 +244,18 @@ export async function recoverCashOutSettlementConflictAwareAfterRestartWithDepen
    *
    * Any already-durable conflict therefore remains active.
    */
+  const currentHandover: CashOutSettlementCurrentHandoverContext | undefined =
+    settlementObservation
+      ? {
+          cashOutId: checkedCashOutId,
+          settlementTxid: checkedIntent.txid,
+          sourcePaymentTxid: checkedIntent.sourcePaymentTxid,
+          sourceOutpointIndex: checkedIntent.sourceOutpointIndex,
+          settlementObservation,
+          conflictInspection,
+        }
+      : undefined;
+
   return {
     record,
 
@@ -204,7 +263,12 @@ export async function recoverCashOutSettlementConflictAwareAfterRestartWithDepen
 
     conflictInspection,
 
-    merchantSafety: evaluateCashOutSettlementMerchantSafety(record),
+    ...(currentHandover ? { currentHandover } : {}),
+
+    merchantSafety: evaluateCashOutSettlementMerchantSafety(
+      record,
+      currentHandover
+    ),
   };
 }
 
@@ -217,27 +281,85 @@ export async function recoverCashOutSettlementConflictAwareAfterRestartWithDepen
 export async function recoverCashOutSettlementConflictAwareAfterRestart(
   cashOutId: string
 ): Promise<CashOutSettlementConflictAwareRestartResult> {
-  const [conflictNetwork, conflictStore] = await Promise.all([
+  return recoverCashOutSettlementConflictAwareAfterRestartWithDependencies(
+    cashOutId,
+    {
+      ...(await createProductionConflictCheckDependencies()),
+      recoverNetwork: recoverCashOutSettlementAfterRestart,
+    }
+  );
+}
+
+async function createProductionConflictCheckDependencies(): Promise<
+  Omit<CashOutSettlementConflictAwareRestartDependencies, 'recoverNetwork'>
+> {
+  const [conflictNetwork, conflictStore, reconciliation] = await Promise.all([
     import('src/services/cash-out-settlement-conflict-electrum'),
 
     import('src/services/cash-out-settlement-conflict-store'),
+
+    import('src/services/cash-out-settlement-reconciliation'),
   ]);
 
+  return {
+    observeSettlement: reconciliation.reconcileCashOutSettlementIntent,
+
+    inspectConflict:
+      conflictNetwork.inspectCashOutSettlementSourceConflictFromNetwork,
+
+    storeConflict: conflictStore.storeCashOutSettlementSourceConflict,
+
+    resolveConflict: conflictStore.resolveStoredCashOutSettlementSourceConflict,
+
+    now: () => new Date().toISOString(),
+  };
+}
+
+export interface CashOutSettlementCurrentHandoverDependencies
+  extends Omit<
+    CashOutSettlementConflictAwareRestartDependencies,
+    'recoverNetwork'
+  > {
+  getCashOutRecordById(id: string): Promise<CashOutRecord | undefined>;
+}
+
+/** Read-only preflight has no transaction construction/signing/broadcast capability. */
+export async function checkCashOutSettlementCurrentHandoverSafetyWithDependencies(
+  cashOutId: string,
+  dependencies: CashOutSettlementCurrentHandoverDependencies
+): Promise<CashOutSettlementConflictAwareRestartResult> {
   return recoverCashOutSettlementConflictAwareAfterRestartWithDependencies(
     cashOutId,
-
     {
-      recoverNetwork: recoverCashOutSettlementAfterRestart,
+      ...dependencies,
+      recoverNetwork: async (id) => {
+        const record = await dependencies.getCashOutRecordById(id);
 
-      inspectConflict:
-        conflictNetwork.inspectCashOutSettlementSourceConflictFromNetwork,
+        if (!record) {
+          throw new Error(
+            'Cash-out record could not be found during handover preflight.'
+          );
+        }
 
-      storeConflict: conflictStore.storeCashOutSettlementSourceConflict,
+        const status = record.settlementReconciliation?.status;
+        return buildRestartRecoveryResult(
+          record,
+          status === 'confirmed' || status === 'mempool' ? status : 'uncertain'
+        );
+      },
+    }
+  );
+}
 
-      resolveConflict:
-        conflictStore.resolveStoredCashOutSettlementSourceConflict,
-
-      now: () => new Date().toISOString(),
+/** Production cash handover always performs a new read-only preflight. */
+export async function checkCashOutSettlementCurrentHandoverSafety(
+  cashOutId: string
+): Promise<CashOutSettlementConflictAwareRestartResult> {
+  return checkCashOutSettlementCurrentHandoverSafetyWithDependencies(
+    cashOutId,
+    {
+      ...(await createProductionConflictCheckDependencies()),
+      getCashOutRecordById,
     }
   );
 }

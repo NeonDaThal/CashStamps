@@ -1,4 +1,7 @@
-import { evaluateCashOutSettlementMerchantSafety } from 'src/services/cash-out-settlement-merchant-safety';
+import {
+  evaluateCashOutSettlementMerchantSafety,
+  type CashOutSettlementCurrentHandoverContext,
+} from 'src/services/cash-out-settlement-merchant-safety';
 
 import type { CashOutRecord } from 'src/types/cash-out';
 
@@ -131,11 +134,31 @@ function assertSafe(
   cashOut: CashOutRecord,
   expectedEvidence: 'mempool' | 'confirmed'
 ): void {
-  const result = evaluateCashOutSettlementMerchantSafety(cashOut);
+  const result = evaluateCashOutSettlementMerchantSafety(
+    cashOut,
+    expectedEvidence === 'mempool' ? currentContext() : undefined
+  );
 
   assertEqual(result.safeToHandCash, true);
 
   assertEqual(result.settlementEvidence, expectedEvidence);
+}
+
+function currentContext(): CashOutSettlementCurrentHandoverContext {
+  return {
+    cashOutId: CASH_OUT_ID,
+    settlementTxid: SETTLEMENT_TXID,
+    sourcePaymentTxid: CUSTOMER_TXID,
+    sourceOutpointIndex: 0,
+    settlementObservation: createReconciliation('mempool'),
+    conflictInspection: {
+      status: 'no_conflict_observed',
+      expectedSettlementTxid: SETTLEMENT_TXID,
+      sourcePaymentTxid: CUSTOMER_TXID,
+      sourceOutpointIndex: 0,
+      checkedTransactionCount: 1,
+    },
+  };
 }
 
 function assertUnsafe(cashOut: CashOutRecord, expectedReason: string): void {
@@ -148,16 +171,106 @@ function assertUnsafe(cashOut: CashOutRecord, expectedReason: string): void {
 
 function runD5ATests(): void {
   /**
-   * Positive exact settlement mempool evidence is the normal zero-confirmation
-   * merchant-safe boundary agreed in the threat model.
+   * Current exact mempool and no-conflict observations are both required.
    */
   {
     assertSafe(createCashOut(), 'mempool');
 
     console.log(
-      'PASS: exact persisted settlement with mempool evidence authorises cash handover'
+      'PASS: current exact mempool and no-conflict observations authorise cash handover'
     );
   }
+
+  {
+    assertUnsafe(createCashOut(), 'current_handover_context_required');
+    console.log(
+      'PASS: historical mempool evidence alone cannot authorise cash handover'
+    );
+  }
+
+  for (const status of ['unknown', 'unavailable'] as const) {
+    const context = currentContext();
+    context.settlementObservation = createReconciliation(status);
+    const record = createCashOut();
+    const before = JSON.stringify(record);
+    const result = evaluateCashOutSettlementMerchantSafety(record, context);
+    assertEqual(result.safeToHandCash, false);
+    assertEqual(result.reason, `settlement_${status}`);
+    assertEqual(JSON.stringify(record), before);
+    console.log(
+      `PASS: current ${status} observation blocks historical mempool handover without changing history`
+    );
+  }
+
+  {
+    const context = currentContext();
+    context.conflictInspection.status = 'inspection_unavailable';
+    const result = evaluateCashOutSettlementMerchantSafety(
+      createCashOut(),
+      context
+    );
+    assertEqual(result.safeToHandCash, false);
+    assertEqual(result.reason, 'current_conflict_inspection_unavailable');
+    console.log(
+      'PASS: current mempool observation cannot bypass unavailable current conflict inspection'
+    );
+  }
+
+  {
+    const context = currentContext();
+    context.conflictInspection.status = 'conflict_detected';
+    const result = evaluateCashOutSettlementMerchantSafety(
+      createCashOut(),
+      context
+    );
+    assertEqual(result.safeToHandCash, false);
+    assertEqual(result.reason, 'settlement_source_conflict');
+    console.log(
+      'PASS: current concrete conflict blocks otherwise positive mempool observation'
+    );
+  }
+
+  const mismatches: Array<
+    (context: CashOutSettlementCurrentHandoverContext) => void
+  > = [
+    (context) => {
+      context.cashOutId = 'another-cash-out';
+    },
+    (context) => {
+      context.settlementTxid = '99'.repeat(32);
+    },
+    (context) => {
+      context.settlementObservation.txid = '99'.repeat(32);
+    },
+    (context) => {
+      context.sourcePaymentTxid = '99'.repeat(32);
+    },
+    (context) => {
+      context.sourceOutpointIndex = 1;
+    },
+    (context) => {
+      context.conflictInspection.expectedSettlementTxid = '99'.repeat(32);
+    },
+    (context) => {
+      context.conflictInspection.sourcePaymentTxid = '99'.repeat(32);
+    },
+    (context) => {
+      context.conflictInspection.sourceOutpointIndex = 1;
+    },
+  ];
+  for (const mutate of mismatches) {
+    const context = currentContext();
+    mutate(context);
+    const result = evaluateCashOutSettlementMerchantSafety(
+      createCashOut(),
+      context
+    );
+    assertEqual(result.safeToHandCash, false);
+    assertEqual(result.reason, 'current_handover_context_mismatch');
+  }
+  console.log(
+    'PASS: every current-context Cash-out, settlement and exact-source identity mismatch fails closed'
+  );
 
   /**
    * Confirmation is stronger positive evidence and is likewise safe.
