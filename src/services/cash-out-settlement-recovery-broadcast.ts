@@ -15,8 +15,6 @@ import {
   createUncertainBroadcastResult,
 } from 'src/services/treasury-broadcast-classification';
 
-import { reconcileTreasuryBroadcastWithRetry } from 'src/services/treasury-broadcast-reconciliation';
-
 import { classifyCashOutSettlementExplicitBroadcastRejection } from 'src/services/cash-out-settlement-broadcast';
 
 import { getCashOutRecordById } from 'src/services/cash-out-store';
@@ -409,7 +407,14 @@ const DEFAULT_SUBMISSION_DEPENDENCIES: CashOutSettlementRecoverySubmissionDepend
 
     storeRecoveryBroadcast: storeCashOutSettlementRecoveryBroadcast,
 
-    reconcileRecoveryTxid: reconcileTreasuryBroadcastWithRetry,
+    async reconcileRecoveryTxid(txid) {
+      // Load the live Electrum graph only when the default network check runs.
+      // Injected executor calls must not eagerly evaluate its Node 18 ESM/CJS boundary.
+      const { reconcileTreasuryBroadcastWithRetry } = await import(
+        'src/services/treasury-broadcast-reconciliation'
+      );
+      return reconcileTreasuryBroadcastWithRetry(txid);
+    },
 
     storeRecoveryReconciliation: storeCashOutSettlementRecoveryReconciliation,
   };

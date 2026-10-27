@@ -1,17 +1,28 @@
-import { encodeCashAddress, hexToBin } from '@bitauth/libauth';
-import { MockNetworkProvider, Network, SignatureTemplate } from 'cashscript';
+import { decodeTransaction, hashTransaction, hexToBin } from '@bitauth/libauth';
 
-import { buildCashOutSettlementContractPlan } from './cash-out-settlement-contract-plan';
-import { buildCashOutSettlementRecoveryInputSet } from './cash-out-settlement-recovery-inputs';
-import { bindCashOutSettlementRecoveryInputSetToNetworkEvidence } from './cash-out-settlement-recovery-input-binding';
 import { observeCashOutSettlementRecoveryNetworkEvidence } from './cash-out-settlement-recovery-network-evidence';
-import { evaluateCashOutSettlementRecoveryEligibility } from './cash-out-settlement-recovery-eligibility';
+import {
+  createRecoveryTestFixture,
+  RECOVERY_TEST_TIME as TIME,
+} from './cash-out-settlement-recovery-test-fixtures';
 import {
   prepareAndStoreCashOutSettlementRecoveryWithDependencies,
   type CashOutSettlementRecoveryPreparationDependencies,
   type PrepareCashOutSettlementRecoveryInput,
 } from './cash-out-settlement-recovery-prepare';
-import { storeCashOutSettlementRecoveryIntentWithDependencies } from './cash-out-settlement-recovery-store';
+import {
+  storeCashOutSettlementRecoveryIntentWithDependencies,
+  applyCashOutSettlementRecoveryBroadcast,
+  applyCashOutSettlementRecoveryReconciliation,
+} from './cash-out-settlement-recovery-store';
+import {
+  broadcastAndReconcileCashOutSettlementRecoveryWithDependencies,
+  broadcastCashOutSettlementRecoveryIntentWithDependencies,
+  reconcileAndStoreCashOutSettlementRecoveryWithDependencies,
+  type CashOutSettlementRecoverySubmissionDependencies,
+} from './cash-out-settlement-recovery-broadcast';
+import { resumeCashOutSettlementRecoveryWithDependencies } from './cash-out-settlement-recovery-restart';
+import { createRecoveryTestStore } from './cash-out-settlement-recovery-test-fixtures';
 import {
   finalizeCashOutSettlementRecoveryTransaction,
   type FinalizeCashOutSettlementRecoveryTransactionInput,
@@ -62,88 +73,11 @@ function pass(message: string): void {
   console.log(`PASS: ${message}`);
 }
 
-// Synthetic scalar 1 only. No Treasury wallet, live network, or broadcast.
-const PRIVATE_KEY = hexToBin('00'.repeat(31) + '01');
-const PUBLIC_KEY = hexToBin(
-  '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
-);
-const TREASURY_ADDRESS = encodeCashAddress({
-  prefix: 'bitcoincash',
-  type: 'p2pkh',
-  payload: hexToBin('751e76e8199196d454941c45d1b3a323f1433bd6'),
-}).address;
-const TIME = '2026-10-27T12:00:00.000Z';
-const BASE_RECORD: CashOutRecord = {
-  id: 'cash-out-d6j-prepare-001',
-  serial: 'CO-D6J-001',
-  createdAt: TIME,
-  updatedAt: TIME,
-  fiatCurrency: 'GBP',
-  fiatAmountMinor: 10_000,
-  customerSendsFiatEquivalentMinor: 10_300,
-  marketBchSats: 200_000,
-  bchSatsRequired: 206_000,
-  treasuryReceivingAddress: TREASURY_ADDRESS,
-  quote: {
-    source: 'manual',
-    fiatCurrency: 'GBP',
-    marketRate: 500,
-    marketRateTimestamp: TIME,
-    quoteLockedAt: TIME,
-    quoteExpiresAt: '2026-10-27T12:05:00.000Z',
-    isFallbackQuote: false,
-  },
-  fee: {
-    feeModel: 'cash_out_v1',
-    totalServiceFeeBasisPoints: 300,
-    totalServiceFeeAmountMinor: 300,
-    platformFeeBasisPoints: 150,
-    platformFeeAmountMinor: 150,
-    merchantFeeBasisPoints: 150,
-    merchantFeeAmountMinor: 150,
-    settlementMode: 'accounting_only',
-  },
-  status: 'quote_locked',
-};
-const provider = new MockNetworkProvider();
-provider.network = Network.MAINNET;
-const contractPlan = buildCashOutSettlementContractPlan({
-  cashOut: BASE_RECORD,
-  cashOutCommitmentHex: '01'.repeat(32),
-  treasuryAddress: TREASURY_ADDRESS,
-  provider,
-});
-const inputSet = buildCashOutSettlementRecoveryInputSet([
-  {
-    txid: 'a'.repeat(64),
-    vout: 0,
-    satoshis: 100_000,
-    contractAddress: contractPlan.contractAddress,
-  },
-  {
-    txid: 'b'.repeat(64),
-    vout: 1,
-    satoshis: 106_000,
-    contractAddress: contractPlan.contractAddress,
-  },
-]);
-const unspents: AddressListUnspent['response'] = inputSet.inputs.map(
-  (entry) => ({
-    tx_hash: entry.txid,
-    tx_pos: entry.vout,
-    value: entry.satoshis,
-    height: 900_001,
-  })
-);
-for (const entry of inputSet.inputs) {
-  provider.addUtxo(contractPlan.contractAddress, {
-    txid: entry.txid,
-    vout: entry.vout,
-    satoshis: BigInt(entry.satoshis),
-  });
-}
+const { unspents } = createRecoveryTestFixture();
 
-function createHarness() {
+function createHarness(inputCount: 1 | 2 | 3 = 2) {
+  const fixture = createRecoveryTestFixture(inputCount);
+  const { record: BASE_RECORD, contractPlan, unspents } = fixture;
   let record: CashOutRecord = {
     ...structuredClone(BASE_RECORD),
     status: 'received',
@@ -170,34 +104,7 @@ function createHarness() {
   // The caller's older binding is valid but reports mempool height. The fresh
   // Electrum-shaped observation reports confirmed height, making its origin
   // observable all the way through the REAL finalizer and signing request.
-  const binding = bindCashOutSettlementRecoveryInputSetToNetworkEvidence({
-    cashOutId: record.id,
-    expectedContractAddress: contractPlan.contractAddress,
-    inputSet,
-    networkEvidence: {
-      source: 'electrum_listunspent',
-      available: true,
-      contractAddress: contractPlan.contractAddress,
-      utxos: inputSet.inputs.map((entry) => ({
-        ...entry,
-        height: 0,
-        tokenDataPresent: false,
-      })),
-    },
-  });
-  const input: PrepareCashOutSettlementRecoveryInput = {
-    contractPlan: structuredClone(contractPlan),
-    inputSet: structuredClone(inputSet),
-    recoveryAssessment: evaluateCashOutSettlementRecoveryEligibility(record, {
-      exceptionalCase: 'fragmented_payment',
-      observedSats: inputSet.totalInputSats,
-      observedOutpointCount: inputSet.inputCount,
-      networkEvidenceAvailable: true,
-    }),
-    binding,
-    provider,
-    preparedAt: TIME,
-  };
+  const input: PrepareCashOutSettlementRecoveryInput = fixture.input;
   const dependencies: CashOutSettlementRecoveryPreparationDependencies = {
     async getCashOutRecordById(id) {
       equal(id, BASE_RECORD.id);
@@ -229,11 +136,7 @@ function createHarness() {
       return finalizeCashOutSettlementRecoveryTransaction(value, {
         async createRecoveryUnlocker(contract, fee) {
           calls.signer += 1;
-          return contract.unlock.recover(
-            PUBLIC_KEY,
-            new SignatureTemplate(PRIVATE_KEY),
-            BigInt(fee)
-          );
+          return fixture.createRecoveryUnlocker(contract, fee);
         },
       });
     },
@@ -361,9 +264,157 @@ equal(valid.finalizerInput()?.authorization.inputs[0].height, 900_001);
 equal(artifact.signingRequest.inputs[0].networkState, 'confirmed');
 equal(artifact.transactionBytes, artifact.actualFeeSats);
 equal(artifact.txid.length, 64);
+equal(hashTransaction(hexToBin(artifact.rawTransactionHex)), artifact.txid);
 pass(
   'fresh confirmed authorization flows through real production finalization, signing and guarded storage'
 );
+
+{
+  // Continue the real production preparation above: its artifact crossed the
+  // guarded write-ahead updater before any transport was even created.
+  const original = JSON.stringify(artifact);
+  const signingBeforeSubmission = { ...valid.calls };
+  equal(valid.calls.store, 1);
+  deepEqual(valid.record().recoveryIntent, artifact);
+  const firstStore = createRecoveryTestStore(valid.record());
+  const submitted: string[] = [];
+  const reconciled: string[] = [];
+  let currentStatus: 'unknown' | 'mempool' = 'unknown';
+  function submissionDependencies(
+    store: ReturnType<typeof createRecoveryTestStore>
+  ): CashOutSettlementRecoverySubmissionDependencies {
+    return {
+      getCashOutRecordById: store.getCashOutRecordById,
+      broadcastRecoveryIntent: (durable) =>
+        broadcastCashOutSettlementRecoveryIntentWithDependencies(durable, {
+          getBroadcastSafetyStatus: () => ({
+            realBroadcastEnabled: true,
+            message: 'Synthetic transport only.',
+          }),
+          createTransport: () => ({
+            async start() {
+              deepEqual(store.snapshot().recoveryIntent, artifact);
+            },
+            async broadcast(raw) {
+              equal(raw, artifact.rawTransactionHex);
+              submitted.push(raw);
+              throw new Error(
+                'Response lost after the network accepted the exact transaction'
+              );
+            },
+          }),
+        }),
+      storeRecoveryBroadcast: (id, result) =>
+        store.mutateCashOutRecordAtomically(id, (current) =>
+          applyCashOutSettlementRecoveryBroadcast(current, result)
+        ),
+      async reconcileRecoveryTxid(txid) {
+        equal(store.snapshot().recoveryBroadcast?.requestAttempted, true);
+        equal(txid, artifact.txid);
+        reconciled.push(txid);
+        return {
+          txid,
+          status: currentStatus,
+          ...(currentStatus === 'mempool' ? { blockHeight: 0 } : {}),
+          checkedAt: TIME,
+          serverChecks: [],
+          message: `Current ${currentStatus} observation.`,
+        };
+      },
+      storeRecoveryReconciliation: (id, result) =>
+        store.mutateCashOutRecordAtomically(id, (current) =>
+          applyCashOutSettlementRecoveryReconciliation(current, result)
+        ),
+    };
+  }
+  const afterSubmission =
+    await broadcastAndReconcileCashOutSettlementRecoveryWithDependencies(
+      valid.input.contractPlan.settlementPlan.cashOutId,
+      submissionDependencies(firstStore)
+    );
+  equal(afterSubmission.recoveryBroadcast?.status, 'uncertain');
+  equal(afterSubmission.recoveryBroadcast?.requestAttempted, true);
+  equal(afterSubmission.recoveryReconciliation?.status, 'unknown');
+
+  // New record objects, new store and new executor dependencies simulate process
+  // restart. Only the durable CashOutRecord crosses this JSON boundary.
+  const restartedRecord = JSON.parse(
+    JSON.stringify(afterSubmission)
+  ) as CashOutRecord;
+  const restartStore = createRecoveryTestStore(restartedRecord);
+  const restartSubmission = submissionDependencies(restartStore);
+  currentStatus = 'mempool';
+  const afterRestart = await resumeCashOutSettlementRecoveryWithDependencies(
+    restartedRecord.id,
+    {
+      getCashOutRecordById: restartStore.getCashOutRecordById,
+      resumeRecovery: (id) =>
+        broadcastAndReconcileCashOutSettlementRecoveryWithDependencies(
+          id,
+          restartSubmission
+        ),
+      checkRecovery: (id) =>
+        reconcileAndStoreCashOutSettlementRecoveryWithDependencies(
+          id,
+          restartSubmission
+        ),
+      broadcastRecoveryIntent: restartSubmission.broadcastRecoveryIntent,
+      storeRecoveryBroadcast: restartSubmission.storeRecoveryBroadcast,
+    }
+  );
+  equal(submitted.length, 1);
+  equal(submitted[0], artifact.rawTransactionHex);
+  equal(reconciled.length, 2);
+  equal(reconciled[0], artifact.txid);
+  equal(reconciled[1], artifact.txid);
+  equal(afterRestart.recoveryReconciliation?.status, 'mempool');
+  equal(JSON.stringify(afterRestart.recoveryIntent), original);
+  equal(valid.calls.finalize, signingBeforeSubmission.finalize);
+  equal(valid.calls.signer, signingBeforeSubmission.signer);
+  equal(valid.calls.store, 1);
+  equal(firstStore.calls.intentAttachments, 0);
+  equal(restartStore.calls.intentAttachments, 0);
+  pass(
+    'COMPOSED: real preparation -> one ambiguous submission -> serialized restart -> original-txid reconciliation, without resigning or a second intent'
+  );
+}
+
+for (const inputCount of [1, 3] as const) {
+  const h = createHarness(inputCount);
+  const prepared = await h.run();
+  const intent = prepared.recoveryIntent;
+  if (!intent)
+    throw new Error('Production preparation did not attach an intent.');
+  const raw = hexToBin(intent.rawTransactionHex);
+  const decoded = decodeTransaction(raw);
+  if (typeof decoded === 'string') throw new Error(decoded);
+  equal(h.calls.finalize, 1);
+  equal(h.calls.store, 1);
+  equal(h.calls.writes, 1);
+  equal(decoded.inputs.length, inputCount);
+  equal(decoded.outputs.length, 2);
+  equal(raw.length, intent.transactionBytes);
+  equal(hashTransaction(raw), intent.txid);
+  equal(intent.actualFeeSats, raw.length);
+  equal(
+    BigInt(h.input.inputSet.totalInputSats) -
+      decoded.outputs.reduce(
+        (total, output) => total + output.valueSatoshis,
+        0n
+      ),
+    BigInt(intent.actualFeeSats)
+  );
+  const beforeReplay = { ...h.calls };
+  const replay = await h.run();
+  deepEqual(replay.recoveryIntent, intent);
+  equal(h.calls.finalize, beforeReplay.finalize);
+  equal(h.calls.signer, beforeReplay.signer);
+  equal(h.calls.network, beforeReplay.network);
+  equal(h.calls.store, beforeReplay.store);
+  pass(
+    `${inputCount}-input production preparation proves raw bytes, txid, exact fee and durable idempotent replay`
+  );
+}
 
 {
   const h = createHarness();
