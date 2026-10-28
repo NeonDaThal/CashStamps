@@ -42,7 +42,7 @@
         </div>
 
         <p class="intro">
-          {{ t('cashOutPage.hero.intro') }}
+          {{ t('cashOutPage.contractIntro') }}
         </p>
 
         <div class="hero-form-wrap">
@@ -183,7 +183,7 @@
           <q-icon name="shield" />
         </template>
 
-        {{ t('cashOutPage.safetyNotice') }}
+        {{ t('cashOutPage.contractSafetyNotice') }}
       </q-banner>
 
       <CashOutConfirmDialog
@@ -195,9 +195,11 @@
         :is-watching-for-payment="isWatchingForPayment"
         :payment-detection-error="paymentDetectionError"
         :is-preparing-receipt="isPreparingReceipt"
-        :is-completing-cash-out="isCompletingCashOut"
+        :contract-display-state="sessionDisplay?.state ?? 'awaiting_payment'"
+        :is-checking-payment="sessionDisplay?.isChecking ?? false"
+        :remaining-milliseconds="remainingMilliseconds"
         @update:model-value="handleConfirmDialogModelUpdate"
-        @confirm-cash-paid="handleConfirmCashPaid"
+        @create-new-cash-out="handleCreateNewCashOut"
         @print-receipt="handlePrintReceiptPlaceholder"
       />
       <q-dialog v-model="isReceiptPreviewOpen">
@@ -237,704 +239,254 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-
+import { ElectrumNetworkProvider, Network } from 'cashscript';
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import CashOutConfirmDialog from 'src/components/CashOutConfirmDialog.vue';
 import CashOutReceiptPreview from 'src/components/CashOutReceiptPreview.vue';
-import type {
-  CashOutPaymentDetection,
-  CashOutRecord,
-} from 'src/types/cash-out';
+import type { CashOutRecord } from 'src/types/cash-out';
+import type { TreasuryWalletPublicInfo } from 'src/types/treasury';
 import {
   calculateCashOutFeeBreakdown,
-  calculateCashOutPricingFromLockedQuote,
   formatCashOutBasisPointsAsPercent,
   formatCashOutMinorFiatAmount,
   isCashOutAmountAllowed,
 } from 'src/services/cash-out-pricing';
 import {
-  addCashOutRecord,
-  cancelAwaitingCashOut,
-  markCashOutCompleted,
-  markCashOutPaymentDetected,
-} from 'src/services/cash-out-store';
-import { recordCashOutPaid } from 'src/services/cash-on-hand-store';
-import {
-  PricingService,
-  PricingUnavailableError,
-} from 'src/services/pricing-service';
-import { createCashOutPaymentUri } from 'src/services/cash-out-payment-uri';
-
-import {
-  CASH_OUT_QUOTE_TTL_MILLISECONDS,
-  getCashOutQuoteRemainingMilliseconds,
-  isCashOutQuoteExpired,
-} from 'src/services/cash-out-quote-policy';
-import {
-  deriveNextTreasuryCashOutReceivingAddress,
-  getTreasuryWalletPublicInfo,
-} from 'src/services/treasury-wallet';
-
-import {
-  checkTreasuryIncomingPaymentOnce,
-  isTransientTreasuryDetectorConnectionError,
-  watchTreasuryIncomingPayment,
-  type TreasuryIncomingPaymentDetection,
-  type TreasuryIncomingPaymentWatcher,
-} from 'src/services/treasury-incoming-detector';
-import type { TreasuryWalletPublicInfo } from 'src/types/treasury';
-
-const pricingService = new PricingService();
+  createCashOutContractSession,
+  createCashOutContractPaymentSession,
+  type CashOutContractSessionDisplay,
+} from 'src/services/cash-out-contract-session';
+import { getCashOutQuoteRemainingMilliseconds } from 'src/services/cash-out-quote-policy';
+import { getTreasuryWalletPublicInfo } from 'src/services/treasury-wallet';
 
 const { t } = useI18n({ useScope: 'global' });
-
 const cashAmountInput = ref('100');
 const isSubmitting = ref(false);
 const isWatchingForPayment = ref(false);
 const isPreparingReceipt = ref(false);
-const isCompletingCashOut = ref(false);
-const isCancellingCashOut = ref(false);
-const isReconcilingPaymentOnResume = ref(false);
-
 const successMessage = ref('');
 const warningMessage = ref('');
 const errorMessage = ref('');
 const paymentDetectionError = ref('');
-
 const isConfirmDialogOpen = ref(false);
 const isReceiptPreviewOpen = ref(false);
 const pendingCashOut = ref<CashOutRecord | null>(null);
-const paymentWatcher = ref<TreasuryIncomingPaymentWatcher | null>(null);
-let quoteExpiryTimer: ReturnType<typeof setTimeout> | undefined;
-
+const sessionDisplay = ref<CashOutContractSessionDisplay | null>(null);
+const clock = ref(Date.now());
 const treasuryWallet = ref<TreasuryWalletPublicInfo>({
   address: '',
   createdAt: '',
   updatedAt: '',
   isSetup: false,
 });
+let paymentSession:
+  | ReturnType<typeof createCashOutContractPaymentSession>
+  | undefined;
+let uiTimer: ReturnType<typeof setInterval> | undefined;
+let expiryRequested = false;
+let generation = 0;
+let mounted = true;
 
-const canReviewCashOut = computed(() => {
-  const amountMinor = parseCashAmountInputToMinor(cashAmountInput.value);
-
-  return (
-    isCashOutAmountAllowed(amountMinor) &&
-    !isSubmitting.value &&
-    !isCancellingCashOut.value
-  );
-});
-
-const isPendingCashOutPaymentDetected = computed(() => {
-  return (
+const canReviewCashOut = computed(
+  () =>
+    isCashOutAmountAllowed(
+      parseCashAmountInputToMinor(cashAmountInput.value)
+    ) && !isSubmitting.value
+);
+// Legacy completed receipt display remains supported. This boolean no longer
+// decides whether an incomplete CONTRACT record may authorize physical cash.
+const isPendingCashOutPaymentDetected = computed(
+  () =>
     pendingCashOut.value?.status === 'received' ||
     pendingCashOut.value?.status === 'completed'
-  );
-});
-
-const isPendingCashOutCompleted = computed(() => {
-  return pendingCashOut.value?.status === 'completed';
-});
-
+);
+const isPendingCashOutCompleted = computed(
+  () => pendingCashOut.value?.status === 'completed'
+);
+const remainingMilliseconds = computed(() =>
+  pendingCashOut.value
+    ? getCashOutQuoteRemainingMilliseconds(
+        pendingCashOut.value.quote,
+        clock.value
+      )
+    : 0
+);
 const previewPricing = computed(() => {
   const fiatAmountMinor = parseCashAmountInputToMinor(cashAmountInput.value);
-
   const fee = calculateCashOutFeeBreakdown(fiatAmountMinor);
-
   return {
     fiatCurrency: 'GBP',
-
     fiatAmountMinor,
-
     totalServiceFeeBasisPoints: fee.totalServiceFeeBasisPoints,
-
     totalServiceFeeAmountMinor: fee.totalServiceFeeAmountMinor,
-
     customerSendsFiatEquivalentMinor:
       fiatAmountMinor + fee.totalServiceFeeAmountMinor,
   };
 });
-
-function clearMessages(): void {
+function parseCashAmountInputToMinor(value: string): number {
+  const amount = Number(value.trim());
+  return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
+}
+async function loadTreasuryWallet() {
+  try {
+    treasuryWallet.value = await getTreasuryWalletPublicInfo();
+  } catch {
+    if (mounted)
+      errorMessage.value = t('cashOutPage.messages.couldNotLoadTreasuryWallet');
+  }
+}
+async function stopPaymentSession() {
+  if (uiTimer !== undefined) {
+    clearInterval(uiTimer);
+    uiTimer = undefined;
+  }
+  const previous = paymentSession;
+  paymentSession = undefined;
+  isWatchingForPayment.value = false;
+  await previous?.stop();
+}
+async function handleReviewCashOut() {
+  if (isSubmitting.value) return;
+  const ownGeneration = ++generation;
+  isSubmitting.value = true;
   successMessage.value = '';
   warningMessage.value = '';
   errorMessage.value = '';
-}
-
-function clearQuoteExpiryTimer(): void {
-  if (!quoteExpiryTimer) {
-    return;
-  }
-
-  clearTimeout(quoteExpiryTimer);
-
-  quoteExpiryTimer = undefined;
-}
-
-async function cancelCurrentAwaitingCashOut(
-  reason: 'merchant_cancelled' | 'quote_expired'
-): Promise<void> {
-  if (isCancellingCashOut.value) {
-    return;
-  }
-
-  const currentCashOut = pendingCashOut.value;
-
-  if (!currentCashOut || currentCashOut.status !== 'awaiting_payment') {
-    return;
-  }
-
-  /**
-   * Prevent another Cash-out from being created while the current record and
-   * its watcher are still being cancelled.
-   *
-   * This avoids overlapping IndexedDB read/modify/write operations and prevents
-   * a stale cancellation from replacing a newly-created pending Cash-out.
-   */
-  isCancellingCashOut.value = true;
-
-  try {
-    clearQuoteExpiryTimer();
-
-    await stopPaymentWatcher();
-
-    const cancelledCashOut = await cancelAwaitingCashOut(
-      currentCashOut.id,
-      reason
-    );
-
-    /**
-     * Only update the reactive record if this is still the same Cash-out.
-     *
-     * Never allow completion of an older asynchronous operation to overwrite a
-     * newer Cash-out in the UI.
-     */
-    if (cancelledCashOut && pendingCashOut.value?.id === currentCashOut.id) {
-      pendingCashOut.value = cancelledCashOut;
-    }
-  } finally {
-    isCancellingCashOut.value = false;
-  }
-}
-
-async function handleCashOutQuoteExpired(cashOutId: string): Promise<void> {
-  const currentCashOut = pendingCashOut.value;
-
-  if (
-    !currentCashOut ||
-    currentCashOut.id !== cashOutId ||
-    currentCashOut.status !== 'awaiting_payment'
-  ) {
-    return;
-  }
-
-  await cancelCurrentAwaitingCashOut('quote_expired');
-
+  paymentDetectionError.value = '';
   isConfirmDialogOpen.value = false;
-
-  paymentDetectionError.value = '';
-
-  warningMessage.value = t('cashOutPage.messages.quoteExpired');
-}
-
-function scheduleCashOutQuoteExpiry(cashOut: CashOutRecord): void {
-  clearQuoteExpiryTimer();
-
-  const remainingMilliseconds = getCashOutQuoteRemainingMilliseconds(
-    cashOut.quote
-  );
-
-  if (remainingMilliseconds <= 0) {
-    void handleCashOutQuoteExpired(cashOut.id);
-
-    return;
-  }
-
-  quoteExpiryTimer = setTimeout(() => {
-    void handleCashOutQuoteExpired(cashOut.id);
-  }, remainingMilliseconds);
-}
-
-function parseCashAmountInputToMinor(value: string): number {
-  const normalisedValue = value.trim();
-
-  if (!normalisedValue) {
-    return 0;
-  }
-
-  const parsedAmount = Number(normalisedValue);
-
-  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-    return 0;
-  }
-
-  return Math.round(parsedAmount * 100);
-}
-
-function generateId(): string {
-  if (
-    typeof window !== 'undefined' &&
-    window.crypto &&
-    typeof window.crypto.randomUUID === 'function'
-  ) {
-    return window.crypto.randomUUID();
-  }
-
-  return `cash-out-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function generateSerial(): string {
-  const now = new Date();
-  const datePart = now.toISOString().slice(0, 10).replaceAll('-', '');
-  const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
-
-  return `CO-${datePart}-${randomPart}`;
-}
-
-async function loadTreasuryWallet(): Promise<void> {
-  try {
-    treasuryWallet.value = await getTreasuryWalletPublicInfo();
-  } catch (error) {
-    console.error(error);
-    errorMessage.value = t('cashOutPage.messages.couldNotLoadTreasuryWallet');
-  }
-}
-
-async function stopPaymentWatcher(): Promise<void> {
-  const watcher = paymentWatcher.value;
-
-  paymentWatcher.value = null;
-  isWatchingForPayment.value = false;
-
-  if (!watcher) {
-    return;
-  }
-
-  await watcher.stop();
-}
-
-async function reconcilePendingCashOutPaymentOnResume(): Promise<void> {
-  const currentCashOut = pendingCashOut.value;
-
-  if (
-    !currentCashOut ||
-    currentCashOut.status !== 'awaiting_payment' ||
-    isReconcilingPaymentOnResume.value
-  ) {
-    return;
-  }
-
-  isReconcilingPaymentOnResume.value = true;
-  paymentDetectionError.value = '';
-
-  try {
-    const detection = await checkTreasuryIncomingPaymentOnce({
-      treasuryAddress: currentCashOut.treasuryReceivingAddress,
-      requiredSats: currentCashOut.bchSatsRequired,
-      baselineBalanceSats: paymentWatcher.value?.baselineBalanceSats ?? 0,
-    });
-
-    if (detection) {
-      await stopPaymentWatcher();
-      await handleDetectedPayment(currentCashOut.id, detection);
-      return;
-    }
-
-    if (pendingCashOut.value?.status === 'awaiting_payment') {
-      await startPaymentWatcher(pendingCashOut.value);
-    }
-  } catch (error) {
-    console.error(error);
-
-    const normalizedError =
-      error instanceof Error
-        ? error
-        : new Error('Could not reconcile cash-out payment after app resume.');
-
-    if (isTransientTreasuryDetectorConnectionError(normalizedError)) {
-      paymentDetectionError.value = '';
-
-      try {
-        if (pendingCashOut.value?.status === 'awaiting_payment') {
-          await startPaymentWatcher(pendingCashOut.value);
-        }
-      } catch (restartError) {
-        console.error(restartError);
-
-        paymentDetectionError.value =
-          restartError instanceof Error
-            ? restartError.message
-            : 'Could not restart treasury payment detector after app resume.';
-      }
-
-      return;
-    }
-
-    paymentDetectionError.value = normalizedError.message;
-  } finally {
-    isReconcilingPaymentOnResume.value = false;
-  }
-}
-
-function handleVisibilityChange(): void {
-  if (
-    typeof document !== 'undefined' &&
-    document.visibilityState === 'visible'
-  ) {
-    void reconcilePendingCashOutPaymentOnResume();
-  }
-}
-
-function handleWindowFocus(): void {
-  void reconcilePendingCashOutPaymentOnResume();
-}
-
-async function handleDetectedPayment(
-  cashOutId: string,
-  detection: TreasuryIncomingPaymentDetection
-): Promise<void> {
-  const currentCashOut = pendingCashOut.value;
-
-  /**
-   * A detector belongs permanently to the Cash-out that created it.
-   *
-   * A late callback from an older watcher must never be allowed to mutate a
-   * newer Cash-out.
-   */
-  if (
-    !currentCashOut ||
-    currentCashOut.id !== cashOutId ||
-    currentCashOut.status !== 'awaiting_payment'
-  ) {
-    return;
-  }
-
-  /**
-   * Detection must never convert an already-expired quote into an instruction
-   * for the merchant to hand over cash.
-   *
-   * The unique receiving address remains auditable if BCH was nevertheless sent.
-   */
-  if (
-    isCashOutQuoteExpired(
-      currentCashOut.quote,
-      new Date(detection.detectedAt).getTime()
-    )
-  ) {
-    await handleCashOutQuoteExpired(currentCashOut.id);
-
-    return;
-  }
-
-  const storeDetection: CashOutPaymentDetection = {
-    treasuryAddress: detection.treasuryAddress,
-    requiredSats: detection.requiredSats,
-    receivedSats: detection.receivedSats,
-    txid: detection.txid,
-    detectedAt: detection.detectedAt,
-    message: detection.message,
-  };
-
-  const updatedCashOut = await markCashOutPaymentDetected(
-    currentCashOut.id,
-    storeDetection
-  );
-
-  const fallbackUpdatedCashOut: CashOutRecord = {
-    ...currentCashOut,
-    status: 'received',
-    bchSatsReceived: detection.receivedSats,
-    receivedTxid: detection.txid,
-    detectedAt: detection.detectedAt,
-    paymentDetection: storeDetection,
-    updatedAt: new Date().toISOString(),
-  };
-
-  const detectedCashOut = updatedCashOut ?? fallbackUpdatedCashOut;
-
-  pendingCashOut.value = detectedCashOut;
-  clearQuoteExpiryTimer();
-
-  paymentWatcher.value = null;
-  isWatchingForPayment.value = false;
-  paymentDetectionError.value = '';
-  successMessage.value =
-    'BCH payment detected in Treasury Wallet. Give cash only after checking the success screen.';
-}
-
-async function recordCashOnHandForCompletedCashOut(
-  cashOut: CashOutRecord
-): Promise<void> {
-  try {
-    await recordCashOutPaid({
-      amountMinor: cashOut.fiatAmountMinor,
-
-      currency: cashOut.fiatCurrency,
-
-      relatedRecordId: cashOut.id,
-
-      note: `Cash-out ${cashOut.serial}`,
-
-      createdAt: cashOut.completedAt ?? new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error(error);
-
-    warningMessage.value =
-      'The Cash-out was completed, but Cash on Hand could not be updated automatically.';
-  }
-}
-
-async function handleConfirmCashPaid(): Promise<void> {
-  const currentCashOut = pendingCashOut.value;
-
-  if (
-    !currentCashOut ||
-    currentCashOut.status !== 'received' ||
-    isCompletingCashOut.value
-  ) {
-    return;
-  }
-
-  isCompletingCashOut.value = true;
-
-  warningMessage.value = '';
-  errorMessage.value = '';
-
-  try {
-    const completedCashOut = await markCashOutCompleted(currentCashOut.id);
-
-    if (!completedCashOut) {
-      throw new Error('Could not find the Cash-out record to complete.');
-    }
-
-    pendingCashOut.value = completedCashOut;
-
-    await recordCashOnHandForCompletedCashOut(completedCashOut);
-
-    successMessage.value = t('cashOutPage.messages.cashOutCompleted');
-  } catch (error) {
-    console.error(error);
-
-    errorMessage.value =
-      error instanceof Error
-        ? error.message
-        : t('cashOutPage.messages.couldNotCompleteCashOut');
-  } finally {
-    isCompletingCashOut.value = false;
-  }
-}
-
-async function startPaymentWatcher(
-  cashOutRecord: CashOutRecord
-): Promise<void> {
-  await stopPaymentWatcher();
-
-  paymentDetectionError.value = '';
-  isWatchingForPayment.value = true;
-
-  try {
-    paymentWatcher.value = await watchTreasuryIncomingPayment({
-      treasuryAddress: cashOutRecord.treasuryReceivingAddress,
-      requiredSats: cashOutRecord.bchSatsRequired,
-      pollIntervalMs: 3_000,
-      onDetected: (detection) =>
-        handleDetectedPayment(cashOutRecord.id, detection),
-      onError: (error) => {
-        console.error(error);
-
-        if (isTransientTreasuryDetectorConnectionError(error)) {
-          paymentDetectionError.value = '';
-
-          return;
-        }
-
-        paymentDetectionError.value = error.message;
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    isWatchingForPayment.value = false;
-    paymentDetectionError.value =
-      error instanceof Error
-        ? error.message
-        : 'Could not start treasury payment detector.';
-
-    throw error;
-  }
-}
-
-async function handleReviewCashOut(): Promise<void> {
-  if (isCancellingCashOut.value) {
-    return;
-  }
-  clearMessages();
-  paymentDetectionError.value = '';
   pendingCashOut.value = null;
-  isConfirmDialogOpen.value = false;
-
-  await stopPaymentWatcher();
-
-  const fiatAmountMinor = parseCashAmountInputToMinor(cashAmountInput.value);
-
-  if (!isCashOutAmountAllowed(fiatAmountMinor)) {
-    errorMessage.value = t('cashOutPage.messages.minimumCashOutAmount');
-
-    return;
-  }
-
-  isSubmitting.value = true;
-
+  sessionDisplay.value = null;
   try {
-    await loadTreasuryWallet();
-
-    if (!treasuryWallet.value.isSetup || !treasuryWallet.value.address) {
-      errorMessage.value = t('cashOutPage.messages.setUpTreasuryFirst');
-      return;
-    }
-
-    const lockedQuote = await pricingService.getLockedQuote('GBP', {
-      ttlMilliseconds: CASH_OUT_QUOTE_TTL_MILLISECONDS,
-    });
-    const pricing = calculateCashOutPricingFromLockedQuote(
+    await stopPaymentSession();
+    const fiatAmountMinor = parseCashAmountInputToMinor(cashAmountInput.value);
+    if (!isCashOutAmountAllowed(fiatAmountMinor))
+      throw new Error(t('cashOutPage.messages.minimumCashOutAmount'));
+    const id = globalThis.crypto.randomUUID();
+    const provider = new ElectrumNetworkProvider(Network.MAINNET);
+    const stored = await createCashOutContractSession({
+      id,
+      serial: `CO-${id.slice(0, 8).toUpperCase()}`,
       fiatAmountMinor,
-      lockedQuote
-    );
-
-    const now = new Date().toISOString();
-    const serial = generateSerial();
-
-    const cashOutReceivingAddress =
-      await deriveNextTreasuryCashOutReceivingAddress();
-
-    const paymentUri = createCashOutPaymentUri({
-      address: cashOutReceivingAddress.address,
-
-      requiredSats: pricing.bchSatsRequired,
-
-      label: t('cashOutPage.paymentUri.label'),
-
-      message: serial,
+      provider,
     });
-
-    const cashOutRecord: CashOutRecord = {
-      id: generateId(),
-      serial,
-
-      createdAt: now,
-      updatedAt: now,
-
-      fiatCurrency: pricing.fiatCurrency,
-      fiatAmountMinor: pricing.fiatAmountMinor,
-
-      customerSendsFiatEquivalentMinor:
-        pricing.customerSendsFiatEquivalentMinor,
-
-      marketBchSats: pricing.marketBchSats,
-      bchSatsRequired: pricing.bchSatsRequired,
-
-      quote: {
-        source: pricing.quoteSource,
-        fiatCurrency: pricing.fiatCurrency,
-        marketRate: pricing.marketRate,
-        marketRateTimestamp: pricing.quoteTimestamp,
-        quoteLockedAt: pricing.quoteLockedAt,
-        quoteExpiresAt: pricing.quoteExpiresAt,
-        isFallbackQuote: pricing.isFallbackQuote,
-      },
-
-      fee: pricing.fee,
-
-      treasuryMasterAddress: cashOutReceivingAddress.treasuryMasterAddress,
-      treasuryReceivingAddress: cashOutReceivingAddress.address,
-      treasuryReceivingDerivationIndex: cashOutReceivingAddress.derivationIndex,
-      paymentUri: paymentUri.uri,
-
-      status: 'awaiting_payment',
+    if (!mounted || ownGeneration !== generation) return;
+    // No payment instruction enters Vue until E1's durable creation has returned.
+    pendingCashOut.value = stored;
+    sessionDisplay.value = {
+      record: stored,
+      state: 'awaiting_payment',
+      cashHandoverAllowed: false,
     };
-
-    await addCashOutRecord(cashOutRecord);
-
-    pendingCashOut.value = cashOutRecord;
-
-    await startPaymentWatcher(cashOutRecord);
-
+    clock.value = Date.now();
     isConfirmDialogOpen.value = true;
-
-    scheduleCashOutQuoteExpiry(cashOutRecord);
-
-    if (lockedQuote.isFallbackQuote) {
+    if (stored.quote.isFallbackQuote)
       warningMessage.value = t('cashOutPage.messages.fallbackQuoteWarning');
-    }
+    paymentSession = createCashOutContractPaymentSession({
+      cashOutId: stored.id,
+      provider,
+      visible: document.visibilityState === 'visible',
+      onUpdate(display) {
+        if (
+          !mounted ||
+          ownGeneration !== generation ||
+          !isConfirmDialogOpen.value ||
+          pendingCashOut.value?.id !== stored.id
+        )
+          return;
+        pendingCashOut.value = display.record;
+        sessionDisplay.value = display;
+        paymentDetectionError.value = display.errorMessage ?? '';
+      },
+      onError(message) {
+        if (
+          mounted &&
+          ownGeneration === generation &&
+          isConfirmDialogOpen.value
+        ) {
+          paymentDetectionError.value = message;
+          sessionDisplay.value = {
+            record: stored,
+            state: 'error',
+            cashHandoverAllowed: false,
+            errorMessage: message,
+          };
+        }
+      },
+    });
+    isWatchingForPayment.value = true;
+    expiryRequested = false;
+    updateUiTimer();
+    void paymentSession.start();
   } catch (error) {
-    console.error(error);
-
-    if (error instanceof PricingUnavailableError) {
-      errorMessage.value = t('cashOutPage.messages.pricingUnavailable');
-      return;
-    }
-
-    if (paymentDetectionError.value) {
+    if (mounted && ownGeneration === generation)
       errorMessage.value =
-        'Cash-out was prepared, but the payment detector could not start. Please do not use this cash-out for a live payout.';
-      return;
-    }
-
-    errorMessage.value = t('cashOutPage.messages.couldNotPrepareCashOut');
+        error instanceof Error
+          ? error.message
+          : t('cashOutPage.messages.couldNotPrepareCashOut');
   } finally {
-    isSubmitting.value = false;
+    if (mounted && ownGeneration === generation) isSubmitting.value = false;
   }
 }
-
-function handlePrintReceiptPlaceholder(): void {
-  if (!pendingCashOut.value || !isPendingCashOutCompleted.value) {
-    warningMessage.value = t('cashOutPage.messages.receiptPrintingPending');
-
-    return;
+function handleConfirmDialogModelUpdate(value: boolean) {
+  isConfirmDialogOpen.value = value;
+  if (!value) {
+    generation += 1;
+    void stopPaymentSession(); // Closing never cancels/deletes the durable record.
   }
-
+}
+function requestCurrentObservation() {
+  if (!isConfirmDialogOpen.value) return;
+  const visible = document.visibilityState === 'visible';
+  // Recompute from the frozen absolute expiry BEFORE rendering the resumed UI.
+  if (visible) clock.value = Date.now();
+  updateUiTimer();
+  void paymentSession?.setVisible(visible);
+}
+function updateUiTimer() {
+  if (uiTimer !== undefined) clearInterval(uiTimer);
+  uiTimer = undefined;
+  if (!isConfirmDialogOpen.value || document.visibilityState !== 'visible')
+    return;
+  uiTimer = setInterval(() => {
+    clock.value = Date.now();
+    if (!expiryRequested && remainingMilliseconds.value <= 0) {
+      expiryRequested = true;
+      void paymentSession?.requestAdvance();
+    }
+  }, 1_000);
+}
+function handleCreateNewCashOut() {
+  handleConfirmDialogModelUpdate(false);
+  pendingCashOut.value = null;
+  sessionDisplay.value = null;
+  paymentDetectionError.value = '';
+  errorMessage.value = '';
+  warningMessage.value = '';
+  successMessage.value = '';
+  isReceiptPreviewOpen.value = false;
+  // Keep the entered amount only. Review creates a new ID, quote and contract.
+}
+function handlePrintReceiptPlaceholder() {
+  if (pendingCashOut.value?.status !== 'completed') return;
   isReceiptPreviewOpen.value = true;
 }
-
-function handleConfirmDialogModelUpdate(value: boolean): void {
-  isConfirmDialogOpen.value = value;
-
-  if (!value && !isPendingCashOutPaymentDetected.value) {
-    void cancelCurrentAwaitingCashOut('merchant_cancelled');
-  }
-}
-
-function formatFiatAmount(amountMinor: number, currency: string): string {
+function formatFiatAmount(amountMinor: number, currency: string) {
   return formatCashOutMinorFiatAmount(amountMinor, currency);
 }
-
-function formatPercent(basisPoints: number): string {
+function formatPercent(basisPoints: number) {
   return formatCashOutBasisPointsAsPercent(basisPoints);
 }
-
 onMounted(() => {
   void loadTreasuryWallet();
-
-  if (typeof window !== 'undefined') {
-    window.addEventListener('focus', handleWindowFocus);
-  }
-
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-  }
+  window.addEventListener('focus', requestCurrentObservation);
+  document.addEventListener('visibilitychange', requestCurrentObservation);
 });
-
 onBeforeUnmount(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('focus', handleWindowFocus);
-  }
-
-  if (typeof document !== 'undefined') {
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }
-
-  clearQuoteExpiryTimer();
-
-  void stopPaymentWatcher();
+  mounted = false;
+  generation += 1;
+  window.removeEventListener('focus', requestCurrentObservation);
+  document.removeEventListener('visibilitychange', requestCurrentObservation);
+  void stopPaymentSession();
 });
 </script>
 
@@ -951,6 +503,7 @@ onBeforeUnmount(() => {
 }
 
 .cash-out-container {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -1251,6 +804,14 @@ h1 {
 }
 
 @media (max-width: 640px) {
+  .preview-line {
+    flex-wrap: wrap;
+  }
+  .preview-value {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .cash-out-hero {
     padding: 22px;
   }

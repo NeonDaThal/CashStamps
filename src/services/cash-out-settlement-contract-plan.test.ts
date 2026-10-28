@@ -58,11 +58,21 @@ import * as nodeCrypto from 'crypto';
 
 import {
   createCashOutContractSessionWithDependencies,
+  createCashOutContractPaymentSession,
+  getCashOutContractPaymentPresentation,
+  type CashOutContractSessionDisplay,
+  type CashOutPaymentSessionDependencies,
   type CashOutContractSessionCreationDependencies,
 } from './cash-out-contract-session';
+import { classifyCashOutContractPayment } from './cash-out-contract-payment-classifier';
+import { bindCashOutSettlementPaymentInspection } from './cash-out-settlement-payment-inspector';
+import type { CashOutPaymentObservation } from './cash-out-contract-network';
+import type { CashOutContractUtxo } from 'src/types/cash-out-contract-payment';
 import { storeCashOutContractSessionWithDependencies } from './cash-out-store';
 import { calculateCashOutPricingFromLockedQuote } from './cash-out-pricing';
 import { createCashOutPaymentUri } from './cash-out-payment-uri';
+import { getCashOutQuoteRemainingMilliseconds } from './cash-out-quote-policy';
+import en from 'src/i18n/messages/en';
 import type { LockedPriceQuote } from 'src/types/pricing';
 
 import { PLATFORM_FEE_ADDRESS } from 'src/services/platform-fee-config';
@@ -495,6 +505,462 @@ function deferred() {
   return { promise, resolve };
 }
 
+// E3 tests the new session composition, with network/signing boundaries replaced
+// by controlled dependencies. Phase D already proves the transaction internals.
+async function paymentSessionHarness() {
+  const creation = creationHarness();
+  let record = await creation.run();
+  const plan = record.settlementContractPlan;
+  if (!plan) throw new Error('E3 requires the durable E1 plan.');
+  let now = Date.parse(record.createdAt) + 1_000;
+  const payment = (values: number[]): CashOutPaymentObservation => ({
+    status: 'observed',
+    server: 'synthetic',
+    observation: bindCashOutSettlementPaymentInspection(plan, {
+      observedAt: new Date(now).toISOString(),
+      payment: classifyCashOutContractPayment({
+        contractAddress: plan.contractAddress,
+        requiredSats: record.bchSatsRequired,
+        utxos: values.map(
+          (satoshis, vout): CashOutContractUtxo => ({
+            txid: 'ab'.repeat(32),
+            vout,
+            satoshis,
+            height: 0,
+          })
+        ),
+      }),
+    }),
+  });
+  // Include nuisance outputs: production still selects the one exact output.
+  let observation = payment([1, record.bchSatsRequired, 2]);
+  let observationGate: Promise<void> | undefined;
+  const entered = deferred();
+  const displays: CashOutContractSessionDisplay[] = [];
+  const calls = {
+    observe: 0,
+    prepare: 0,
+    advance: 0,
+    stopPoll: 0,
+    stopWatch: 0,
+    writes: 0,
+  };
+  let poll = () => undefined as void;
+  let pollScheduled = false;
+  const pollIntervals: number[] = [];
+  let notification = () => undefined as void;
+  let positive = false;
+  let settlementUnavailable = false;
+  let watchConnected = true;
+  const dependencies: CashOutPaymentSessionDependencies = {
+    async getCashOutRecordById() {
+      return structuredClone(record);
+    },
+    async mutateCashOutRecordAtomically(id, updater) {
+      assert.equal(id, record.id);
+      const next = updater(record);
+      if (next !== record) {
+        calls.writes += 1;
+        record = structuredClone(next);
+      }
+      return structuredClone(record);
+    },
+    async observePayment(current) {
+      assert.deepEqual(current.settlementContractPlan, plan);
+      calls.observe += 1;
+      entered.resolve();
+      await observationGate;
+      return observation;
+    },
+    async prepareSettlement(input) {
+      calls.prepare += 1;
+      if (observation.status !== 'observed') throw new Error('No candidate.');
+      assert.equal(
+        input.candidate,
+        observation.observation.normalSettlementCandidate
+      );
+      assert.equal(input.candidate.vout, 1);
+      assert.equal(record.status, 'received');
+      assert.equal(record.receivedTxid, input.candidate.txid);
+      assert.deepEqual(input.contractPlan, plan);
+      // Boundary result fixture only; never submitted or accepted as real bytes.
+      record = {
+        ...record,
+        settlementIntent: {
+          status: 'prepared',
+          cashOutId: record.id,
+          cashOutSerial: record.serial,
+          cashOutCommitmentHex: plan.cashOutCommitmentHex,
+          contractAddress: plan.contractAddress,
+          sourcePaymentTxid: input.candidate.txid,
+          sourceOutpointIndex: input.candidate.vout,
+          sourceValueSats: input.candidate.satoshis,
+          rawTransactionHex: '00',
+          txid: 'cd'.repeat(32),
+          rawTransactionBytesLength: 1,
+          treasuryAddress: plan.settlementPlan.treasuryDestination.address,
+          treasuryOutputSats: plan.settlementPlan.treasuryOutputSats,
+          platformAddress: plan.settlementPlan.platformDestination.address,
+          platformOutputSats: plan.settlementPlan.platformOutputSats,
+          actualFeeSats: plan.settlementPlan.settlementFeeSats,
+          inputCount: 1,
+          outputCount: 2,
+          broadcastEnabled: false,
+          preparedAt: new Date(now).toISOString(),
+        },
+      };
+      return structuredClone(record);
+    },
+    async advanceSettlement(id) {
+      calls.advance += 1;
+      assert.equal(id, record.id);
+      assert.equal(
+        Boolean(record.settlementIntent),
+        true,
+        'Network advancement requires durable intent.'
+      );
+      if (settlementUnavailable) {
+        const reconciliation = {
+          txid: record.settlementIntent?.txid ?? '',
+          status: 'unavailable' as const,
+          serverChecks: [],
+          checkedAt: new Date(now).toISOString(),
+          message: 'Synthetic unavailable read',
+        };
+        record = { ...record, settlementReconciliation: reconciliation };
+        return {
+          record: structuredClone(record),
+          outcome: 'uncertain',
+          reconciliation,
+        };
+      }
+      return {
+        record: structuredClone(record),
+        outcome: positive ? 'mempool' : 'blocked',
+      };
+    },
+    async subscribe(current, notify) {
+      assert.equal(
+        current.settlementContractPlan?.contractAddress,
+        plan.contractAddress
+      );
+      notification = notify;
+      return {
+        isConnected: () => watchConnected,
+        async stop() {
+          calls.stopWatch += 1;
+        },
+      };
+    },
+    schedulePoll(notify, milliseconds) {
+      poll = notify;
+      pollScheduled = true;
+      pollIntervals.push(milliseconds);
+      return () => {
+        pollScheduled = false;
+        calls.stopPoll += 1;
+      };
+    },
+    now: () => now,
+  };
+  const session = createCashOutContractPaymentSession(
+    {
+      cashOutId: record.id,
+      provider: creation.input.provider,
+      onUpdate: (display) => displays.push(display),
+    },
+    dependencies
+  );
+  return {
+    session,
+    calls,
+    displays,
+    entered,
+    payment,
+    pollIntervals,
+    record: () => structuredClone(record),
+    poll: () => {
+      if (pollScheduled) poll();
+    },
+    notify: () => notification(),
+    setObservation: (value: CashOutPaymentObservation) => {
+      observation = value;
+    },
+    hold: (gate: Promise<void>) => {
+      observationGate = gate;
+    },
+    expire: () => {
+      now = Date.parse(record.quote.quoteExpiresAt ?? '');
+    },
+    elapse: (milliseconds: number) => {
+      now += milliseconds;
+    },
+    remaining: () => getCashOutQuoteRemainingMilliseconds(record.quote, now),
+    positive: () => {
+      positive = true;
+    },
+    unavailableSettlement: () => {
+      settlementUnavailable = true;
+    },
+    disconnect: () => {
+      watchConnected = false;
+    },
+  };
+}
+
+async function runE3PaymentSessionTests() {
+  {
+    const h = await paymentSessionHarness();
+    const release = deferred();
+    h.hold(release.promise);
+    const starting = h.session.start();
+    await h.entered.promise;
+    h.poll();
+    h.notify();
+    const focused = h.session.requestAdvance();
+    assert.equal(h.calls.prepare, 0);
+    release.resolve();
+    await Promise.all([starting, focused]);
+    assert.equal(h.calls.observe, 1);
+    assert.equal(h.calls.prepare, 1);
+    assert.equal(
+      h.displays.some((display) => display.state === 'payment_detected'),
+      true
+    );
+    assert.equal(
+      h.displays.some((display) => display.state === 'settlement_blocked'),
+      true
+    );
+    const intent = h.record().settlementIntent;
+    h.positive();
+    await h.session.requestAdvance();
+    assert.equal(
+      h.displays[h.displays.length - 1].state,
+      'settlement_observed'
+    );
+    assert.equal(
+      h.displays.every(
+        (display) =>
+          display.cashHandoverAllowed === false &&
+          display.record.status !== 'completed' &&
+          !display.record.completedAt
+      ),
+      true
+    );
+    assert.deepEqual(h.record().settlementIntent, intent);
+    assert.equal(h.calls.prepare, 1);
+    await h.session.stop();
+    assert.equal(h.calls.stopPoll, 1);
+    assert.equal(h.calls.stopWatch, 1);
+    const count = h.displays.length;
+    h.notify();
+    h.poll();
+    await h.session.requestAdvance();
+    assert.equal(h.displays.length, count);
+    assert.deepEqual(h.record().settlementIntent, intent);
+    console.log(
+      'PASS: E3 coalesces watch/poll/focus requests, forwards the exact production-bound candidate once, reuses durable intent and never permits cash handover'
+    );
+  }
+  {
+    const h = await paymentSessionHarness();
+    const required = h.record().bchSatsRequired;
+    for (const values of [
+      [],
+      [required - 1],
+      [required + 1],
+      [1, 2],
+      [required, required],
+      [required, required + 1],
+    ]) {
+      h.setObservation(h.payment(values));
+      await h.session.start();
+      assert.equal(
+        h.displays[h.displays.length - 1].state,
+        values.length ? 'payment_needs_resolution' : 'awaiting_payment'
+      );
+    }
+    h.setObservation({ status: 'unavailable', errors: [] });
+    await h.session.requestAdvance();
+    assert.equal(
+      h.displays[h.displays.length - 1].state,
+      'payment_needs_resolution'
+    );
+    assert.equal(h.calls.prepare, 0);
+    assert.equal(h.calls.advance, 0);
+    assert.equal(h.record().status, 'awaiting_payment');
+    await h.session.stop();
+    console.log(
+      'PASS: E3 respects production exceptional classifications and unavailable observations without normal preparation or completion'
+    );
+  }
+  for (const closing of [false, true]) {
+    const h = await paymentSessionHarness();
+    const before = h.record();
+    const release = deferred();
+    h.hold(release.promise);
+    const running = h.session.start();
+    await h.entered.promise;
+    if (closing) await h.session.stop();
+    else h.expire();
+    const count = h.displays.length;
+    release.resolve();
+    await running;
+    assert.equal(h.calls.prepare, 0);
+    assert.equal(h.calls.advance, 0);
+    assert.equal(h.calls.writes, 0);
+    assert.deepEqual(h.record(), before);
+    if (closing) assert.equal(h.displays.length, count);
+    else {
+      assert.equal(
+        h.displays[h.displays.length - 1].state,
+        'payment_needs_resolution'
+      );
+      await h.session.stop();
+    }
+    assert.equal(h.calls.stopPoll, 1);
+  }
+  console.log(
+    'PASS: E3 expiry during observation stops preparation; close stops watchers/timers, suppresses late results and preserves the durable record'
+  );
+  {
+    const h = await paymentSessionHarness();
+    h.setObservation({ status: 'unavailable', errors: [] });
+    await h.session.start();
+    assert.deepEqual(h.pollIntervals, [10_000]);
+    assert.equal(h.displays[h.displays.length - 1].state, 'awaiting_payment');
+    assert.equal(
+      h.displays.some((display) => display.isChecking),
+      true
+    );
+    h.elapse(19_999);
+    await h.session.requestAdvance();
+    assert.equal(h.displays[h.displays.length - 1].state, 'awaiting_payment');
+    h.elapse(1);
+    h.poll();
+    await h.session.requestAdvance();
+    assert.equal(h.displays[h.displays.length - 1].state, 'unavailable');
+    assert.equal(
+      en.cashOutConfirm.contract.states.unavailable.message,
+      'Network check delayed — retrying automatically.'
+    );
+    h.setObservation(h.payment([]));
+    await h.session.requestAdvance();
+    assert.equal(h.displays[h.displays.length - 1].state, 'awaiting_payment');
+    h.elapse(10_000);
+    h.setObservation({ status: 'unavailable', errors: [] });
+    await h.session.requestAdvance();
+    assert.equal(h.displays[h.displays.length - 1].state, 'awaiting_payment');
+    assert.equal(h.calls.prepare, 0);
+    await h.session.stop();
+    console.log(
+      'PASS: E3 schedules 10-second fallback checks, suppresses a transient failure, warns neutrally after 20 seconds and resets freshness after success'
+    );
+  }
+  {
+    const h = await paymentSessionHarness();
+    h.setObservation(h.payment([]));
+    await h.session.start();
+    const before = h.record();
+    const remaining = h.remaining();
+    await h.session.setVisible(false);
+    const observations = h.calls.observe;
+    h.elapse(120_000);
+    h.poll();
+    assert.equal(h.calls.observe, observations);
+    assert.equal(h.remaining(), remaining - 120_000);
+    h.setObservation({ status: 'unavailable', errors: [] });
+    await h.session.setVisible(true);
+    assert.equal(h.calls.observe, observations + 1);
+    assert.equal(h.displays[h.displays.length - 1].state, 'awaiting_payment');
+    assert.deepEqual(h.pollIntervals, [10_000, 10_000]);
+    await h.session.setVisible(false);
+    h.expire();
+    h.setObservation(h.payment([]));
+    await h.session.setVisible(true);
+    assert.equal(h.remaining(), 0);
+    assert.equal(h.displays[h.displays.length - 1].state, 'quote_expired');
+    assert.deepEqual(
+      getCashOutContractPaymentPresentation(h.record(), 'awaiting_payment', 0),
+      { state: 'quote_expired', showPaymentInstructions: false }
+    );
+    const presentation = getCashOutContractPaymentPresentation(
+      h.record(),
+      'quote_expired',
+      0
+    );
+    assert.equal(presentation.showPaymentInstructions, false);
+    await h.session.stop(); // The Create-new action stops and discards UI state only.
+    assert.deepEqual(h.record(), before);
+    assert.equal(h.calls.writes, 0);
+    assert.equal(h.calls.prepare, 0);
+    console.log(
+      'PASS: E3 pauses hidden polling, observes immediately on visibility return, derives countdown from absolute expiry and hides the unpaid expired QR without changing its record'
+    );
+  }
+  {
+    const h = await paymentSessionHarness();
+    h.unavailableSettlement();
+    await h.session.start();
+    assert.equal(h.displays[h.displays.length - 1].state, 'settling');
+    h.elapse(20_000);
+    await h.session.requestAdvance();
+    assert.equal(h.displays[h.displays.length - 1].state, 'unavailable');
+    assert.equal(h.calls.prepare, 1);
+    assert.equal(
+      h.displays.every((display) => !display.cashHandoverAllowed),
+      true
+    );
+    await h.session.stop();
+    console.log(
+      'PASS: E3 reconciliation display uses the same warning grace without changing intent reuse or cash-handover restrictions'
+    );
+  }
+  {
+    const h = await paymentSessionHarness();
+    h.setObservation(h.payment([1]));
+    await h.session.start();
+    h.expire();
+    h.setObservation(h.payment([]));
+    await h.session.requestAdvance();
+    assert.equal(
+      h.displays[h.displays.length - 1].state,
+      'payment_needs_resolution'
+    );
+    assert.equal(
+      getCashOutContractPaymentPresentation(
+        h.record(),
+        'payment_needs_resolution',
+        0
+      ).state,
+      'payment_needs_resolution'
+    );
+    await h.session.stop();
+    console.log(
+      'PASS: E3 preserves observed exceptional payment resolution across expiry even if a later read is empty'
+    );
+  }
+  {
+    const h = creationHarness();
+    const old = await h.run();
+    // A subsequent Review uses a fresh ID. E1 must quote/create again and retain
+    // the old contract unchanged, rather than reprice its existing identity.
+    h.input.id = 'cash-out-e3-new';
+    h.input.serial = 'CO-E3-NEW';
+    const next = await h.run();
+    assert.equal(h.calls.quotes, 2);
+    assert.notEqual(
+      next.settlementContractPlan?.cashOutCommitmentHex,
+      old.settlementContractPlan?.cashOutCommitmentHex
+    );
+    assert.notEqual(next.paymentUri, old.paymentUri);
+    assert.deepEqual(await h.dependencies.getCashOutRecordById(old.id), old);
+    console.log(
+      'PASS: a new Review creates a new quote/session identity and preserves the previous frozen contract'
+    );
+  }
+}
+
 try {
   const entered = deferred();
   const release = deferred();
@@ -664,6 +1130,7 @@ try {
   console.log(
     'PASS: failed persistence returns no successful session; independent secure commitments produce distinct contracts'
   );
+  await runE3PaymentSessionTests();
 } finally {
   if (originalCrypto)
     Object.defineProperty(globalThis, 'crypto', originalCrypto);

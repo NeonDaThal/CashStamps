@@ -517,6 +517,7 @@ function networkHarness(
     string,
     {
       connectError?: boolean;
+      subscribeError?: boolean;
       requestError?: boolean;
       rawError?: boolean;
       connecting?: Promise<void>;
@@ -533,6 +534,7 @@ function networkHarness(
   const events: string[] = [];
   const requested: string[] = [];
   const closed: Record<string, number> = {};
+  const notifications: Record<string, () => void> = {};
   const lateClosed = gate();
   const network = createCashOutContractNetwork(
     { servers: ['a', 'b', 'c'], ...options },
@@ -541,6 +543,14 @@ function networkHarness(
         const settings = behavior[server] ?? {};
         events.push(`create:${server}`);
         return {
+          isConnected: () => !closed[server],
+          async subscribeAddress(address, notify) {
+            events.push(`subscribe:${server}`);
+            assertEqual(address, INTENT.contractAddress);
+            if (settings.subscribeError)
+              throw new Error('Synthetic subscription unavailable');
+            notifications[server] = notify;
+          },
           async start() {
             events.push(`start:${server}`);
             await settings.connecting;
@@ -602,7 +612,7 @@ function networkHarness(
       ...overrides,
     }
   );
-  return { network, events, requested, closed, lateClosed };
+  return { network, events, requested, closed, lateClosed, notifications };
 }
 
 async function runE2NetworkTests() {
@@ -795,3 +805,52 @@ async function runE2NetworkTests() {
 
 await runD5D2BTests();
 await runE2NetworkTests();
+
+// E3 owns only notification hints. The existing E2 tests above continue to prove
+// that authoritative reads fail over and cannot submit or mutate records.
+{
+  const h = networkHarness({ a: { subscribeError: true } });
+  const abort = new AbortController();
+  let triggered = 0;
+  const watch = await h.network.subscribePaymentNotifications(
+    observationRecord(),
+    () => {
+      triggered += 1;
+    },
+    abort.signal
+  );
+  assertEqual(Boolean(watch?.isConnected()), true);
+  assertEqual(
+    h.events.join(','),
+    'create:a,start:a,subscribe:a,stop:a,create:b,start:b,subscribe:b'
+  );
+  h.notifications.b();
+  assertEqual(triggered, 1);
+  assertEqual(h.requested.length, 0);
+  abort.abort();
+  await watch?.stop();
+  h.notifications.b();
+  assertEqual(triggered, 1);
+  assertEqual(watch?.isConnected(), false);
+  assertEqual(h.closed.b >= 1, true);
+  console.log(
+    'PASS: E3 subscribes to the frozen contract, cleans failed subscription hosts, emits hints only and ignores notifications after close'
+  );
+}
+{
+  const h = networkHarness();
+  const abort = new AbortController();
+  abort.abort();
+  assertEqual(
+    await h.network.subscribePaymentNotifications(
+      observationRecord(),
+      () => undefined,
+      abort.signal
+    ),
+    undefined
+  );
+  assertEqual(h.events.length, 0);
+  console.log(
+    'PASS: E3 does not open a subscription for an already closed session'
+  );
+}

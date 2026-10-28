@@ -209,6 +209,10 @@ const en = {
     },
   },
   cashOutPage: {
+    contractIntro:
+      'Enter the cash amount the customer wants to receive. Review the locked quote, then ask the customer to pay the Cash-out contract. Wait for the payment checks before handing over cash.',
+    contractSafetyNotice:
+      'Payment detection alone does not authorize cash handover. Keep the Cash-out open while payment checks continue.',
     hero: {
       eyebrow: 'Cash-out BCH',
       title: 'Cash-out BCH',
@@ -218,7 +222,7 @@ const en = {
     actions: {
       treasuryWallet: 'Treasury wallet',
       voucherHistory: 'Transactions',
-      reviewCashOut: 'Review Cashout',
+      reviewCashOut: 'Review Cash-out',
     },
     form: {
       cashAmountLabel: 'Cash amount to pay out',
@@ -263,6 +267,63 @@ const en = {
   },
 
   cashOutConfirm: {
+    contract: {
+      paymentInstruction:
+        'Ask the customer to scan the QR and wait for the payment to arrive safely before handing over cash.',
+      timeRemaining: 'Payment time remaining:',
+      checking: 'Checking payment…',
+      createNewCashOut: 'Create new Cash-out',
+      watching:
+        'Watching the Cash-out contract for payment. This screen updates automatically.',
+      waiting: 'Payment checks are paused. Keep this Cash-out for review.',
+      noHandover: 'Do not hand over cash yet.',
+      states: {
+        awaiting_payment: {
+          title: 'Waiting for payment',
+          message:
+            'Ask the customer to scan the QR and send the exact BCH amount. Do not hand over cash yet.',
+        },
+        payment_detected: {
+          title: 'Payment detected',
+          message:
+            'The customer payment has arrived. Payment checks are still in progress.',
+        },
+        settling: {
+          title: 'Processing payment',
+          message:
+            'The payment is being processed. Please wait before handing over cash.',
+        },
+        settlement_observed: {
+          title: 'Payment processing observed',
+          message:
+            'The payment has reached the network. Cash handover is not available yet.',
+        },
+        settlement_blocked: {
+          title: 'Payment processing paused',
+          message:
+            'Settlement submission is currently disabled. Keep this Cash-out for review.',
+        },
+        payment_needs_resolution: {
+          title: 'Payment needs review',
+          message:
+            'This payment or expired quote needs resolution. The original Cash-out details have been preserved.',
+        },
+        quote_expired: {
+          title: 'Quote expired',
+          message:
+            'No payment was received within the quote period. Create a new Cash-out to get a fresh price quote.',
+        },
+        unavailable: {
+          title: 'Checking payment — please wait',
+          message: 'Network check delayed — retrying automatically.',
+        },
+        error: {
+          title: 'Payment check could not finish',
+          message:
+            'Keep this Cash-out for review. No cash payout has been recorded.',
+        },
+      },
+    },
     header: {
       reviewTitle: 'Review Cash-out',
       receivedTitle: 'BCH received',

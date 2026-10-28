@@ -10,7 +10,9 @@
           <div class="header-icon">
             <q-icon
               :name="
-                isCashOutCompleted
+                isContractFlow && !isCashOutCompleted
+                  ? 'hourglass_top'
+                  : isCashOutCompleted
                   ? 'task_alt'
                   : isPaymentDetected
                   ? 'payments'
@@ -21,7 +23,9 @@
 
           <div class="dialog-title">
             {{
-              isCashOutCompleted
+              isContractFlow && !isCashOutCompleted
+                ? contractTitle
+                : isCashOutCompleted
                 ? t('cashOutConfirm.header.completedTitle')
                 : isPaymentDetected
                 ? t('cashOutConfirm.header.receivedTitle')
@@ -32,7 +36,9 @@
 
         <p class="dialog-subtitle">
           {{
-            isCashOutCompleted
+            isContractFlow && !isCashOutCompleted
+              ? contractMessage
+              : isCashOutCompleted
               ? t('cashOutConfirm.header.completedSubtitle')
               : isPaymentDetected
               ? t('cashOutConfirm.header.receivedSubtitle')
@@ -44,7 +50,21 @@
       <q-separator />
 
       <q-card-section class="dialog-body">
-        <template v-if="!isPaymentDetected">
+        <template v-if="showPaymentInstructions">
+          <q-banner
+            v-if="isContractFlow"
+            rounded
+            class="contract-status bg-blue-1 text-blue-10 q-mb-md"
+            role="status"
+            aria-live="polite"
+          >
+            <strong>{{ contractTitle }}</strong>
+            <div>{{ contractMessage }}</div>
+            <div class="contract-timer">
+              {{ t('cashOutConfirm.contract.timeRemaining') }}
+              <strong>{{ timerLabel }}</strong>
+            </div>
+          </q-banner>
           <div
             :class="[
               'quote-status-pill',
@@ -164,7 +184,11 @@
                   {{ t('cashOutConfirm.paymentQr.title') }}
                 </p>
                 <p class="payment-instruction-subtitle">
-                  {{ t('cashOutConfirm.paymentQr.subtitle') }}
+                  {{
+                    isContractFlow
+                      ? t('cashOutConfirm.contract.paymentInstruction')
+                      : t('cashOutConfirm.paymentQr.subtitle')
+                  }}
                 </p>
               </div>
 
@@ -277,7 +301,7 @@
 
                 <div class="details-address-value">
                   <strong class="details-address-text">
-                    {{ cashOut.treasuryReceivingAddress }}
+                    {{ receivingAddress }}
                   </strong>
 
                   <q-btn
@@ -327,17 +351,59 @@
             </template>
 
             <span v-if="isWatchingForPayment">
-              Watching Treasury Wallet for the customer BCH payment. This screen
-              will change automatically when the payment arrives.
+              <template v-if="isContractFlow">{{
+                t(
+                  isCheckingPayment
+                    ? 'cashOutConfirm.contract.checking'
+                    : 'cashOutConfirm.contract.watching'
+                )
+              }}</template>
+              <template v-else>
+                Watching Treasury Wallet for the customer BCH payment. This
+                screen will change automatically when the payment arrives.
+              </template>
             </span>
 
             <span v-else>
-              Payment watcher is not active. Close this review and start again
-              before using this cash-out for a live payout.
+              <template v-if="isContractFlow">{{
+                t('cashOutConfirm.contract.waiting')
+              }}</template>
+              <template v-else>
+                Payment watcher is not active. Close this review and start again
+                before using this cash-out for a live payout.
+              </template>
             </span>
           </q-banner>
         </template>
 
+        <template v-else-if="isContractFlow && !isCashOutCompleted">
+          <q-banner
+            rounded
+            class="contract-status bg-blue-1 text-blue-10"
+            role="status"
+            aria-live="polite"
+          >
+            <strong>{{ contractTitle }}</strong>
+            <div>{{ contractMessage }}</div>
+            <div class="q-mt-sm text-weight-bold">
+              {{ t('cashOutConfirm.contract.noHandover') }}
+            </div>
+          </q-banner>
+          <q-banner
+            v-if="paymentDetectionError"
+            rounded
+            class="bg-red-1 text-red-10 q-mt-md"
+            >{{ paymentDetectionError }}</q-banner
+          >
+          <div class="details-row q-mt-md">
+            <span>{{ t('cashOutConfirm.details.reference') }}</span
+            ><strong>{{ cashOut.serial }}</strong>
+          </div>
+          <div class="details-row">
+            <span>{{ t('cashOutConfirm.details.status') }}</span
+            ><strong>{{ contractTitle }}</strong>
+          </div>
+        </template>
         <template v-else>
           <div class="success-panel">
             <div class="success-icon">
@@ -429,7 +495,27 @@
         ]"
       >
         <q-btn
-          v-if="!isPaymentDetected"
+          v-if="
+            isContractFlow &&
+            !isCashOutCompleted &&
+            contractState === 'quote_expired'
+          "
+          class="primary-button"
+          :label="t('cashOutConfirm.contract.createNewCashOut')"
+          unelevated
+          no-caps
+          @click="emit('create-new-cash-out')"
+        />
+        <q-btn
+          v-else-if="isContractFlow && !isCashOutCompleted"
+          flat
+          class="cancel-review-button"
+          :label="t('common.close')"
+          no-caps
+          @click="emit('update:modelValue', false)"
+        />
+        <q-btn
+          v-else-if="!isPaymentDetected"
           flat
           class="cancel-review-button"
           :label="t('cashOutConfirm.actions.closeReview')"
@@ -489,6 +575,10 @@ import { useI18n } from 'vue-i18n';
 import bchLogoUrl from 'src/assets/bch-logo.png';
 import type { CashOutRecord } from 'src/types/cash-out';
 import {
+  getCashOutContractPaymentPresentation,
+  type CashOutContractDisplayState,
+} from 'src/services/cash-out-contract-session';
+import {
   formatCashOutBchSats,
   formatCashOutMarketRate,
   formatCashOutMinorFiatAmount,
@@ -506,6 +596,9 @@ const props = withDefaults(
     paymentDetectionError?: string;
     isPreparingReceipt?: boolean;
     isCompletingCashOut?: boolean;
+    contractDisplayState?: CashOutContractDisplayState;
+    remainingMilliseconds?: number;
+    isCheckingPayment?: boolean;
   }>(),
   {
     isPaymentDetected: false,
@@ -514,6 +607,9 @@ const props = withDefaults(
     isPreparingReceipt: false,
     isCashOutCompleted: false,
     isCompletingCashOut: false,
+    contractDisplayState: 'awaiting_payment',
+    remainingMilliseconds: 0,
+    isCheckingPayment: false,
   }
 );
 
@@ -521,6 +617,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   'confirm-cash-paid': [];
   'print-receipt': [];
+  'create-new-cash-out': [];
 }>();
 
 const $q = useQuasar();
@@ -528,8 +625,42 @@ const { locale, t } = useI18n({ useScope: 'global' });
 
 const qrDataUrl = ref('');
 const isGeneratingQr = ref(false);
+const isContractFlow = computed(() =>
+  Boolean(props.cashOut.settlementContractPlan)
+);
+const contractPresentation = computed(() =>
+  getCashOutContractPaymentPresentation(
+    props.cashOut,
+    props.contractDisplayState,
+    props.remainingMilliseconds
+  )
+);
+const contractState = computed(() => contractPresentation.value.state);
+const contractTitle = computed(() =>
+  t(`cashOutConfirm.contract.states.${contractState.value}.title`)
+);
+const contractMessage = computed(() =>
+  t(`cashOutConfirm.contract.states.${contractState.value}.message`)
+);
+const showPaymentInstructions = computed(() =>
+  isContractFlow.value
+    ? !props.isCashOutCompleted &&
+      contractPresentation.value.showPaymentInstructions
+    : !props.isPaymentDetected
+);
+const timerLabel = computed(() => {
+  const seconds = Math.max(0, Math.ceil(props.remainingMilliseconds / 1_000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+});
+const receivingAddress = computed(
+  () =>
+    props.cashOut.settlementContractPlan?.contractAddress ??
+    props.cashOut.treasuryReceivingAddress
+);
+let qrGeneration = 0;
 
 const paymentUri = computed(() => {
+  if (isContractFlow.value) return props.cashOut.paymentUri ?? '';
   if (props.cashOut.paymentUri) {
     return props.cashOut.paymentUri;
   }
@@ -560,25 +691,36 @@ const cashOutStatusLabel = computed(() => {
 });
 
 async function generateQrCode(): Promise<void> {
+  const generation = ++qrGeneration;
   qrDataUrl.value = '';
 
-  if (!props.cashOut.treasuryReceivingAddress || !paymentUri.value) {
+  if (
+    !receivingAddress.value ||
+    !paymentUri.value ||
+    !showPaymentInstructions.value
+  ) {
     return;
   }
 
   isGeneratingQr.value = true;
 
   try {
-    qrDataUrl.value = await QRCode.toDataURL(paymentUri.value, {
+    const rendered = await QRCode.toDataURL(paymentUri.value, {
       errorCorrectionLevel: 'M',
       margin: 2,
       width: 460,
     });
+    if (
+      generation === qrGeneration &&
+      props.modelValue &&
+      showPaymentInstructions.value
+    )
+      qrDataUrl.value = rendered;
   } catch (error) {
     console.error(error);
-    qrDataUrl.value = '';
+    if (generation === qrGeneration) qrDataUrl.value = '';
   } finally {
-    isGeneratingQr.value = false;
+    if (generation === qrGeneration) isGeneratingQr.value = false;
   }
 }
 
@@ -604,13 +746,15 @@ async function copyToClipboard(
 }
 
 function handleCopyAddress(): void {
+  if (isContractFlow.value && !showPaymentInstructions.value) return;
   void copyToClipboard(
-    props.cashOut.treasuryReceivingAddress,
+    receivingAddress.value,
     t('cashOutConfirm.messages.treasuryAddressCopied')
   );
 }
 
 function handleCopyUri(): void {
+  if (isContractFlow.value && !showPaymentInstructions.value) return;
   void copyToClipboard(
     paymentUri.value,
     t('cashOutConfirm.messages.paymentUriCopied')
@@ -637,10 +781,18 @@ function formatDateTime(value: string): string {
 }
 
 watch(
-  [() => props.modelValue, () => paymentUri.value, () => locale.value],
+  [
+    () => props.modelValue,
+    () => paymentUri.value,
+    () => locale.value,
+    showPaymentInstructions,
+  ],
   () => {
     if (props.modelValue) {
       void generateQrCode();
+    } else {
+      qrGeneration += 1;
+      qrDataUrl.value = '';
     }
   },
   { immediate: true }
@@ -651,7 +803,16 @@ watch(
 .confirm-card {
   border-radius: 24px;
   max-width: 95vw;
-  width: 660px;
+  width: min(660px, 95vw);
+  overflow-x: hidden;
+}
+
+.contract-status {
+  overflow-wrap: anywhere;
+}
+.contract-timer {
+  margin-top: 8px;
+  font-size: 16px;
 }
 
 .dialog-header {
@@ -966,6 +1127,7 @@ watch(
 }
 
 .payment-qr-panel {
+  max-width: 100%;
   align-items: center;
   display: flex;
   flex-direction: column;
@@ -1035,6 +1197,8 @@ watch(
   cursor: pointer;
   display: block;
   padding: 0;
+  width: min(246px, 100%);
+  max-width: 100%;
 }
 
 .qr-copy-button:focus-visible {
@@ -1052,7 +1216,8 @@ watch(
   justify-content: center;
   padding: 10px;
   transition: border-color 160ms ease, transform 160ms ease;
-  width: 246px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .qr-copy-button:hover .qr-wrap {
@@ -1063,6 +1228,7 @@ watch(
 .qr-image {
   height: 226px;
   width: 226px;
+  max-width: 100%;
 }
 
 .copy-soft-button {
@@ -1259,6 +1425,30 @@ watch(
 }
 
 @media (max-width: 640px) {
+  .breakdown-line,
+  .breakdown-total,
+  .breakdown-fee-row {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .breakdown-values,
+  .breakdown-total-values,
+  .amount-values {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .breakdown-bch-value,
+  .breakdown-total-values span,
+  .amount-values span {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+  .details-address-text {
+    overflow-wrap: anywhere;
+  }
+  .copy-soft-button {
+    min-height: 44px;
+  }
   .dialog-header {
     gap: 10px;
     padding: 18px;
@@ -1323,7 +1513,7 @@ watch(
     margin: 0 auto;
     max-width: 236px;
     padding: 0 2px 4px;
-    width: 236px;
+    width: min(236px, 100%);
   }
 
   .amount-label {
@@ -1338,9 +1528,13 @@ watch(
     font-size: 11px;
   }
 
+  .qr-copy-button {
+    width: min(236px, 100%);
+  }
+
   .qr-wrap {
     height: 236px;
-    width: 236px;
+    width: 100%;
   }
 
   .qr-image {

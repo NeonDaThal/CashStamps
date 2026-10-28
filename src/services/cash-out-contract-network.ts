@@ -26,6 +26,8 @@ export interface CashOutObservationConnection {
   reader: CashOutObservationReader;
   start(): Promise<void>;
   stop(): Promise<void>;
+  subscribeAddress?(address: string, notify: () => void): Promise<void>;
+  isConnected?(): boolean;
 }
 
 export interface CashOutContractNetworkDependencies {
@@ -72,7 +74,9 @@ const READ_METHODS = new Set([
 
 const DEFAULT_DEPENDENCIES: CashOutContractNetworkDependencies = {
   async createConnection(server, timeoutMilliseconds) {
-    const { ElectrumClient } = await import('@electrum-cash/network');
+    const { ElectrumClient, ConnectionStatus } = await import(
+      '@electrum-cash/network'
+    );
     // Own the client BEFORE connect: ElectrumService.start() only exposes its
     // client after successful connection, too late to force-close a dead dial.
     // Same WSS/protocol settings as ElectrumService; shared behavior is unchanged.
@@ -88,6 +92,19 @@ const DEFAULT_DEPENDENCIES: CashOutContractNetworkDependencies = {
       start: () => client.connect(),
       async stop() {
         await client.disconnect(true);
+      },
+      isConnected: () =>
+        client.connection.status === ConnectionStatus.CONNECTED,
+      async subscribeAddress(address, notify) {
+        client.on('connected', notify); // Reconnection requests a fresh E2 read.
+        client.on('notification', (notification) => {
+          if (
+            notification.method === 'blockchain.address.subscribe' &&
+            notification.params[0] === address
+          )
+            notify();
+        });
+        await client.subscribe('blockchain.address.subscribe', address);
       },
       reader: {
         connectedServer: server,
@@ -159,7 +176,7 @@ function bounded<T>(work: Promise<T>, milliseconds: number): Promise<T> {
   return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
 }
 
-/** E2 only: temporary read-only connections, no storage or lifecycle actions. */
+/** Read-only observations and E3 notification triggers; no lifecycle actions. */
 export function createCashOutContractNetwork(
   options: CashOutContractNetworkOptions = {},
   overrides: Partial<CashOutContractNetworkDependencies> = {}
@@ -295,6 +312,78 @@ export function createCashOutContractNetwork(
   }
 
   return {
+    /** E3 notifications are hints only. E2 observations remain authoritative. */
+    async subscribePaymentNotifications(
+      record: CashOutRecord,
+      notify: () => void,
+      signal: AbortSignal
+    ) {
+      const address = record.settlementContractPlan?.contractAddress;
+      if (!address)
+        throw new Error('Contract subscription requires a persisted plan.');
+      let live = true;
+      let current: CashOutObservationConnection | undefined;
+      const stop = async () => {
+        live = false;
+        signal.removeEventListener('abort', abort);
+        if (current) await cleanup(current);
+      };
+      const abort = () => {
+        void stop();
+      };
+      signal.addEventListener('abort', abort, { once: true });
+      if (signal.aborted) {
+        await stop();
+        return undefined;
+      }
+      const order =
+        preferred && servers.includes(preferred)
+          ? [preferred, ...servers.filter((server) => server !== preferred)]
+          : servers;
+      for (const server of order) {
+        let attemptActive = true;
+        let connection: CashOutObservationConnection | undefined;
+        const connecting = (async () => {
+          connection = await dependencies.createConnection(server, timeout);
+          if (!live || !attemptActive) {
+            await cleanup(connection);
+            return;
+          }
+          current = connection;
+          await connection.start();
+          if (!live || !attemptActive) {
+            await cleanup(connection);
+            return;
+          }
+          if (!connection.subscribeAddress)
+            throw new Error('Address subscription is unavailable.');
+          await connection.subscribeAddress(address, () => {
+            if (live && attemptActive && !signal.aborted) notify();
+          });
+        })();
+        try {
+          await bounded(connecting, timeout);
+          if (!live || signal.aborted) {
+            await stop();
+            return undefined;
+          }
+          return {
+            isConnected: () =>
+              live && !signal.aborted && (connection?.isConnected?.() ?? true),
+            stop,
+          };
+        } catch {
+          attemptActive = false;
+          if (connection) await cleanup(connection);
+          if (!live || signal.aborted) {
+            await stop();
+            return undefined;
+          }
+        }
+      }
+      await stop();
+      return undefined;
+    },
     observePayment(record: CashOutRecord): Promise<CashOutPaymentObservation> {
       const plan = structuredClone(record.settlementContractPlan);
       if (!plan || plan.settlementPlan.cashOutId !== record.id)
