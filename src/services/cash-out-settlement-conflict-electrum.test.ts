@@ -14,6 +14,13 @@ import {
 import type { CashOutRecord } from 'src/types/cash-out';
 
 import type { CashOutSettlementIntent } from 'src/types/cash-out-settlement';
+import type { CashOutSettlementContractPlan } from 'src/types/cash-out-settlement';
+import type { ElectrumRequest } from './electrum-types';
+import {
+  createCashOutContractNetwork,
+  type CashOutContractNetworkOptions,
+  type CashOutContractNetworkDependencies,
+} from './cash-out-contract-network';
 
 const CASH_OUT_ID = 'cash-out-d5d2b-001';
 
@@ -469,8 +476,322 @@ async function runD5D2BTests(): Promise<void> {
   );
 }
 
-runD5D2BTests().catch((error) => {
-  console.error(error);
+// E2 extends this existing Electrum adapter suite, reusing its exact-outpoint
+// record/raw-spender fixtures and the REAL production observation functions.
+function gate() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
 
-  process.exitCode = 1;
-});
+function observationRecord(): CashOutRecord {
+  const record = createCashOut();
+  // Only the D2 fields inspected by production are relevant to this network
+  // fixture. Contract construction itself remains covered by D1/E1.
+  record.settlementContractPlan = {
+    version: 'cash_out_settlement_contract_v1',
+    contractType: 'p2sh32',
+    cashOutCommitmentHex: INTENT.cashOutCommitmentHex,
+    contractAddress: INTENT.contractAddress,
+    constructor: {
+      cashOutCommitmentHex: INTENT.cashOutCommitmentHex,
+      paymentSats: REQUIRED_SATS,
+    },
+    settlementPlan: {
+      version: 'cash_out_settlement_v1',
+      cashOutId: CASH_OUT_ID,
+      cashOutSerial: CASH_OUT_SERIAL,
+      paymentSats: REQUIRED_SATS,
+      treasuryOutputSats: INTENT.treasuryOutputSats,
+      platformOutputSats: INTENT.platformOutputSats,
+      settlementFeeSats: INTENT.actualFeeSats,
+    },
+  } as CashOutSettlementContractPlan;
+  return record;
+}
+
+function networkHarness(
+  behavior: Record<
+    string,
+    {
+      connectError?: boolean;
+      requestError?: boolean;
+      rawError?: boolean;
+      connecting?: Promise<void>;
+      reading?: Promise<void>;
+      stopping?: Promise<void>;
+      height?: number | null;
+      history?: { tx_hash: string; height: number }[];
+      raw?: string;
+    }
+  > = {},
+  options: CashOutContractNetworkOptions = {},
+  overrides: Partial<CashOutContractNetworkDependencies> = {}
+) {
+  const events: string[] = [];
+  const requested: string[] = [];
+  const closed: Record<string, number> = {};
+  const lateClosed = gate();
+  const network = createCashOutContractNetwork(
+    { servers: ['a', 'b', 'c'], ...options },
+    {
+      async createConnection(server) {
+        const settings = behavior[server] ?? {};
+        events.push(`create:${server}`);
+        return {
+          async start() {
+            events.push(`start:${server}`);
+            await settings.connecting;
+            if (settings.connectError)
+              throw new Error('Synthetic connection unavailable');
+          },
+          async stop() {
+            events.push(`stop:${server}`);
+            closed[server] = (closed[server] ?? 0) + 1;
+            if (closed[server] === 2) lateClosed.release();
+            await settings.stopping;
+          },
+          reader: {
+            connectedServer: server,
+            async request<T extends ElectrumRequest>(
+              endpoint: T['method'],
+              ...params: T['params']
+            ): Promise<T['response']> {
+              requested.push(`${server}:${endpoint}`);
+              await settings.reading;
+              if (settings.requestError)
+                throw new Error('Synthetic request unavailable');
+              let response: unknown;
+              switch (endpoint) {
+                case 'blockchain.address.listunspent':
+                  assertEqual(params[0], INTENT.contractAddress);
+                  assertEqual(params[1], 'exclude_tokens');
+                  response = [
+                    {
+                      tx_hash: CUSTOMER_TXID,
+                      tx_pos: SOURCE_OUTPOINT_INDEX,
+                      value: REQUIRED_SATS,
+                      height: 0,
+                    },
+                  ];
+                  break;
+                case 'blockchain.transaction.get_height':
+                  assertEqual(params[0], SETTLEMENT_TXID);
+                  response =
+                    settings.height === undefined ? 0 : settings.height;
+                  break;
+                case 'blockchain.address.get_history':
+                  assertEqual(params[0], INTENT.contractAddress);
+                  response = settings.history ?? [];
+                  break;
+                case 'blockchain.transaction.get':
+                  if (settings.rawError)
+                    throw new Error('Synthetic raw transaction unavailable');
+                  response = settings.raw;
+                  break;
+                default:
+                  throw new Error(`Unexpected non-observation RPC ${endpoint}`);
+              }
+              return response as T['response'];
+            },
+          },
+        };
+      },
+      ...overrides,
+    }
+  );
+  return { network, events, requested, closed, lateClosed };
+}
+
+async function runE2NetworkTests() {
+  const record = observationRecord();
+  const unchanged = JSON.stringify(record);
+  {
+    const h = networkHarness();
+    const one = h.network.observePayment(record);
+    const two = h.network.observePayment(structuredClone(record));
+    assertEqual(
+      one,
+      two,
+      'Overlapping identical reads should share one operation.'
+    );
+    const result = await one;
+    assertEqual(result.status, 'observed');
+    if (result.status !== 'observed')
+      throw new Error('Expected production D2 inspection');
+    assertEqual(
+      result.observation.normalSettlementCandidate?.txid,
+      CUSTOMER_TXID
+    );
+    assertEqual(
+      result.observation.normalSettlementCandidate?.vout,
+      SOURCE_OUTPOINT_INDEX
+    );
+    assertEqual(h.events.join(','), 'create:a,start:a,stop:a');
+    await h.network.observePayment(record);
+    assertEqual(
+      h.requested.length,
+      2,
+      'Later reads must be fresh, not cached.'
+    );
+    console.log(
+      'PASS: E2 first-server success uses production D2 classification, coalesces overlap, closes once and refreshes later'
+    );
+  }
+  for (const failure of ['connectError', 'requestError'] as const) {
+    const h = networkHarness(
+      { a: { [failure]: true } },
+      { servers: [' a ', 'b', 'a', 'c'] }
+    );
+    const result = await h.network.observePayment(record);
+    assertEqual(result.status, 'observed');
+    if (result.status === 'observed') assertEqual(result.server, 'b');
+    assertEqual(
+      h.events.join(','),
+      'create:a,start:a,stop:a,create:b,start:b,stop:b'
+    );
+    await h.network.observePayment(record);
+    assertEqual(h.events.slice(-3).join(','), 'create:b,start:b,stop:b');
+    console.log(
+      `PASS: E2 ${failure} closes the failed host before fallback; stable configuration order and successful-server preference are preserved`
+    );
+  }
+  {
+    const h = networkHarness({}, { preferredServer: 'c' });
+    await h.network.observePayment(record);
+    assertEqual(h.events.join(','), 'create:c,start:c,stop:c');
+    const result = await h.network.observeSettlement(INTENT);
+    assertEqual(result.status, 'mempool');
+    assertEqual(result.txid, SETTLEMENT_TXID);
+    assertEqual(result.serverChecks[0]?.server, 'c');
+    console.log(
+      'PASS: E2 preferred host and production settlement mempool evidence return immediately without consensus'
+    );
+  }
+  {
+    const h = networkHarness({ a: { height: null } });
+    assertEqual((await h.network.observeSettlement(INTENT)).status, 'unknown');
+    assertEqual(h.events.join(','), 'create:a,start:a,stop:a');
+    const fallback = networkHarness({
+      a: { height: -999 },
+      b: { height: 900_001 },
+    });
+    assertEqual(
+      (await fallback.network.observeSettlement(INTENT)).status,
+      'confirmed'
+    );
+    assertEqual(
+      fallback.events.join(','),
+      'create:a,start:a,stop:a,create:b,start:b,stop:b'
+    );
+    console.log(
+      'PASS: usable unknown evidence is authoritative; production-unavailable height evidence falls through to a confirmed observation'
+    );
+  }
+  {
+    const h = networkHarness({
+      a: { connectError: true },
+      b: { requestError: true },
+      c: { connectError: true },
+    });
+    const payment = await h.network.observePayment(record);
+    assertEqual(payment.status, 'unavailable');
+    if (payment.status === 'unavailable') assertEqual(payment.errors.length, 3);
+    const settlement = await h.network.observeSettlement(INTENT);
+    assertEqual(settlement.status, 'unavailable');
+    assertEqual(settlement.serverChecks.length, 3);
+    assertEqual(
+      (await h.network.inspectConflict(record)).status,
+      'inspection_unavailable'
+    );
+    assertEqual(h.closed.a, 3);
+    assertEqual(h.closed.b, 3);
+    assertEqual(h.closed.c, 3);
+    console.log(
+      'PASS: E2 exhaustion is explicit for all three observation seams and every temporary connection is stopped'
+    );
+  }
+  {
+    const spender = createRawSpenderTransaction(
+      CUSTOMER_TXID,
+      SOURCE_OUTPOINT_INDEX
+    );
+    const h = networkHarness({
+      a: {
+        history: [{ tx_hash: spender.txid, height: 0 }],
+        raw: spender.rawTransactionHex,
+      },
+    });
+    const result = await h.network.inspectConflict(record);
+    assertEqual(result.status, 'conflict_detected');
+    assertEqual(result.evidence?.conflictingTxid, spender.txid);
+    assertEqual(h.events.join(','), 'create:a,start:a,stop:a');
+    const unavailable = networkHarness({
+      a: { history: [{ tx_hash: spender.txid, height: 0 }], rawError: true },
+    });
+    assertEqual(
+      (await unavailable.network.inspectConflict(record)).status,
+      'no_conflict_observed'
+    );
+    assertEqual(
+      unavailable.events.join(','),
+      'create:a,start:a,stop:a,create:b,start:b,stop:b'
+    );
+    console.log(
+      'PASS: E2 preserves a real decoded exact-outpoint conflict immediately; unavailable raw evidence can fail over'
+    );
+  }
+  for (const phase of ['connecting', 'reading'] as const) {
+    const delayed = gate();
+    const h = networkHarness(
+      { a: { [phase]: delayed.promise } },
+      { timeoutMilliseconds: 40 }
+    );
+    const result = await h.network.observePayment(record);
+    assertEqual(result.status, 'observed');
+    if (result.status === 'observed') assertEqual(result.server, 'b');
+    assertEqual(h.events.indexOf('stop:a') < h.events.indexOf('start:b'), true);
+    delayed.release();
+    if (phase === 'connecting') await h.lateClosed.promise;
+    assertEqual(
+      h.requested.some((request) => request.startsWith('a:')),
+      phase === 'reading'
+    );
+    console.log(
+      `PASS: E2 bounds dead ${phase}, cleans up before failover and ignores late results`
+    );
+  }
+  {
+    const h = networkHarness(
+      {
+        a: { requestError: true, stopping: new Promise<void>(() => undefined) },
+      },
+      { cleanupTimeoutMilliseconds: 20 }
+    );
+    assertEqual((await h.network.observePayment(record)).status, 'observed');
+    const forbidden = networkHarness(
+      {},
+      {},
+      {
+        async observePayment(reader) {
+          await reader.request('blockchain.transaction.broadcast', '00');
+          throw new Error('Non-read RPC escaped the adapter.');
+        },
+      }
+    );
+    assertEqual(
+      (await forbidden.network.observePayment(record)).status,
+      'unavailable'
+    );
+    assertEqual(forbidden.requested.length, 0);
+    assertEqual(JSON.stringify(record), unchanged);
+    console.log(
+      'PASS: E2 bounds cleanup, blocks broadcast RPCs before transport, and never mutates the Cash-out record'
+    );
+  }
+}
+
+await runD5D2BTests();
+await runE2NetworkTests();

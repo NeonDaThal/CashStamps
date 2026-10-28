@@ -304,7 +304,7 @@ export function bindCashOutSettlementPaymentInspection(
  * Later watcher/reconciliation code can therefore reuse one socket.
  */
 export async function inspectCashOutSettlementPaymentUsingElectrum(
-  electrum: ElectrumService,
+  electrum: Pick<ElectrumService, 'request' | 'connectedServer'>,
   contractPlan: CashOutSettlementContractPlan
 ): Promise<CashOutSettlementPaymentInspection> {
   const expected = validateSettlementContractPlan(contractPlan);

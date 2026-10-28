@@ -2,7 +2,7 @@ import { ELECTRUM_SERVERS } from 'src/config';
 
 import { classifyCashOutContractPayment } from 'src/services/cash-out-contract-payment-classifier';
 
-import { ElectrumService } from 'src/services/electrum';
+import type { ElectrumService } from 'src/services/electrum';
 
 import type { AddressListUnspent } from 'src/services/electrum-types';
 
@@ -71,7 +71,7 @@ function normalizeElectrumUtxo(
  * connection instead of opening a new socket for every check.
  */
 export async function inspectCashOutContractPaymentUsingElectrum(
-  electrum: ElectrumService,
+  electrum: Pick<ElectrumService, 'request' | 'connectedServer'>,
   options: InspectCashOutContractPaymentOptions
 ): Promise<CashOutContractPaymentNetworkInspection> {
   const contractAddress = options.contractAddress.trim();
@@ -133,6 +133,7 @@ export async function inspectCashOutContractPaymentUsingElectrum(
 export async function inspectCashOutContractPaymentOnce(
   options: InspectCashOutContractPaymentOptions
 ): Promise<CashOutContractPaymentNetworkInspection> {
+  const { ElectrumService } = await import('src/services/electrum');
   const electrum = new ElectrumService(ELECTRUM_SERVERS);
 
   await electrum.start();

@@ -1,9 +1,6 @@
 import { ELECTRUM_SERVERS } from 'src/config';
 
-import {
-  ElectrumService,
-  type TransactionStatusCallback,
-} from 'src/services/electrum';
+import type { TransactionStatusCallback } from 'src/services/electrum';
 
 import type { TransactionGetHeight } from 'src/services/electrum-types';
 
@@ -208,6 +205,7 @@ export function classifyTreasuryBroadcastReconciliation(
 export async function reconcileTreasuryBroadcast(
   txid: string
 ): Promise<TreasuryBroadcastReconciliationResult> {
+  const { ElectrumService } = await import('./electrum');
   const normalisedTxid = normaliseTransactionId(txid);
 
   const serverChecks = await Promise.all(
@@ -266,6 +264,7 @@ function isKnownTransactionHeight(height: number | null): height is number {
 export async function observeTreasuryBroadcastBySubscription(
   txid: string
 ): Promise<TreasuryBroadcastReconciliationResult | undefined> {
+  const { ElectrumService } = await import('./electrum');
   const normalisedTxid = normaliseTransactionId(txid);
 
   const electrum = new ElectrumService(ELECTRUM_SERVERS);
