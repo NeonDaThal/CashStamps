@@ -69,6 +69,73 @@ export async function addCashOutRecord(
   });
 }
 
+export interface CashOutContractSessionStoreDependencies {
+  getCashOutRecords: typeof getCashOutRecords;
+  writeCashOutRecords: (records: CashOutRecord[]) => Promise<void>;
+}
+
+/**
+ * E1 creation only. Use the SAME mutation queue as every other Cash-out write.
+ * BCH validation is lazy so ordinary history/report reads stay lightweight.
+ */
+export async function storeCashOutContractSessionWithDependencies(
+  record: CashOutRecord,
+  dependencies: CashOutContractSessionStoreDependencies
+): Promise<CashOutRecord> {
+  // Own the caller's values before the first await and before entering the queue.
+  const snapshot = structuredClone(record);
+  const { validateNewCashOutContractSession, cashOutContractSessionIdentity } =
+    await import('./cash-out-contract-session');
+
+  return enqueueCashOutRecordsMutation(async () => {
+    const records = await dependencies.getCashOutRecords();
+    const existing = records.find((entry) => entry.id === snapshot.id);
+
+    if (existing) {
+      if (
+        existing.settlementContractPlan &&
+        cashOutContractSessionIdentity(existing) ===
+          cashOutContractSessionIdentity(snapshot)
+      ) {
+        // Preserve later lifecycle progress, timestamps and the FIRST snapshot.
+        return structuredClone(existing);
+      }
+      throw new Error(
+        'Cash-out already exists with a different frozen contract session.'
+      );
+    }
+
+    validateNewCashOutContractSession(snapshot);
+    const plan = snapshot.settlementContractPlan;
+    if (
+      records.some(
+        (entry) =>
+          entry.settlementContractPlan &&
+          (entry.settlementContractPlan.cashOutCommitmentHex ===
+            plan?.cashOutCommitmentHex ||
+            entry.settlementContractPlan.contractAddress ===
+              plan?.contractAddress)
+      )
+    ) {
+      throw new Error(
+        'Cash-out contract commitment/address is already assigned to another record.'
+      );
+    }
+
+    await dependencies.writeCashOutRecords([snapshot, ...records]);
+    return structuredClone(snapshot);
+  });
+}
+
+export async function storeCashOutContractSession(
+  record: CashOutRecord
+): Promise<CashOutRecord> {
+  return storeCashOutContractSessionWithDependencies(record, {
+    getCashOutRecords,
+    writeCashOutRecords,
+  });
+}
+
 export async function getCashOutRecordById(
   id: string
 ): Promise<CashOutRecord | undefined> {

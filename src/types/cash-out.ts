@@ -1,5 +1,6 @@
 import type {
   CashOutSettlementBroadcastResult,
+  CashOutSettlementContractPlan,
   CashOutSettlementIntent,
   CashOutSettlementSourceConflictEvidence,
 } from 'src/types/cash-out-settlement';
@@ -115,6 +116,13 @@ export interface CashOutRecord {
   updatedAt: string;
 
   /**
+   * E1 frozen, JSON-safe contract identity and economics, stored before payment
+   * instructions may be returned. Its version comes from the production plan.
+   * Absent on legacy direct-to-Treasury records; no migration is required.
+   */
+  settlementContractPlan?: CashOutSettlementContractPlan;
+
+  /**
    * Fiat cash amount the merchant gives to the customer after BCH is detected.
    */
   fiatCurrency: string;
@@ -159,7 +167,9 @@ export interface CashOutRecord {
   /**
    * Address shown to the customer for this specific cash-out payment.
    *
-   * New cash-outs use a unique treasury-derived receiving address.
+   * Legacy Cash-outs use a Treasury-derived address. Contract Cash-outs use
+   * settlementContractPlan.contractAddress; the Treasury destination remains
+   * treasuryMasterAddress.
    */
   treasuryReceivingAddress: string;
 
